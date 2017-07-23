@@ -1,0 +1,36 @@
+body
+{
+    padding: 0;
+    margin: 0;
+}
+
+div#scene img
+{
+    position: absolute;
+}
+
+div#scene img
+{
+    height: 25em;
+
+    image-rendering:optimizeSpeed;             /* Legal fallback */
+    image-rendering:-moz-crisp-edges;          /* Firefox        */
+    image-rendering:-o-crisp-edges;            /* Opera          */
+    image-rendering:-webkit-optimize-contrast; /* Safari         */
+    image-rendering:optimize-contrast;         /* CSS3 Proposed  */
+    image-rendering:crisp-edges;               /* CSS4 Proposed  */
+    image-rendering:pixelated;                 /* CSS4 Proposed  */
+    -ms-interpolation-mode:nearest-neighbor;   /* IE8+           */
+}
+
+div#scene
+{
+    height: 25em;
+    width: 25em;
+    border: solid 1px;
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+}
