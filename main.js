@@ -153,6 +153,7 @@ function updateCamera(x)
 
 function handleScreenResize()
 {
+    sceneNode.style.display = "block";
     // Center the game screen in the window, as best we can
     var top = window.innerHeight/2-sceneNode.clientHeight/2;
     if (top < 0) top = 0;

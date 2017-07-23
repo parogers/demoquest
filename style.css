@@ -29,6 +29,7 @@ div#scene
     width: 25em;
     border: solid 1px;
 
+    display: none;
     position: absolute;
     top: 0;
     left: 0;
