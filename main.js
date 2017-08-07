@@ -16,7 +16,10 @@
  */
 
 var sceneNode = null;
-var scene = null;
+var stage = null;
+var Media = {};
+
+/***/
 
 function onload()
 {
@@ -34,10 +37,17 @@ function onload()
 
 */
 
-    sceneNode = document.getElementById("scene");
-    handleScreenResize();
+    stage = new Stage(
+	document.getElementById("stage"),
+	document.getElementById("scene"),
+	document.getElementById("curtain"),
+	document.getElementById("messages")
+    );
+    stage.handleScreenResize();
 
-    window.addEventListener("resize", handleScreenResize);
+    window.addEventListener("resize", function() {
+	stage.handleScreenResize();
+    });
 
     var cameraX = 0;
     var newCameraX = 0;
@@ -47,11 +57,11 @@ function onload()
 	if (!pressing) return;
 	var x = cameraX + (event.pageX - dragX) / (window.innerWidth/4);
 	x = Math.max(Math.min(x, 1), -1);
-	updateCamera(x);
+	stage.setCameraPos(x);
 	newCameraX = x;
     });
 
-    window.addEventListener("mousedown", function(event) {
+    stage.stageNode.addEventListener("mousedown", function(event) {
 	pressing = true;
 	dragX = event.pageX;
     });
@@ -59,27 +69,17 @@ function onload()
     window.addEventListener("mouseup", function(event) {
 	pressing = false;
 	cameraX = newCameraX;
+
+	if (event.pageX === dragX) {
+	    stage.handleClicked(event);
+	}
     });
-
-/*    Loader.loadImages([
-	"out1.png",
-	"out2.png",
-	"out3.png",
-	"out4.png",
-	"out5.png"
-    ]).onload(function(img) {
-	console.log("LOADED: " + img.src);
-
-    }).onerror(function(img) {
-	console.log("ERROR LOADING: " + img.src);
-
-    }).ondone(loaded);*/
 
     // Load all the scene meta data here, then the scene images below
     var ldr = new Loader.SceneLoader();
-    ldr.add("media/scenes/test/scene.json");
+    ldr.add("media/scenes/road/scene.json");
     ldr.ondone(function(scenes) {
-	handleScenesLoaded(scenes);
+	loadSceneImages(scenes);
     });
     ldr.onerror(function(src) {
 	console.log("Error loading scene: " + src);
@@ -91,72 +91,71 @@ function onload()
 
 /* Called when the basic scene data is loaded. This function loads the layer
  * images for each scene. */
-function handleScenesLoaded(scenes)
+function loadSceneImages(scenes)
 {
     // Use a single loader instance to load everything at once
     var ldr = new Loader.ImageLoader();
     ldr.ondone(function() {
-	handleLayersLoaded(scenes);
+	stage.setScene(scenes["road"]);
+	//setup(scenes);
+	//handleLayersLoaded(scenes);
     });
-    ldr.onload(function(img, layer) {
+    ldr.onerror(function(src) {
+	console.log("ERROR loading media: " + src);
+    });
+    ldr.onload(function(img, path) {
+	Media[path] = img;
+	/*img.className = "layer";
 	layer.img = img;
+	layer.div.appendChild(img);
+	layer.origWidth = img.width;
+	layer.origHeight = img.height;
+	layer.mask = getTransparencyMask(img);*/
     });
 
     for (var key in scenes) 
     {
 	var scene = scenes[key];
 	for (var layer of scene.layers) {
-	    ldr.add(scene.scenePath + layer.src, layer);
+	    // Queue the background image and anything else in the scene. Note
+	    // all images are stored in a global 'Media' object.
+	    ldr.add(
+		scene.scenePath + layer.src, 
+		scene.scenePath + layer.name);
+	    for (var thing of layer.things) 
+	    {
+		ldr.add(
+		    scene.scenePath + thing.src,
+		    scene.scenePath + thing.name);
+	    }
 	}
     }
 }
 
-/* Called once all the layer images are loaded */
-function handleLayersLoaded(scenes)
+/* Called once all the layer images are loaded. This function triggers the
+ * main loop which starts the game. */
+function setup(scenes)
 {
     console.log("Done loading scene images");
 
-    for (var key in scenes) 
-    {
-	// Now that the layer images are loaded we can sort them by relative
-	// depth. Images that are wider are considered closer to the camera.
-	scenes[key].layers.sort(function(a, b) {
-	    return (a.img.width > b.img.width) - (a.img.width < b.img.width);
-	});
-    }
+/*    Loader.loadImages([
+	"key.png"
+    ]).onload(function(img) {
+	console.log("LOADED: " + img.src);
 
-    function noDragging() {
-	return false;
-    }
+	var thing = new Thing(img);
+	img.className = "thing";
+	img.style.top = 0;
+	img.style.left = 0;
 
-    scene = scenes["road"];
-    for (layer of scene.layers) {
-	layer.img.ondragstart = noDragging;
-	sceneNode.appendChild(layer.img);
-    }
-    scene = scn;
-    updateCamera(0);
-}
+	img.width = img.width*scene.getDisplayScale();
 
-function updateCamera(x)
-{
-    var n = 1;
-    var centreX = sceneNode.clientWidth/2;
-    var backWidth = scene.layers[0].img.width;
-    for (layer of scene.layers) {
-	var img = layer.img;
-	img.style.left = (centreX-img.width/2-x*(img.width/2-backWidth/2))|0;
-	n++;
-    }
-}
+	scene.layers[4].div.appendChild(img);
 
+	console.log(scene.layers[4].name);
 
-function handleScreenResize()
-{
-    sceneNode.style.display = "block";
-    // Center the game screen in the window, as best we can
-    var top = window.innerHeight/2-sceneNode.clientHeight/2;
-    if (top < 0) top = 0;
-    sceneNode.style.top = top;
-    sceneNode.style.left = window.innerWidth/2 - sceneNode.clientWidth/2;
+    }).onerror(function(img) {
+	console.log("ERROR LOADING: " + img.src);
+
+    });*/
 }

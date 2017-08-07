@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/* Returns a 2d matrix containing the alpha values of each pixel in the given
+ * image. So that grid[x][y] => alpha value at pixel (x, y) */
 function getTransparencyMask(img)
 {
     var canvas = document.createElement("canvas");

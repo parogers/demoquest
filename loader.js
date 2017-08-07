@@ -128,26 +128,6 @@ Loader = function()
     }
     SceneLoader.prototype = Object.create(Loader.prototype);
 
-    SceneLoader.prototype.buildScene = function(src, raw)
-    {
-	var scn = new Scene();
-	var data = JSON.parse(raw);
-	scn.name = data["name"];
-	scn.keyname = data["keyname"];
-	scn.description = data["description"];
-	// Determine the scene directory
-	var i = src.lastIndexOf("/");
-	scn.scenePath = src.substring(0, i+1);
-	// Build the layers
-	for (var name in data["layers"]) {
-	    var layer = new Layer(name);
-	    layer.src = data["layers"][name];
-	    scn.layers.push(layer);
-	}
-	scn.rawJSON = raw;
-	return scn;
-    }
-
     SceneLoader.prototype.handleDone = function()
     {
 	var scenes = {};
@@ -163,7 +143,11 @@ Loader = function()
 
 	var req = new XMLHttpRequest();
 	req.overrideMimeType("application/json");
-	req.open("GET", src, true);
+
+	// Add a timestamp to avoid caching this
+	var srcPath = src + "?time=" + (new Date()).getTime();
+	req.open("GET", srcPath, true);
+
 	req.onerror = function(ldr) {
 	    return function() {
 		ldr.handleError(src);
@@ -175,7 +159,7 @@ Loader = function()
 		if (req.readyState == 4 && req.status == "200") {
 		    // Parse the JSON and extract the scene info
 		    // TODO - handle exceptions here
-		    scn = ldr.buildScene(src, req.responseText);
+		    scn = buildSceneFromJSON(src, req.responseText);
 		    scn.src = src;
 		    ldr.handleLoaded(scn, src, arg);
 		}
@@ -187,6 +171,3 @@ Loader = function()
 
     return exports;
 }();
-
-
-

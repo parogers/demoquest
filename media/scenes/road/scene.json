@@ -1,0 +1,46 @@
+{
+    "name": "Road",
+    "keyname": "road",
+    "description": "The road ends in a small building.",
+    "layers": [
+        {
+            "name": "sky",
+            "background": "layer1.png",
+            "things": []
+        },
+        {
+            "name": "forest",
+            "background": "layer2.png",
+            "things": []
+        },
+        {
+            "name": "house",
+            "background": "layer3.png",
+            "things": [
+                {
+                    "name": "door",
+                    "src": "layer3-1.png",
+                    "x": 19,
+                    "y": 17
+                }
+            ]
+        },
+        {
+            "name": "character",
+            "background": "layer4.png",
+            "things": [
+                {
+                    "name": "key",
+                    "src": "layer4-1.png",
+                    "x": 63,
+                    "y": 28
+                }
+            ]
+        },
+        {
+            "name": "foreground",
+            "background": "layer5.png",
+            "things": []
+        }
+    ]
+}
