@@ -36,7 +36,6 @@ div#scene
 {
     height: 25em;
     width: 25em;
-    border: solid 1px;
 
     /*display: none;*/
     position: absolute;
@@ -71,12 +70,22 @@ div#curtain
     position: absolute;
     top: 0;
     left: 0;
+    border: solid 1px;
+}
+
+#message-area
+{
+    font-size: 20px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 4em;
+    color: #333;
+    background: #eee;
 }
 
 #messages
 {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 2em;
+    padding: 0.5em;
 }
+

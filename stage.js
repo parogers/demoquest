@@ -15,13 +15,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-function Stage(stageNode, sceneNode, curtainNode, messagesNode)
+/* The stage manages the user interface. Each piece of the interface is
+ * associated with a DOM node:
+ * 
+ *    stageNode = A container div holding the UI
+ *    sceneNode = Contains elements of the scene (eg background images)
+ *    curtainNode = An overlay that is used to transition between scenes
+ *    messagesNode = Displays messages to the player
+ */
+function Stage()
 {
     // The HTML element (div) holding the scene images
-    this.sceneNode = sceneNode;
-    this.stageNode = stageNode;
-    this.curtainNode = curtainNode;
-    this.messagesNode = messagesNode;
+    this.sceneNode = document.getElementById("scene");
+    this.stageNode = document.getElementById("stage");
+    this.curtainNode = document.getElementById("curtain");
+    this.messagesNode = document.getElementById("messages");
     // The scene being displayed
     this.scene = null;
     this.cameraX = 0;
@@ -30,6 +38,8 @@ function Stage(stageNode, sceneNode, curtainNode, messagesNode)
 
 Stage.prototype.setScene = function(scene)
 {
+    // A callback used below to prevent img elements from getting dragged
+    // around when the player is trying to pan the scene.
     function noDragging() {
 	return false;
     }
@@ -51,10 +61,11 @@ Stage.prototype.setScene = function(scene)
 	var img = new Image();
 	img.src = Media[src].src;
 	img.id = "layer_" + layer.name
+	// Prevent the img from being dragged. (function cached above)
 	img.ondragstart = noDragging;
 	img.className = "layer";
 	img.style.height = this.sceneNode.style.height;
-	console.log("LAYER: " + src + " " + img);
+	//console.log("LAYER: " + src + " " + img);
 	div.appendChild(img);
 
 	// Size the div to match the image dimensions
@@ -88,7 +99,7 @@ Stage.prototype.setScene = function(scene)
 	    img.style.left = scale*thing.x;
 	    img.style.top = scale*thing.y;
 
-	    console.log("THING: " + src + " " + thing.x + ", " + thing.y);
+	    //console.log("THING: " + src + " " + thing.x + ", " + thing.y);
 	    div.appendChild(img);
 	    stageLayer.thingImgs.push(img);
 	}
@@ -96,6 +107,9 @@ Stage.prototype.setScene = function(scene)
     this.setCameraPos(this.cameraX);
 }
 
+/* Set the camera position within the scene. The position is from -1 (furthest
+ * left) to 1 (furthest right) with 0 being the centre of the scene. This 
+ * code moves the layers around to simulate parallax scrolling. */
 Stage.prototype.setCameraPos = function(xpos)
 {
     var centreX = this.sceneNode.clientWidth/2;
@@ -148,18 +162,29 @@ Stage.prototype.handleClicked = function(event)
 
 Stage.prototype.handleScreenResize = function()
 {
-    var mrect = this.messagesNode.getBoundingClientRect();
-    var stageWidth = Math.min(window.innerWidth, window.innerHeight-50);
-    var stageHeight = stageWidth + (mrect.bottom-mrect.top);
-    var sceneSize = stageWidth;
+    this.stageNode.style.display = "block";
+
+    var messageArea = document.getElementById("message-area");
+    var rect = messageArea.getBoundingClientRect();
+    var msgHeight = (rect.bottom-rect.top);
+    var sceneSize = Math.min(
+	window.innerWidth-16,
+	window.innerHeight-16-msgHeight);
+    var stageWidth = sceneSize;
+    var stageHeight = sceneSize + msgHeight;
+
+    console.log("STAGE: " + stageWidth + ", " + stageHeight);
+    console.log("SCENE: " + sceneSize);
 
     // Make the scene div visible (let's us query the width/height)
-    this.stageNode.style.display = "block";
     this.stageNode.style.width = stageWidth;
     this.stageNode.style.height = stageHeight;
 
     this.sceneNode.style.width = sceneSize;
     this.sceneNode.style.height = sceneSize;
+
+    messageArea.style.top = sceneSize + "px";
+    messageArea.style.width = sceneSize + "px";
 
     /*var width = this.sceneNode.offsetWidth || this.sceneNode.clientWidth;
     var height = this.sceneNode.offsetHeight || this.sceneNode.clientHeight;
@@ -188,6 +213,9 @@ Stage.prototype.handleScreenResize = function()
 /* StageLayer */
 /**************/
 
+/* The visual equivalent to a scene Layer. (ie a visual "slice" of the scene
+ * at a fixed depth) Manages the background image and clickable objects 
+ * on this layer. */
 function StageLayer()
 {
     // The div holding the layer image and all things

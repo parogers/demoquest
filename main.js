@@ -37,12 +37,7 @@ function onload()
 
 */
 
-    stage = new Stage(
-	document.getElementById("stage"),
-	document.getElementById("scene"),
-	document.getElementById("curtain"),
-	document.getElementById("messages")
-    );
+    stage = new Stage();
     stage.handleScreenResize();
 
     window.addEventListener("resize", function() {
