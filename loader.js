@@ -118,17 +118,17 @@ Loader = function()
     exports.ImageLoader = ImageLoader;
     exports.loadImages = loadImages;
 
-    /***************/
-    /* SceneLoader */
-    /***************/
+    /*******************/
+    /* SceneDataLoader */
+    /*******************/
 
-    function SceneLoader()
+    function SceneDataLoader()
     {
 	Loader.call(this);
     }
-    SceneLoader.prototype = Object.create(Loader.prototype);
+    SceneDataLoader.prototype = Object.create(Loader.prototype);
 
-    SceneLoader.prototype.handleDone = function()
+    SceneDataLoader.prototype.handleDone = function()
     {
 	var scenes = {};
 	for (var scn of this.loaded) {
@@ -137,7 +137,7 @@ Loader = function()
 	if (this._ondone) this._ondone(scenes);
     }
 
-    SceneLoader.prototype.add = function(src, arg)
+    SceneDataLoader.prototype.add = function(src, arg)
     {
 	this.queue.push(src);
 
@@ -159,7 +159,7 @@ Loader = function()
 		if (req.readyState == 4 && req.status == "200") {
 		    // Parse the JSON and extract the scene info
 		    // TODO - handle exceptions here
-		    scn = buildSceneFromJSON(src, req.responseText);
+		    scn = SceneData.fromJSON(src, req.responseText);
 		    scn.src = src;
 		    ldr.handleLoaded(scn, src, arg);
 		}
@@ -167,7 +167,7 @@ Loader = function()
 	}(this);
 	req.send(null);
     }
-    exports.SceneLoader = SceneLoader;
+    exports.SceneDataLoader = SceneDataLoader;
 
     return exports;
 }();

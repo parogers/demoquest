@@ -89,3 +89,19 @@ div#curtain
     padding: 0.5em;
 }
 
+.marker
+{
+    background: #0f0;
+    width: 2em;
+    height: 2em;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#canvas-area
+{
+    margin-left: auto;
+    margin-right: auto;
+}
+

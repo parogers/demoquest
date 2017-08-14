@@ -15,65 +15,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var renderer = null;
 var sceneNode = null;
 var stage = null;
-var Media = {};
-
-/***/
+var scene = null;
 
 function onload()
 {
-/*
-    var layers = [];
-    for (var n = 1; ; n++) {
-	var img = document.getElementById("layer" + n);
-	if (!img) break;
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
-	img.ondragstart = function() { return false; }
-	console.log(img.width);
+    setupMouseHandlers();
+    handleScreenResize();
 
-	layers.push(img);
-    }
-
-*/
-
-    stage = new Stage();
-    stage.handleScreenResize();
-
-    window.addEventListener("resize", function() {
-	stage.handleScreenResize();
-    });
-
-    var cameraX = 0;
-    var newCameraX = 0;
-    var dragX = 0;
-    var pressing = false;
-    window.addEventListener("mousemove", function(event) {
-	if (!pressing) return;
-	var x = cameraX + (event.pageX - dragX) / (window.innerWidth/4);
-	x = Math.max(Math.min(x, 1), -1);
-	stage.setCameraPos(x);
-	newCameraX = x;
-    });
-
-    stage.stageNode.addEventListener("mousedown", function(event) {
-	pressing = true;
-	dragX = event.pageX;
-    });
-
-    window.addEventListener("mouseup", function(event) {
-	pressing = false;
-	cameraX = newCameraX;
-
-	if (event.pageX === dragX) {
-	    stage.handleClicked(event);
-	}
-    });
+    stage = new PIXI.Container();
 
     // Load all the scene meta data here, then the scene images below
-    var ldr = new Loader.SceneLoader();
+    var ldr = new Loader.SceneDataLoader();
     ldr.add("media/scenes/road/scene.json");
     ldr.ondone(function(scenes) {
+	console.log("DONE loading scene metadata");
 	loadSceneImages(scenes);
     });
     ldr.onerror(function(src) {
@@ -82,12 +42,113 @@ function onload()
     ldr.onload(function(scn, src) {
 	console.log("Loaded scene: " + scn.keyname);
     });
+
+    window.addEventListener("resize", function() {
+	handleScreenResize();
+    });
+
+/*
+    window.addEventListener("touchstart", function(event) {
+	var touches = event.changedTouches;
+
+	for (var touch of touches) {
+	    var div = document.createElement("div");
+	    div.className = "marker";
+	    div.style.left = touch.pageX;
+	    div.style.top = touch.pageY;
+	    document.body.appendChild(div);
+	}
+
+    }, false);
+
+    window.addEventListener("touchmove", function(event) {
+    }, false);
+
+    window.addEventListener("touchcancel", function(event) {
+    }, false);
+
+    window.addEventListener("touchend", function(event) {
+    }, false);
+
+    stage = new Stage();
+    stage.handleScreenResize();
+*/
+}
+
+function handleScreenResize()
+{
+    // Setup the canvas area
+    var div = document.getElementById("canvas-area");
+    div.focus();
+    div.innerHTML = "";
+
+    var pad = 10;
+    var renderSize = Math.min(window.innerWidth-pad, window.innerHeight-pad);
+    renderer = PIXI.autoDetectRenderer(renderSize, renderSize);
+    div.appendChild(renderer.view);
+    div.style.width = renderer.width;
+    div.style.height = renderer.height;
+}
+
+function setupMouseHandlers()
+{
+    var dragStartX = 0;
+    var dragStartY = 0;
+    var pressing = false;
+    window.addEventListener("mousemove", function(event) {
+	if (pressing) {
+	    scene.handleDrag(event.pageX-dragStartX, event.pageY-dragStartY);
+	}
+    });
+
+    window.addEventListener("mousedown", function(event) {
+	pressing = true;
+	dragStartX = event.pageX;
+	dragStartY = event.pageY;
+	scene.handleDragStart(event.pageX, event.pageY);
+    });
+
+    window.addEventListener("mouseup", function(event) {
+	pressing = false;
+	if (event.pageX === dragStartX) {
+	    scene.handleClick(event.clientX, event.clientY);
+	} else {
+	    scene.handleDragDone(event.clientX, event.clientY);
+	}
+    });
 }
 
 /* Called when the basic scene data is loaded. This function loads the layer
- * images for each scene. */
-function loadSceneImages(scenes)
+ * and thing textures for each scene. */
+function loadSceneImages(dataList)
 {
+    var now = (new Date()).getTime();
+    Object.values(dataList).forEach(function(data) {
+	PIXI.loader.add(data.spritesPath);
+    });
+    //PIXI.loader.on("progress", progresscb);
+    PIXI.loader.defaultQueryString = "nocache=" + now;
+    PIXI.loader.load(function() {
+	console.log("DONE loading scene images");
+
+	scene = Scene.fromData(dataList["road"]);
+	stage.addChild(scene.container);
+	//console.log(scene);
+	///console.log(renderer.view);
+
+	stage.scale.set(renderer.height/scene.getBaseHeight());
+	stage.x = renderer.width/2;
+	stage.y = renderer.height/2;
+
+	scene.setCameraPos(-1);
+
+	requestAnimFrame(function() {
+	    renderer.render(stage);
+	});
+
+    });
+
+/*
     // Use a single loader instance to load everything at once
     var ldr = new Loader.ImageLoader();
     ldr.ondone(function() {
@@ -99,13 +160,6 @@ function loadSceneImages(scenes)
 	console.log("ERROR loading media: " + src);
     });
     ldr.onload(function(img, path) {
-	Media[path] = img;
-	/*img.className = "layer";
-	layer.img = img;
-	layer.div.appendChild(img);
-	layer.origWidth = img.width;
-	layer.origHeight = img.height;
-	layer.mask = getTransparencyMask(img);*/
     });
 
     for (var key in scenes) 
@@ -124,7 +178,7 @@ function loadSceneImages(scenes)
 		    scene.scenePath + thing.name);
 	    }
 	}
-    }
+    }*/
 }
 
 /* Called once all the layer images are loaded. This function triggers the

@@ -33,7 +33,10 @@ function Stage()
     // The scene being displayed
     this.scene = null;
     this.cameraX = 0;
+    this.dragStartX = 0;
+    this.dragStartY = 0;
     this.stageLayers = [];
+    this.dragging = null;
 }
 
 Stage.prototype.setScene = function(scene)
@@ -47,6 +50,7 @@ Stage.prototype.setScene = function(scene)
     this.scene = scene;
     this.sceneNode.innerHTML = "";
     this.stageLayers = [];
+    this.stageLayersByName = {};
     for (var layer of scene.layers) 
     {
 	// Create a div to hold the layer background images, and any floating
@@ -79,6 +83,7 @@ Stage.prototype.setScene = function(scene)
 	stageLayer.name = layer.name;
 	stageLayer.mask = getTransparencyMask(Media[src]);
 	this.stageLayers.push(stageLayer);
+	this.stageLayersByName[stageLayer.name] = stageLayer;
 
 	// Now that we know the render size of the background layer (by
 	// setting the class name above) we can figure out the overall
@@ -102,38 +107,20 @@ Stage.prototype.setScene = function(scene)
 	    //console.log("THING: " + src + " " + thing.x + ", " + thing.y);
 	    div.appendChild(img);
 	    stageLayer.thingImgs.push(img);
+	    stageLayer.thingImgsByName[thing.name] = img;
 	}
     }
     this.setCameraPos(this.cameraX);
 }
 
-/* Set the camera position within the scene. The position is from -1 (furthest
- * left) to 1 (furthest right) with 0 being the centre of the scene. This 
- * code moves the layers around to simulate parallax scrolling. */
-Stage.prototype.setCameraPos = function(xpos)
-{
-    var centreX = this.sceneNode.clientWidth/2;
-    var backWidth = this.stageLayers[0].div.clientWidth;
-    for (var stageLayer of this.stageLayers) 
-    {
-	var div = stageLayer.div;
-	var pos = (
-	    centreX-div.clientWidth/2-xpos*(div.clientWidth/2-backWidth/2));
-	div.style.left = pos|0;
-    }
-    this.cameraX = xpos;
-}
-
-/* Called to handle a mouse click on the stage area. The event is passed 
- * through as-is from the click handler. */
-Stage.prototype.handleClicked = function(event)
+/* Returns the scene element under the position (given as page coordinates). 
+ * This returns {layer: name, thing: name} which names the layer that was 
+ * clicked, and (optionally) the thing within that layer that was clicked. 
+ */
+Stage.prototype.checkHit = function(x, y)
 {
     var rect = this.sceneNode.getBoundingClientRect();
-    var x = event.clientX;
-    var y = event.clientY;
-
-    if (x < rect.left || y < rect.top || x > rect.right || y > rect.bottom) 
-    {
+    if (x < rect.left || y < rect.top || x > rect.right || y > rect.bottom) {
 	return;
     }
 
@@ -146,18 +133,33 @@ Stage.prototype.handleClicked = function(event)
     for (var stageLayer of reversed)
     {
 	// First check if they clicked on a thing in the layer
-	var hit = stageLayer.checkHitThing(x, y);
-	if (hit !== null) {
-	    console.log("CLICKED THING: " + hit + "\n");
-	    break;
+	var thing = stageLayer.checkHitThing(x, y);
+	if (thing !== null) {
+	    //this.messagesNode.innerHTML = "Clicked " + hit;
+	    return {layer: stageLayer.name, thing: thing};
 	}
 
 	// Now check if they clicked on this layer itself
 	if (stageLayer.checkHit(x, y)) {
-	    console.log("CLICKED: " + stageLayer.name + "\n");
-	    break;
+	    //console.log("CLICKED: " + stageLayer.name + "\n");
+	    return {layer: stageLayer.name, thing: null};
 	}
     }
+    return {layer: null, thing: null};
+}
+
+// Returns a StageLayer given the name
+Stage.prototype.getLayer = function(name)
+{
+    return this.stageLayersByName[name];
+}
+
+// Returns a thing image given the name (returns the HTML img element)
+Stage.prototype.getThing = function(layerName, thingName)
+{
+    var layer = this.getLayer(layerName)
+    if (layer) return layer.getThing(thingName)
+    return null;
 }
 
 Stage.prototype.handleScreenResize = function()
@@ -209,6 +211,44 @@ Stage.prototype.handleScreenResize = function()
     if (this.scene) this.setScene(this.scene);
 }
 
+Stage.prototype.handleDragStart = function(x, y)
+{
+    var args = this.checkHit(x, y);
+    if (args.thing) {
+	// Dragging an object
+	var thing = this.getThing(args.layer, args.thing);
+	var rect = thing.getBoundingClientRect();
+	this.dragging = args;
+	this.dragStartX = parseInt(thing.style.left);
+	this.dragStartY = parseInt(thing.style.top);
+    } else {
+	// Panning the scene
+	this.dragging = null;
+	this.dragStartX = this.cameraX;
+    }
+}
+
+Stage.prototype.handleDragDone = function(x, y)
+{
+    this.dragging = null;
+}
+
+Stage.prototype.handleDrag = function(dx, dy)
+{
+    if (this.dragging) {
+	// Dragging a thing
+	var thing = this.getThing(this.dragging.layer, this.dragging.thing);
+	thing.style.left = this.dragStartX + dx;
+	thing.style.top = this.dragStartY + dy;
+
+    } else {
+	// Panning the scene around
+	var pos = this.dragStartX + dx / (window.innerWidth/4);
+	pos = Math.max(Math.min(pos, 1), -1);
+	this.setCameraPos(pos);
+    }
+}
+
 /**************/
 /* StageLayer */
 /**************/
@@ -221,10 +261,16 @@ function StageLayer()
     // The div holding the layer image and all things
     this.div = null;
     this.thingImgs = [];
+    this.thingImgsByName = {};
     // The transparency mask for the layer image
     this.mask = null;
     // The scaling factor from original source image size to display size
     this.scale = 1;
+}
+
+StageLayer.prototype.getThing = function(name)
+{
+    return this.thingImgsByName[name];
 }
 
 /* Check if the given point refers to an opaque pixel of this layer. The point
