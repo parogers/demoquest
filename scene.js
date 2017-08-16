@@ -26,8 +26,6 @@ function Scene()
     this.container = new PIXI.Container();
     this.sceneData = null;
     this.cameraX = 0;
-    this.dragging = null;
-    this.dragStartX = 0;
 }
 
 /* Builds a new scene given the SceneData instance. This function builds
@@ -37,7 +35,8 @@ Scene.fromData = function(sceneData)
     var scn = new Scene();
     scn.sceneData = sceneData;
     // Build the layers and contained sprites
-    for (var layerData of sceneData.layers) {
+    for (var layerData of sceneData.layers) 
+    {
 	var texture = scn.getTexture(layerData.name);
 	var layer = new Layer(layerData.name, texture);
 	scn.addLayer(layer);
@@ -53,14 +52,15 @@ Scene.fromData = function(sceneData)
     return scn;
 }
 
-Scene.prototype.getBaseWidth = function()
+/* Returns the width and height of the bottom layer in this scene. This is
+ * considered the 'base size' and is used to determine how the scene should
+ * be scaled to fit the viewport */
+Scene.prototype.getBaseSize = function()
 {
-    return this.layers[0].getWidth();
-}
-
-Scene.prototype.getBaseHeight = function()
-{
-    return this.layers[0].getHeight();
+    return {
+	width: this.layers[0].getWidth(),
+	height: this.layers[0].getHeight()
+    };
 }
 
 Scene.prototype.addLayer = function(layer)
@@ -88,7 +88,7 @@ Scene.prototype.getTexture = function(name)
  * code moves the layers around to simulate parallax scrolling. */
 Scene.prototype.setCameraPos = function(xpos)
 {
-    var backWidth = this.getBaseWidth();
+    var backWidth = this.getBaseSize().width;
     var centreX = 0;
     for (var layer of this.layers) {
 	var pos = centreX-xpos*(layer.getWidth()/2-backWidth/2);
@@ -97,56 +97,33 @@ Scene.prototype.setCameraPos = function(xpos)
     this.cameraX = xpos;
 }
 
+/* Returns the scene element under the position (given relative to the top
+ * left corner of the unscaled scene viewport) 
+ * This returns {layer: name, thing: name} which names the layer that was 
+ * clicked, and (optionally) the thing within that layer that was clicked. */
 Scene.prototype.checkHit = function(x, y)
 {
+    // Search through the stage layers in reverse order, so we start with
+    // the "front most" layer and proceed to the ones behind.
+    var offset = x - this.getBaseSize().width/2;
+    var reversed = Array.slice(this.layers).reverse();
+    for (var layer of reversed)
+    {
+	var xp = offset - layer.container.x + layer.getWidth()/2;
+	var yp = y;
+
+	// First check if they clicked on a thing in the layer
+	var thing = layer.checkHitThing(xp, yp);
+	if (thing) {
+	    return {layer: layer.name, thing: thing};
+	}
+
+	// Now check if they clicked on this layer itself
+	if (layer.checkHit(xp, yp)) {
+	    return {layer: layer.name, thing: null};
+	}
+    }
     return {layer: null, thing: null};
-}
-
-Scene.prototype.handleDragStart = function(x, y)
-{
-    var args = this.checkHit(x, y);
-    if (args.thing) {
-	// Dragging an object
-	var thing = this.getThing(args.layer, args.thing);
-	var rect = thing.getBoundingClientRect();
-	this.dragging = args;
-	this.dragStartX = parseInt(thing.style.left);
-	this.dragStartY = parseInt(thing.style.top);
-    } else {
-	// Panning the scene
-	this.dragging = null;
-	this.dragStartX = this.cameraX;
-    }
-}
-
-Scene.prototype.handleDragDone = function(x, y)
-{
-    this.dragging = null;
-}
-
-Scene.prototype.handleDrag = function(dx, dy)
-{
-    if (this.dragging) {
-	// Dragging a thing
-	var thing = this.getThing(this.dragging.layer, this.dragging.thing);
-	thing.style.left = this.dragStartX + dx;
-	thing.style.top = this.dragStartY + dy;
-
-    } else {
-	// Panning the scene around
-	var pos = this.dragStartX + dx / (window.innerWidth/4);
-	pos = Math.max(Math.min(pos, 1), -1);
-	this.setCameraPos(pos);
-	requestAnimFrame(function() {
-	    renderer.render(stage);
-	});
-    }
-}
-
-Scene.prototype.handleClick = function(x, y)
-{
-    var args = this.checkHit(x, y);
-    console.log(args);
 }
 
 /*************/
@@ -204,7 +181,7 @@ function Layer(name, texture)
     this.name = name;
     // The transparency mask for the image. Useful for determining whether
     // the user clicks on a piece of this layer.
-    this.mask = null;
+    this.mask = getTransparencyMask(gameState.renderer, texture);
     // The container holding the background image, and all thing sprites 
     // on this layer.
     this.container = new PIXI.Container();
@@ -225,15 +202,11 @@ Layer.prototype.getHeight = function()
     return this.sprite.texture.height;
 }
 
-/* Check if the given point refers to an opaque pixel of this layer. The point
- * is given relative to the top-left corner of the image, and is expressed in
- * scaled screen coordinates. (ie relative to the rendered image size) */
+/* Check if the given point refers to an opaque pixel of this layer */
 Layer.prototype.checkHit = function(x, y)
 {
-    var scale = this.getDisplayScale();
-    var xp = Math.floor(x/scale);
-    var yp = Math.floor(y/scale);
-
+    var xp = x|0;
+    var yp = y|0;
     if (xp >= 0 && yp >= 0 && xp < this.mask.length && yp < this.mask[0].length)
     {
 	return (this.mask[xp][yp] === 255);
@@ -252,4 +225,93 @@ Layer.prototype.addThing = function(name, sprite)
     // TODO - check for duplicates
     this.sprites[name] = sprite;
     this.container.addChild(sprite);
+}
+
+/**************/
+/* PlayScreen */
+/**************/
+
+function PlayScreen()
+{
+    // The scene displayed
+    this.scene = null;
+    // The top-level PIXI container that holds the scene sprites. This 
+    // container gets scaled to fit the canvas.
+    this.stage = new PIXI.Container();
+    this.displayScale = 1;
+    // The thing being dragged around, or null if no dragging is happening
+    // or the player is panning around instead.
+    this.dragging = null;
+    // The mouse cursor position when the player started dragging around
+    this.dragStartX = 0;
+    this.dragStartY = 0;
+}
+
+PlayScreen.prototype.setScene = function(scn)
+{
+    this.scene = scn;
+    this.stage.children = [];
+    this.stage.addChild(scn.container);
+    this.handleResize();
+}
+
+/* Called when the game window is resized. This scales the scene to fit the 
+ * available space. */
+PlayScreen.prototype.handleResize = function()
+{
+    if (this.scene) {
+	var renderer = gameState.renderer;
+	this.displayScale = renderer.height/this.scene.getBaseSize().height;
+	this.stage.scale.set(this.displayScale);
+	this.stage.x = renderer.width/2;
+	this.stage.y = renderer.height/2;
+    }
+}
+
+PlayScreen.prototype.handleClick = function(x, y)
+{
+    var xp = x/this.displayScale;
+    var yp = y/this.displayScale;
+    var args = this.scene.checkHit(xp, yp);
+    console.log(args);
+}
+
+PlayScreen.prototype.handleDragStart = function(x, y)
+{
+    //var args = this.checkHit(x, y);
+    if (false) { //args.thing) {
+	// Dragging an object
+	var thing = this.scene.getThing(args.layer, args.thing);
+	var rect = thing.getBoundingClientRect();
+	this.dragging = args;
+	this.dragStartX = parseInt(thing.style.left);
+	this.dragStartY = parseInt(thing.style.top);
+    } else {
+	// Panning the scene
+	this.dragging = null;
+	this.dragStartX = this.scene.cameraX;
+    }
+}
+
+PlayScreen.prototype.handleDragDone = function(x, y)
+{
+    this.dragging = null;
+}
+
+PlayScreen.prototype.handleDrag = function(dx, dy)
+{
+    if (this.dragging) {
+	// Dragging a thing
+	var thing = this.scene.getThing(
+	    this.dragging.layer, this.dragging.thing);
+	thing.style.left = this.dragStartX + dx;
+	thing.style.top = this.dragStartY + dy;
+
+    } else {
+	// Panning the scene around
+	var pos = this.dragStartX + dx / (window.innerWidth/4);
+	pos = Math.max(Math.min(pos, 1), -1);
+	this.scene.setCameraPos(pos);
+	redraw();
+    }
 }

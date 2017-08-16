@@ -17,21 +17,17 @@
 
 /* Returns a 2d matrix containing the alpha values of each pixel in the given
  * image. So that grid[x][y] => alpha value at pixel (x, y) */
-function getTransparencyMask(img)
+function getTransparencyMask(renderer, texture)
 {
-    var canvas = document.createElement("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    var ctx = canvas.getContext("2d");
-
-    ctx.drawImage(img, 0, 0);
-
-    var imgData = ctx.getImageData(0, 0, img.width, img.height);
+    var sprite = new PIXI.Sprite(texture);
+    sprite.anchor.set(0, 0);
+    // This returns a flat array packed with pixel values (RGBARGBA...)
+    var pixels = renderer.extract.pixels(sprite);
     var mask = [];
-    for (var x = 0; x < img.width; x++) {
+    for (var x = 0; x < sprite.width; x++) {
 	mask.push([]);
-	for (var y = 0; y < img.height; y++) {
-	    var value = imgData.data[4*(x + y*img.width)+3];
+	for (var y = 0; y < sprite.height; y++) {
+	    var value = pixels[4*(x + y*sprite.width)+3];
 	    mask[mask.length-1].push(value);
 	}
     }

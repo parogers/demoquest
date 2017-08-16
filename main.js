@@ -15,19 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-var renderer = null;
-var sceneNode = null;
-var stage = null;
-var scene = null;
+var gameState = null;
 
 function onload()
 {
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
-    setupMouseHandlers();
-    handleScreenResize();
+    var div = document.getElementById("canvas-area");
+    gameState = new GameState(div);
 
-    stage = new PIXI.Container();
+    gameState.handleResize();
+    setupMouseHandlers();
 
     // Load all the scene meta data here, then the scene images below
     var ldr = new Loader.SceneDataLoader();
@@ -44,7 +42,7 @@ function onload()
     });
 
     window.addEventListener("resize", function() {
-	handleScreenResize();
+	gameState.handleResize();
     });
 
 /*
@@ -75,19 +73,14 @@ function onload()
 */
 }
 
-function handleScreenResize()
+function redraw()
 {
-    // Setup the canvas area
-    var div = document.getElementById("canvas-area");
-    div.focus();
-    div.innerHTML = "";
+    requestAnimFrame(renderFrame);
+}
 
-    var pad = 10;
-    var renderSize = Math.min(window.innerWidth-pad, window.innerHeight-pad);
-    renderer = PIXI.autoDetectRenderer(renderSize, renderSize);
-    div.appendChild(renderer.view);
-    div.style.width = renderer.width;
-    div.style.height = renderer.height;
+function renderFrame()
+{
+    gameState.renderFrame();
 }
 
 function setupMouseHandlers()
@@ -97,24 +90,30 @@ function setupMouseHandlers()
     var pressing = false;
     window.addEventListener("mousemove", function(event) {
 	if (pressing) {
-	    scene.handleDrag(event.pageX-dragStartX, event.pageY-dragStartY);
+	    gameState.handleDrag(
+		event.clientX-dragStartX, 
+		event.clientY-dragStartY);
 	}
     });
 
     window.addEventListener("mousedown", function(event) {
 	pressing = true;
-	dragStartX = event.pageX;
-	dragStartY = event.pageY;
-	scene.handleDragStart(event.pageX, event.pageY);
+	dragStartX = event.clientX;
+	dragStartY = event.clientY;
+	gameState.handleDragStart(event.clientX, event.clientY);
     });
 
     window.addEventListener("mouseup", function(event) {
-	pressing = false;
-	if (event.pageX === dragStartX) {
-	    scene.handleClick(event.clientX, event.clientY);
+	// Convert from display to scene coordinates
+	var rect = gameState.getBoundingClientRect();
+	var x = event.clientX - rect.left;
+	var y = event.clientY - rect.top;
+	if (event.clientX === dragStartX && event.clientY === dragStartY) {
+	    gameState.handleClick(x, y);
 	} else {
-	    scene.handleDragDone(event.clientX, event.clientY);
+	    gameState.handleDragStop(x, y);
 	}
+	pressing = false;
     });
 }
 
@@ -131,21 +130,10 @@ function loadSceneImages(dataList)
     PIXI.loader.load(function() {
 	console.log("DONE loading scene images");
 
-	scene = Scene.fromData(dataList["road"]);
-	stage.addChild(scene.container);
-	//console.log(scene);
-	///console.log(renderer.view);
+	var scene = Scene.fromData(dataList["road"]);
+	gameState.screen.setScene(scene);
 
-	stage.scale.set(renderer.height/scene.getBaseHeight());
-	stage.x = renderer.width/2;
-	stage.y = renderer.height/2;
-
-	scene.setCameraPos(-1);
-
-	requestAnimFrame(function() {
-	    renderer.render(stage);
-	});
-
+	redraw();
     });
 
 /*
