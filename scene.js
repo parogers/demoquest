@@ -312,6 +312,6 @@ PlayScreen.prototype.handleDrag = function(dx, dy)
 	var pos = this.dragStartX + dx / (window.innerWidth/4);
 	pos = Math.max(Math.min(pos, 1), -1);
 	this.scene.setCameraPos(pos);
-	redraw();
+	gameState.redraw();
     }
 }

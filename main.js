@@ -19,13 +19,19 @@ var gameState = null;
 
 function onload()
 {
+    // Set pixel scaling to be "nearest neighbour" which makes textures 
+    // render nice and blocky.
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+    // Disable the ticker sinc we don't use it (rendering happens as needed)
+    PIXI.ticker.shared.autoStart = false;
+    PIXI.ticker.shared.stop();
 
     var div = document.getElementById("canvas-area");
     gameState = new GameState(div);
 
-    gameState.handleResize();
-    setupMouseHandlers();
+    window.addEventListener("resize", function() {
+	gameState.handleResize();
+    });
 
     // Load all the scene meta data here, then the scene images below
     var ldr = new Loader.SceneDataLoader();
@@ -39,10 +45,6 @@ function onload()
     });
     ldr.onload(function(scn, src) {
 	console.log("Loaded scene: " + scn.keyname);
-    });
-
-    window.addEventListener("resize", function() {
-	gameState.handleResize();
     });
 
 /*
@@ -73,50 +75,6 @@ function onload()
 */
 }
 
-function redraw()
-{
-    requestAnimFrame(renderFrame);
-}
-
-function renderFrame()
-{
-    gameState.renderFrame();
-}
-
-function setupMouseHandlers()
-{
-    var dragStartX = 0;
-    var dragStartY = 0;
-    var pressing = false;
-    window.addEventListener("mousemove", function(event) {
-	if (pressing) {
-	    gameState.handleDrag(
-		event.clientX-dragStartX, 
-		event.clientY-dragStartY);
-	}
-    });
-
-    window.addEventListener("mousedown", function(event) {
-	pressing = true;
-	dragStartX = event.clientX;
-	dragStartY = event.clientY;
-	gameState.handleDragStart(event.clientX, event.clientY);
-    });
-
-    window.addEventListener("mouseup", function(event) {
-	// Convert from display to scene coordinates
-	var rect = gameState.getBoundingClientRect();
-	var x = event.clientX - rect.left;
-	var y = event.clientY - rect.top;
-	if (event.clientX === dragStartX && event.clientY === dragStartY) {
-	    gameState.handleClick(x, y);
-	} else {
-	    gameState.handleDragStop(x, y);
-	}
-	pressing = false;
-    });
-}
-
 /* Called when the basic scene data is loaded. This function loads the layer
  * and thing textures for each scene. */
 function loadSceneImages(dataList)
@@ -133,7 +91,7 @@ function loadSceneImages(dataList)
 	var scene = Scene.fromData(dataList["road"]);
 	gameState.screen.setScene(scene);
 
-	redraw();
+	gameState.redraw();
     });
 
 /*

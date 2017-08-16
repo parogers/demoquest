@@ -47,15 +47,3 @@ function getNativeHeight(img)
     tmp.src = img.src;
     return tmp.height;
 }
-
-/* Cross platform way of requesting an animation update
- * (see http://jlongster.com/Making-Sprite-based-Games-with-Canvas) */
-var requestAnimFrame =
-	window.requestAnimationFrame ||
-	window.webkitRequestAnimationFrame ||
-	window.mozRequestAnimationFrame ||
-	window.oRequestAnimationFrame ||
-	window.msRequestAnimationFrame ||
-	function(callback){
-	    window.setTimeout(callback, 1000 / 60);
-	};

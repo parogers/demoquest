@@ -16,6 +16,53 @@
  */
 
 /*************/
+/* Functions */
+/*************/
+
+/* Attach handlers for mouse-related events. The events (mouseup/down/move) 
+ * are first transformed into something more convenient before being forwarded
+ * to the game state instance. */
+function setupMouseEvents(gameState)
+{
+    var dragStartX = 0;
+    var dragStartY = 0;
+    var pressing = false;
+
+    window.addEventListener("mousemove", function(event) {
+	if (pressing) {
+	    gameState.handleDrag(
+		event.clientX-dragStartX, 
+		event.clientY-dragStartY);
+	}
+    });
+
+    window.addEventListener("mousedown", function(event) {
+	pressing = true;
+	dragStartX = event.clientX;
+	dragStartY = event.clientY;
+	gameState.handleDragStart(event.clientX, event.clientY);
+    });
+
+    window.addEventListener("mouseup", function(event) {
+	var rect = gameState.getBoundingClientRect();
+	var x = event.clientX - rect.left;
+	var y = event.clientY - rect.top;
+	if (event.clientX === dragStartX && event.clientY === dragStartY) {
+	    gameState.handleClick(x, y);
+	} else {
+	    gameState.handleDragStop(x, y);
+	}
+	pressing = false;
+    });
+}
+
+/* Attach handlers to touch-related events. This is similar in function to 
+ * setupMouseEvents. */
+function setupTouchEvents(gameState)
+{
+}
+
+/*************/
 /* GameState */
 /*************/
 
@@ -27,6 +74,22 @@ function GameState(div)
     this.renderer = null;
     // ...
     this.screen = new PlayScreen();
+    // Callback function for passing to renderAnimationFrame
+    this.staticRenderFrame = function(gameState) {
+	return function() {
+	    gameState.renderFrame();
+	}
+    }(this);
+    // Setup mouse and touch handlers, attaching events to this instance
+    setupMouseEvents(this);
+    setupTouchEvents(this);
+    this.handleResize();
+}
+
+/* Schedule a redraw of the game screen */
+GameState.prototype.redraw = function()
+{
+    requestAnimationFrame(this.staticRenderFrame);
 }
 
 /* Returns the bounding (client) rectangle of the game rendering area */
@@ -58,7 +121,7 @@ GameState.prototype.handleResize = function()
     if (this.screen) {
 	this.screen.handleResize();
     }
-    redraw();
+    this.redraw();
 }
 
 /* Various mouse/touch event handlers. The coordinates are given relative to
