@@ -90,7 +90,6 @@ function loadSceneImages(dataList)
 
 	var scene = Scene.fromData(dataList["road"]);
 	gameState.screen.setScene(scene);
-
 	gameState.redraw();
     });
 

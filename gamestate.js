@@ -16,53 +16,6 @@
  */
 
 /*************/
-/* Functions */
-/*************/
-
-/* Attach handlers for mouse-related events. The events (mouseup/down/move) 
- * are first transformed into something more convenient before being forwarded
- * to the game state instance. */
-function setupMouseEvents(gameState)
-{
-    var dragStartX = 0;
-    var dragStartY = 0;
-    var pressing = false;
-
-    window.addEventListener("mousemove", function(event) {
-	if (pressing) {
-	    gameState.handleDrag(
-		event.clientX-dragStartX, 
-		event.clientY-dragStartY);
-	}
-    });
-
-    window.addEventListener("mousedown", function(event) {
-	pressing = true;
-	dragStartX = event.clientX;
-	dragStartY = event.clientY;
-	gameState.handleDragStart(event.clientX, event.clientY);
-    });
-
-    window.addEventListener("mouseup", function(event) {
-	var rect = gameState.getBoundingClientRect();
-	var x = event.clientX - rect.left;
-	var y = event.clientY - rect.top;
-	if (event.clientX === dragStartX && event.clientY === dragStartY) {
-	    gameState.handleClick(x, y);
-	} else {
-	    gameState.handleDragStop(x, y);
-	}
-	pressing = false;
-    });
-}
-
-/* Attach handlers to touch-related events. This is similar in function to 
- * setupMouseEvents. */
-function setupTouchEvents(gameState)
-{
-}
-
-/*************/
 /* GameState */
 /*************/
 
@@ -75,15 +28,44 @@ function GameState(div)
     // ...
     this.screen = new PlayScreen();
     // Callback function for passing to renderAnimationFrame
-    this.staticRenderFrame = function(gameState) {
-	return function() {
-	    gameState.renderFrame();
-	}
-    }(this);
-    // Setup mouse and touch handlers, attaching events to this instance
-    setupMouseEvents(this);
-    setupTouchEvents(this);
+    var gameState = this;
+    this.staticRenderFrame = function() {
+	gameState.renderFrame();
+    };
+
+    // Setup mouse and/or touch handlers
+    var m = new MouseAdapter(window, this.div);
+    this.setupInputHandlers(m);
+
     this.handleResize();
+}
+
+GameState.prototype.setupInputHandlers = function(m)
+{
+    var gameState = this;
+    m.onClick(function(x, y) {
+	if (gameState.screen && gameState.screen.handleClick) {
+	    gameState.screen.handleClick(x, y);
+	}
+    });
+
+    m.onDragStart(function(x, y) {
+	if (gameState.screen && gameState.screen.handleDragStart) {
+	    gameState.screen.handleDragStart(x, y);
+	}
+    });
+
+    m.onDrag(function(x, y) {
+	if (gameState.screen && gameState.screen.handleDrag) {
+	    gameState.screen.handleDrag(x, y);
+	}
+    });
+
+    m.onDragStop(function(x, y) {
+	if (gameState.screen && gameState.screen.handleDragStop) {
+	    gameState.screen.handleDragStop(x, y);
+	}
+    });
 }
 
 /* Schedule a redraw of the game screen */

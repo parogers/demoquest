@@ -270,14 +270,18 @@ PlayScreen.prototype.handleResize = function()
 
 PlayScreen.prototype.handleClick = function(x, y)
 {
-    var xp = x/this.displayScale;
-    var yp = y/this.displayScale;
-    var args = this.scene.checkHit(xp, yp);
-    console.log(args);
+    if (this.scene) {
+	var xp = x/this.displayScale;
+	var yp = y/this.displayScale;
+	var args = this.scene.checkHit(xp, yp);
+	console.log(args);
+    }
 }
 
 PlayScreen.prototype.handleDragStart = function(x, y)
 {
+    if (!this.scene) return;
+
     //var args = this.checkHit(x, y);
     if (false) { //args.thing) {
 	// Dragging an object
@@ -293,13 +297,15 @@ PlayScreen.prototype.handleDragStart = function(x, y)
     }
 }
 
-PlayScreen.prototype.handleDragDone = function(x, y)
+PlayScreen.prototype.handleDragStop = function(x, y)
 {
     this.dragging = null;
 }
 
 PlayScreen.prototype.handleDrag = function(dx, dy)
 {
+    if (!this.scene) return;
+
     if (this.dragging) {
 	// Dragging a thing
 	var thing = this.scene.getThing(
