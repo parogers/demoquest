@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var SCENES = ["road", "intro"];
 var gameState = null;
 
 function onload()
@@ -35,7 +36,10 @@ function onload()
 
     // Load all the scene meta data here, then the scene images below
     var ldr = new Loader.SceneDataLoader();
-    ldr.add("media/scenes/road/scene.json");
+
+    for (var scene of SCENES) {
+	ldr.add("media/scenes/" + scene + "/scene.json");
+    }
     ldr.ondone(function(scenes) {
 	console.log("DONE loading scene metadata");
 	loadSceneImages(scenes);

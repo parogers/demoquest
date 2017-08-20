@@ -47,13 +47,18 @@ function MouseAdapter(outside, src)
     var mouse = this;
 
     outside.addEventListener("mousemove", function(event) {
+	if (!mouse.pressing) return;
+
 	// If the mouse just started moving, issue a drag start event
 	if (mouse.movements === 0 && mouse.onDragStartHandler) {
-	    mouse.onDragStartHandler(event.clientX, event.clientY);
+	    var rect = src.getBoundingClientRect();
+	    var x = event.clientX - rect.left;
+	    var y = event.clientY - rect.top;
+	    mouse.onDragStartHandler(x, y);
 	}
 	mouse.movements++;
 
-	if (mouse.pressing && mouse.onDragHandler) {
+	if (mouse.onDragHandler) {
 	    // The drag coordinates are always given relative to where the
 	    // user starting dragging.
 	    mouse.onDragHandler(

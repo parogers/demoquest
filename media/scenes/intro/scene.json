@@ -1,0 +1,35 @@
+{
+    "name": "Cabin",
+    "keyname": "intro",
+    "description": "Your cabin",
+    "layers": [
+        {
+            "name": "sunset",
+            "background": "layer1.png",
+            "things": []
+        },
+        {
+            "name": "terrain",
+            "background": "layer2.png",
+            "things": []
+        },
+        {
+            "name": "wall",
+            "background": "layer3.png",
+            "things": [
+                {
+                    "name": "candle",
+                    "src": "layer3-1.png",
+                    "x": 23,
+                    "y": 18
+                },
+                {
+                    "name": "cupboard",
+                    "src": "layer3-1.png",
+                    "x": 57,
+                    "y": 2
+                }
+            ]
+        }
+    ]
+}

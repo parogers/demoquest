@@ -105,12 +105,13 @@ Scene.prototype.checkHit = function(x, y)
 {
     // Search through the stage layers in reverse order, so we start with
     // the "front most" layer and proceed to the ones behind.
-    var offset = x - this.getBaseSize().width/2;
+    var xoffset = x - this.getBaseSize().width/2;
+    var yoffset = y - this.getBaseSize().height/2;
     var reversed = Array.slice(this.layers).reverse();
     for (var layer of reversed)
     {
-	var xp = offset - layer.container.x + layer.getWidth()/2;
-	var yp = y;
+	var xp = xoffset - layer.container.x; // + layer.getWidth()/2;
+	var yp = yoffset;
 
 	// First check if they clicked on a thing in the layer
 	var thing = layer.checkHitThing(xp, yp);
@@ -124,6 +125,17 @@ Scene.prototype.checkHit = function(x, y)
 	}
     }
     return {layer: null, thing: null};
+}
+
+Scene.prototype.getThing = function(layerName, thingName)
+{
+    console.log(layerName + ", " + thingName);
+    for (var layer of this.layers) {
+	if (layer.name === layerName) {
+	    return layer.sprites[thingName];
+	}
+    }
+    return null;
 }
 
 /*************/
@@ -188,8 +200,10 @@ function Layer(name, texture)
     this.sprite = new PIXI.Sprite(texture);
     this.sprite.anchor.set(0.5, 0.5);
     this.container.addChild(this.sprite);
-    // The thing sprites rendered in this scene
+    // The list of sprites rendered in this scene (stored by name)
     this.sprites = {};
+    // The transparency masks for the rendered sprites
+    this.masks = {};
 }
 
 Layer.prototype.getWidth = function()
@@ -205,8 +219,8 @@ Layer.prototype.getHeight = function()
 /* Check if the given point refers to an opaque pixel of this layer */
 Layer.prototype.checkHit = function(x, y)
 {
-    var xp = x|0;
-    var yp = y|0;
+    var xp = (x + this.getWidth()/2)|0;
+    var yp = (y + this.getHeight()/2)|0;
     if (xp >= 0 && yp >= 0 && xp < this.mask.length && yp < this.mask[0].length)
     {
 	return (this.mask[xp][yp] === 255);
@@ -218,12 +232,27 @@ Layer.prototype.checkHit = function(x, y)
  * instance in this layer. If so, this returns the thing. */
 Layer.prototype.checkHitThing = function(x, y)
 {
+    for (var name in this.sprites) {
+	var sprite = this.sprites[name];
+	if (x >= sprite.x && 
+	    y >= sprite.y && 
+	    x < sprite.x + sprite.width && 
+	    y < sprite.y + sprite.height)
+	{
+	    var xp = (x-sprite.x)|0;
+	    var yp = (y-sprite.y)|0;
+	    if (this.masks && this.masks[name][xp][yp] === 255) 
+		return name;
+	}
+    }
+    return null;
 }
 
 Layer.prototype.addThing = function(name, sprite)
 {
     // TODO - check for duplicates
     this.sprites[name] = sprite;
+    this.masks[name] = getTransparencyMask(gameState.renderer, sprite.texture);
     this.container.addChild(sprite);
 }
 
@@ -282,14 +311,18 @@ PlayScreen.prototype.handleDragStart = function(x, y)
 {
     if (!this.scene) return;
 
-    //var args = this.checkHit(x, y);
+    var xp = x/this.displayScale;
+    var yp = y/this.displayScale;
+    var args = this.scene.checkHit(xp, yp);
     if (false) { //args.thing) {
 	// Dragging an object
-	var thing = this.scene.getThing(args.layer, args.thing);
-	var rect = thing.getBoundingClientRect();
+	this.dragging = this.scene.getThing(args.layer, args.thing);
+	this.dragStartX = this.dragging.x;
+	this.dragStartY = this.dragging.y;
+	/*var rect = thing.getBoundingClientRect();
 	this.dragging = args;
 	this.dragStartX = parseInt(thing.style.left);
-	this.dragStartY = parseInt(thing.style.top);
+	this.dragStartY = parseInt(thing.style.top);*/
     } else {
 	// Panning the scene
 	this.dragging = null;
@@ -308,14 +341,13 @@ PlayScreen.prototype.handleDrag = function(dx, dy)
 
     if (this.dragging) {
 	// Dragging a thing
-	var thing = this.scene.getThing(
-	    this.dragging.layer, this.dragging.thing);
-	thing.style.left = this.dragStartX + dx;
-	thing.style.top = this.dragStartY + dy;
+	this.dragging.x = this.dragStartX + dx/this.displayScale;
+	this.dragging.y = this.dragStartY + dy/this.displayScale;
+	gameState.redraw();
 
     } else {
 	// Panning the scene around
-	var pos = this.dragStartX + dx / (window.innerWidth/4);
+	var pos = this.dragStartX - dx / (window.innerWidth/4);
 	pos = Math.max(Math.min(pos, 1), -1);
 	this.scene.setCameraPos(pos);
 	gameState.redraw();
