@@ -48,7 +48,7 @@ function onload()
 	console.log("Error loading scene: " + src);
     });
     ldr.onload(function(scn, src) {
-	console.log("Loaded scene: " + scn.keyname);
+	console.log("Loaded scene: " + scn.name);
     });
 
 /*
@@ -84,15 +84,16 @@ function onload()
 function loadSceneImages(dataList)
 {
     var now = (new Date()).getTime();
-    Object.values(dataList).forEach(function(data) {
-	PIXI.loader.add(data.spritesPath);
-    });
-    //PIXI.loader.on("progress", progresscb);
     PIXI.loader.defaultQueryString = "nocache=" + now;
+    for (var name in dataList) {
+	PIXI.loader.add(dataList[name].spritesPath);
+    };
+    //PIXI.loader.on("progress", progresscb);
     PIXI.loader.load(function() {
 	console.log("DONE loading scene images");
 
-	var scene = Scene.fromData(dataList["road"]);
+	var scene = Scene.fromData(dataList["intro"]);
+	scene.setCameraPos(-1);
 	gameState.screen.setScene(scene);
 	gameState.redraw();
     });
@@ -134,8 +135,6 @@ function loadSceneImages(dataList)
  * main loop which starts the game. */
 function setup(scenes)
 {
-    console.log("Done loading scene images");
-
 /*    Loader.loadImages([
 	"key.png"
     ]).onload(function(img) {

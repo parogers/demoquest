@@ -25,6 +25,7 @@ function GameState(div)
     // The screen currently displayed
     this.screen = null;
     this.renderer = null;
+    this.logic = new Logic();
     // ...
     this.screen = new PlayScreen();
     // Callback function for passing to renderAnimationFrame
@@ -95,7 +96,12 @@ GameState.prototype.handleResize = function()
 
     var pad = 10;
     var renderSize = Math.min(window.innerWidth-pad, window.innerHeight-pad);
-    this.renderer = PIXI.autoDetectRenderer(renderSize, renderSize);
+    this.renderer = PIXI.autoDetectRenderer({
+	width: renderSize, 
+	height: renderSize,
+	// Required to prevent flickering in Chrome on Android (others too?)
+	preserveDrawingBuffer: true
+    });
     this.div.appendChild(this.renderer.view);
     this.div.style.width = this.renderer.width;
     this.div.style.height = this.renderer.height;

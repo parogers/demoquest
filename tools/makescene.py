@@ -63,6 +63,10 @@ def build_scene(src, dest):
     scene_info = extract_level_info(src)
     scene_info["layers"] = []
 
+    # Load the scene logic file
+    #logic = open(os.path.splitext(src)[0] + ".js", "r").read()
+    #scene_info["logic"] = logic.replace("\n", " ")
+
     img_list = []
     img_names = []
     current = None
@@ -72,11 +76,11 @@ def build_scene(src, dest):
     for layer in reversed(layers):
         if (layer.name.startswith(">")):
             # Object belonging to the current layer
-            fname = "layer%d-%d.png" % (layer_num, object_num)
-            layer_info["things"].append(
+            #fname = "layer%d-%d.png" % (layer_num, object_num)
+            layer_info["sprites"].append(
                 OrderedDict((
                     ("name", layer.name[1:]),
-                    ("src", fname),
+                    #("src", fname),
                     ("x", layer.x),
                     ("y", layer.y)
                 ))
@@ -84,13 +88,13 @@ def build_scene(src, dest):
             img_names.append(layer.name[1:])
         else:
             layer_num += 1
-            fname = "layer%d.png" % layer_num
+            #fname = "layer%d.png" % layer_num
             object_num = 1
             current = layer
             layer_info = OrderedDict((
                 ("name", layer.name),
-                ("background", fname),
-                ("things", []),
+                #("background", fname),
+                ("sprites", []),
             ))
             scene_info["layers"].append(layer_info)
             img_names.append(layer.name)

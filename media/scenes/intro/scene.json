@@ -1,32 +1,42 @@
 {
-    "name": "Cabin",
-    "keyname": "intro",
+    "title": "Cabin",
+    "name": "intro",
     "description": "Your cabin",
     "layers": [
         {
             "name": "sunset",
-            "background": "layer1.png",
-            "things": []
+            "sprites": []
         },
         {
             "name": "terrain",
-            "background": "layer2.png",
-            "things": []
+            "sprites": []
         },
         {
             "name": "wall",
-            "background": "layer3.png",
-            "things": [
+            "sprites": [
                 {
                     "name": "candle",
-                    "src": "layer3-1.png",
                     "x": 23,
                     "y": 18
                 },
                 {
-                    "name": "cupboard",
-                    "src": "layer3-1.png",
+                    "name": "door_closed",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "door_open",
+                    "x": 98,
+                    "y": 5
+                },
+                {
+                    "name": "cupboard_closed",
                     "x": 57,
+                    "y": 2
+                },
+                {
+                    "name": "cupboard_open",
+                    "x": 44,
                     "y": 2
                 }
             ]

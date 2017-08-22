@@ -132,7 +132,7 @@ Loader = function()
     {
 	var scenes = {};
 	for (var scn of this.loaded) {
-	    scenes[scn.keyname] = scn;
+	    scenes[scn.name] = scn;
 	}
 	if (this._ondone) this._ondone(scenes);
     }

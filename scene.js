@@ -26,6 +26,11 @@ function Scene()
     this.container = new PIXI.Container();
     this.sceneData = null;
     this.cameraX = 0;
+    this.name = null;
+    // List of things in this scene, stored by name (eg cupboard)
+    this.things = {};
+    // The same list of things, but stored by sprite name (eg cupboard_open)
+    this.thingsBySpriteName = {};
 }
 
 /* Builds a new scene given the SceneData instance. This function builds
@@ -33,6 +38,7 @@ function Scene()
 Scene.fromData = function(sceneData)
 {
     var scn = new Scene();
+    scn.name = sceneData.name;
     scn.sceneData = sceneData;
     // Build the layers and contained sprites
     for (var layerData of sceneData.layers) 
@@ -40,13 +46,28 @@ Scene.fromData = function(sceneData)
 	var texture = scn.getTexture(layerData.name);
 	var layer = new Layer(layerData.name, texture);
 	scn.addLayer(layer);
-	for (var thingData of layerData["things"]) {
-	    var texture = scn.getTexture(thingData["name"]);
-	    var thing = new PIXI.Sprite(texture);
-	    thing.anchor.set(0, 0);
-	    thing.x = thingData["x"] - layer.sprite.texture.width/2;
-	    thing.y = thingData["y"] - layer.sprite.texture.height/2;
-	    layer.addThing(thingData["name"], thing);
+	for (var spriteData of layerData["sprites"]) {
+	    var texture = scn.getTexture(spriteData["name"]);
+	    var sprite = new PIXI.Sprite(texture);
+	    sprite.name = spriteData["name"];
+	    sprite.anchor.set(0, 0);
+	    sprite.x = spriteData["x"] - layer.getWidth()/2;
+	    sprite.y = spriteData["y"] - layer.getHeight()/2;
+	    layer.addSprite(sprite);
+
+	    var n = sprite.name.indexOf("_");
+	    var thingName = sprite.name;
+	    var stateName = "";
+	    if (n !== -1) {
+		thingName = sprite.name.substr(0, n);
+		stateName = sprite.name.substr(n+1);
+	    }
+	    var thing = scn.things[thingName];
+	    if (!thing) {
+		thing = scn.things[thingName] = new Thing(thingName);
+	    }
+	    thing.sprites[stateName] = sprite;
+	    scn.thingsBySpriteName[sprite.name] = thing;
 	}
     }
     return scn;
@@ -65,6 +86,7 @@ Scene.prototype.getBaseSize = function()
 
 Scene.prototype.addLayer = function(layer)
 {
+    layer.scene = this;
     this.layers.push(layer);
     this.container.addChild(layer.container);
 }
@@ -107,35 +129,45 @@ Scene.prototype.checkHit = function(x, y)
     // the "front most" layer and proceed to the ones behind.
     var xoffset = x - this.getBaseSize().width/2;
     var yoffset = y - this.getBaseSize().height/2;
-    var reversed = Array.slice(this.layers).reverse();
+    var reversed = this.layers.slice().reverse();
     for (var layer of reversed)
     {
-	var xp = xoffset - layer.container.x; // + layer.getWidth()/2;
+	var xp = xoffset - layer.container.x;
 	var yp = yoffset;
 
 	// First check if they clicked on a thing in the layer
-	var thing = layer.checkHitThing(xp, yp);
-	if (thing) {
-	    return {layer: layer.name, thing: thing};
+	var sprite = layer.checkHitSprite(xp, yp);
+	if (sprite) {
+	    var thing = this.thingsBySpriteName[sprite.name];
+	    return {
+		scene: this, 
+		layer: layer, 
+		sprite: sprite, 
+		thing: thing
+	    };
 	}
 
 	// Now check if they clicked on this layer itself
 	if (layer.checkHit(xp, yp)) {
-	    return {layer: layer.name, thing: null};
+	    return {scene: this, layer: layer, sprite: null, thing: null};
 	}
     }
-    return {layer: null, thing: null};
+    return {scene: this, layer: null, sprite: null, thing: null};
 }
 
-Scene.prototype.getThing = function(layerName, thingName)
+Scene.prototype.getLayer = function(name)
 {
-    console.log(layerName + ", " + thingName);
     for (var layer of this.layers) {
-	if (layer.name === layerName) {
-	    return layer.sprites[thingName];
+	if (layer.name === name) {
+	    return layer;
 	}
     }
     return null;
+}
+
+Scene.prototype.getThing = function(name)
+{
+    return this.things[name];
 }
 
 /*************/
@@ -146,12 +178,16 @@ function SceneData(scenePath)
 {
     // Descriptive scene name
     this.name = null;
+    // Logic for this scene (handles player interactions and gameplay logic)
+    this.logic = null;
     // Relative path to the scene directory (ends with '/')
     this.scenePath = scenePath;
     this.spritesFile = "sprites.json";
     this.spritesPath = scenePath + this.spritesFile;
-    // The scene keyname should be unique game-wide
-    this.keyname = null;
+    // The scene name should be unique game-wide
+    this.name = null;
+    // The descriptive scene name
+    this.title = null;
     // The layers that makeup the scene (Layer instances)
     this.layers = [];
     // The camera position (-1 to 1)
@@ -165,7 +201,7 @@ SceneData.fromJSON = function(src, raw)
     var scn = new SceneData(src.substring(0, i+1));
     var data = JSON.parse(raw);
     scn.name = data["name"];
-    scn.keyname = data["keyname"];
+    scn.title = data["title"];
     scn.description = data["description"];
     // Build the layers
     /*for (var layerData of data["layers"]) {
@@ -176,6 +212,13 @@ SceneData.fromJSON = function(src, raw)
 	}
 	scn.layers.push(layer);
     }*/
+    /*
+    try {
+	scn.logic = eval(data["logic"]);
+    } catch(e) {
+	console.log("ERROR parsing scene logic for " + scn.name + ": " + e);
+    }
+    */
     scn.layers = data["layers"];
     scn.rawJSON = raw;
     return scn;
@@ -189,6 +232,7 @@ SceneData.fromJSON = function(src, raw)
  * collection of things. */
 function Layer(name, texture)
 {
+    this.scene = null;
     // The layer name (unique to the scene)
     this.name = name;
     // The transparency mask for the image. Useful for determining whether
@@ -197,9 +241,9 @@ function Layer(name, texture)
     // The container holding the background image, and all thing sprites 
     // on this layer.
     this.container = new PIXI.Container();
-    this.sprite = new PIXI.Sprite(texture);
-    this.sprite.anchor.set(0.5, 0.5);
-    this.container.addChild(this.sprite);
+    this.background = new PIXI.Sprite(texture);
+    this.background.anchor.set(0.5, 0.5);
+    this.container.addChild(this.background);
     // The list of sprites rendered in this scene (stored by name)
     this.sprites = {};
     // The transparency masks for the rendered sprites
@@ -208,12 +252,12 @@ function Layer(name, texture)
 
 Layer.prototype.getWidth = function()
 {
-    return this.sprite.texture.width;
+    return this.background.texture.width;
 }
 
 Layer.prototype.getHeight = function()
 {
-    return this.sprite.texture.height;
+    return this.background.texture.height;
 }
 
 /* Check if the given point refers to an opaque pixel of this layer */
@@ -228,13 +272,14 @@ Layer.prototype.checkHit = function(x, y)
     return false;
 }
 
-/* Similar to checkHit, but checks if the given point connects with a thing
- * instance in this layer. If so, this returns the thing. */
-Layer.prototype.checkHitThing = function(x, y)
+/* Similar to checkHit, but checks if the given point connects with a sprite
+ * instance in this layer. If so, this returns the sprite. */
+Layer.prototype.checkHitSprite = function(x, y)
 {
     for (var name in this.sprites) {
 	var sprite = this.sprites[name];
-	if (x >= sprite.x && 
+	if (sprite.visible && 
+	    x >= sprite.x && 
 	    y >= sprite.y && 
 	    x < sprite.x + sprite.width && 
 	    y < sprite.y + sprite.height)
@@ -242,17 +287,19 @@ Layer.prototype.checkHitThing = function(x, y)
 	    var xp = (x-sprite.x)|0;
 	    var yp = (y-sprite.y)|0;
 	    if (this.masks && this.masks[name][xp][yp] === 255) 
-		return name;
+		return sprite;
 	}
     }
     return null;
 }
 
-Layer.prototype.addThing = function(name, sprite)
+Layer.prototype.addSprite = function(sprite)
 {
     // TODO - check for duplicates
-    this.sprites[name] = sprite;
-    this.masks[name] = getTransparencyMask(gameState.renderer, sprite.texture);
+    this.sprites[sprite.name] = sprite;
+    this.masks[sprite.name] = getTransparencyMask(
+	gameState.renderer, 
+	sprite.texture);
     this.container.addChild(sprite);
 }
 
@@ -282,6 +329,7 @@ PlayScreen.prototype.setScene = function(scn)
     this.stage.children = [];
     this.stage.addChild(scn.container);
     this.handleResize();
+    gameState.logic.initScene(scn);
 }
 
 /* Called when the game window is resized. This scales the scene to fit the 
@@ -303,7 +351,10 @@ PlayScreen.prototype.handleClick = function(x, y)
 	var xp = x/this.displayScale;
 	var yp = y/this.displayScale;
 	var args = this.scene.checkHit(xp, yp);
-	console.log(args);
+	if (args.thing) {
+	    gameState.logic.handleThingClicked(args);
+	    gameState.redraw();
+	}
     }
 }
 
@@ -352,4 +403,33 @@ PlayScreen.prototype.handleDrag = function(dx, dy)
 	this.scene.setCameraPos(pos);
 	gameState.redraw();
     }
+}
+
+/*********/
+/* Thing */
+/*********/
+
+/* A thing is a collection of sprites, each sprite representing a different
+ * visual state. For example, a bird would be represented by certain sprites
+ * such as the bird in flight, the bird sitting on a branch, etc. */
+function Thing(name)
+{
+    // Sprites associated with this thing, stored by "state" name
+    this.sprites = {};
+    this.state = "";
+    this.name = name;
+}
+
+/* Sets the current "state" of this thing. It sets as visible the sprite 
+ * called thingName + "_" + state, and sets all others as invisible. */
+Thing.prototype.setState = function(state)
+{
+    if (!this.sprites[state]) {
+	throw Error("invalid thing state: " + state);
+    }
+    for (var spriteName in this.sprites) {
+	this.sprites[spriteName].visible = false;
+    }
+    this.sprites[state].visible = true;
+    this.state = state;
 }
