@@ -36,13 +36,12 @@ function GameState(div)
     this.dataList = {};
 
     // Callback function for passing to renderAnimationFrame
-    var gameState = this;
-    this.staticRenderFrame = function() {
-	gameState.renderFrame();
-    };
-    window.addEventListener("resize", function() {
-	gameState.handleResize();
-    });
+    this.staticRenderFrame = (function() {
+	this.renderFrame();
+    }).bind(this);
+    window.addEventListener("resize", (function() {
+	this.handleResize();
+    }).bind(this));
     // Call our resize handler to setup the render area at the correct size
     this.handleResize();
 
@@ -50,11 +49,10 @@ function GameState(div)
     var m = new MouseAdapter(this.div);
     this.setupInputHandlers(m);
 
-    var self = this;
     this.screen = new LoadingScreen();
-    this.screen.onDone(function() {
-	self._startGame();
-    });
+    this.screen.onDone((function() {
+	this._startGame();
+    }).bind(this));
     this.screen.start();
 }
 
@@ -62,27 +60,26 @@ function GameState(div)
  * should be passed in here. (eg MouseAdapter) */
 GameState.prototype.setupInputHandlers = function(m)
 {
-    var gs = this;
-    m.onClick(function(x, y) {
-	if (gs.screen && gs.screen.handleClick) {
-	    gs.screen.handleClick(x, y);
+    m.onClick((function(x, y) {
+	if (this.screen && this.screen.handleClick) {
+	    this.screen.handleClick(x, y);
 	}
-    });
-    m.onDragStart(function(x, y) {
-	if (gs.screen && gs.screen.handleDragStart) {
-	    gs.screen.handleDragStart(x, y);
+    }).bind(this));
+    m.onDragStart((function(x, y) {
+	if (this.screen && this.screen.handleDragStart) {
+	    this.screen.handleDragStart(x, y);
 	}
-    });
-    m.onDrag(function(x, y) {
-	if (gs.screen && gs.screen.handleDrag) {
-	    gs.screen.handleDrag(x, y);
+    }).bind(this));
+    m.onDrag((function(x, y) {
+	if (this.screen && this.screen.handleDrag) {
+	    this.screen.handleDrag(x, y);
 	}
-    });
-    m.onDragStop(function(x, y) {
-	if (gs.screen && gs.screen.handleDragStop) {
-	    gs.screen.handleDragStop(x, y);
+    }).bind(this));
+    m.onDragStop((function(x, y) {
+	if (this.screen && this.screen.handleDragStop) {
+	    this.screen.handleDragStop(x, y);
 	}
-    });
+    }).bind(this));
 }
 
 /* Schedule a redraw of the game screen */
@@ -138,16 +135,23 @@ GameState.prototype._startGame = function()
     this.screen = new PlayScreen(this.logic, this.dataList);
 
     // Attach to various events exposed by the PlayScreen
-    var self = this;
-    this.screen.onGameOver(function() {
-	// 
-    });
-    this.screen.onComplete(function() {
-	// 
-    });
-    this.screen.onRedraw(function() {
-	self.redraw();
-    });
+    this.screen.onGameOver((
+	function() {
+	    // 
+	}
+    ).bind(this));
+
+    this.screen.onComplete((
+	function() {
+	    // 
+	}
+    ).bind(this));
+
+    this.screen.onRedraw((
+	function() {
+	    this.redraw();
+	}
+    ).bind(this));
 
     // Now change to the opening scene
     this.screen.setScene("intro");

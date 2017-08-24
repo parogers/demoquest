@@ -107,23 +107,24 @@ SceneDataLoader.prototype.add = function(src, arg)
     var srcPath = src + "?time=" + (new Date()).getTime();
     req.open("GET", srcPath, true);
 
-    req.onerror = function(ldr) {
-	return function() {
-	    ldr.handleError(src);
+    req.onerror = (
+	function() {
+	    this.handleError(src);
 	}
-    }(this);
+    ).bind(this);
 
-    req.onreadystatechange = function(ldr) {
-	return function() {
+    req.onreadystatechange = (
+	function() {
 	    if (req.readyState == 4 && req.status == "200") {
 		// Parse the JSON and extract the scene info
 		// TODO - handle exceptions here
 		scn = SceneData.fromJSON(src, req.responseText);
 		scn.src = src;
-		ldr.handleLoaded(scn, src, arg);
+		this.handleLoaded(scn, src, arg);
 	    }
-	};
-    }(this);
+	}
+    ).bind(this);
+
     req.send(null);
 }
 
@@ -155,19 +156,26 @@ LoadingScreen.prototype._loadSceneData = function()
 {
     // Load all the scene meta data here, then the scene images below
     var ldr = new SceneDataLoader();
-    var screen = this;
     for (var scene of SCENES) {
 	ldr.add("media/scenes/" + scene + "/scene.json");
     }
-    ldr.ondone(function(dataList) {
-	screen._loadSceneImages(dataList);
-    });
-    ldr.onerror(function(src) {
-	console.log("Error loading scene: " + src);
-    });
-    ldr.onload(function(scn, src) {
-	console.log("Loaded scene: " + scn.name);
-    });
+    ldr.ondone((
+	function(dataList) {
+	    this._loadSceneImages(dataList);
+	}
+    ).bind(this));
+
+    ldr.onerror((
+	function(src) {
+	    console.log("Error loading scene: " + src);
+	}
+    ).bind(this));
+
+    ldr.onload((
+	function(scn, src) {
+	    console.log("Loaded scene: " + scn.name);
+	}
+    ).bind(this));
     console.log("Loading scene meta data");
 }
 
@@ -184,9 +192,8 @@ LoadingScreen.prototype._loadSceneImages = function(dataList)
     };
     //PIXI.loader.on("progress", progresscb);
 
-    var self = this;
-    PIXI.loader.load(function() {
+    PIXI.loader.load((function() {
 	console.log("DONE loading scene images");
-	self.eventManager.dispatch("done");
-    });
+	this.eventManager.dispatch("done");
+    }).bind(this));
 }

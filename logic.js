@@ -56,7 +56,7 @@ Logic.prototype.handleDragStop = function(target)
 
 function IntroLogic(logic)
 {
-    this.logic = this;
+    this.logic = logic;
 
     this.initScene = function(scene) {
 	scene.getThing("door").setState("closed");
@@ -91,7 +91,7 @@ function IntroLogic(logic)
 
 function RoadLogic(logic)
 {
-    this.logic = this;
+    this.logic = logic;
 
     this.initScene = function(scene) {
     }
