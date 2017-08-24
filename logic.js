@@ -22,22 +22,53 @@
 function Logic()
 {
     // Scene specific logic stored by name
-    this.sceneLogic = {};
+    this.sceneLogic = {
+	"intro" : new IntroLogic(this),
+	"road" : new RoadLogic(this)
+    };
 }
 
 Logic.prototype.initScene = function(scene)
 {
-    scene.getThing("door").setState("closed");
-    scene.getThing("cupboard").setState("closed");
+    var logic = this.sceneLogic[scene.name];
+    if (logic && logic.initScene) logic.initScene(scene);
 }
 
-Logic.prototype.handleThingClicked = function(target)
+Logic.prototype.handleClicked = function(target)
 {
-    switch(target.scene.name) {
-    case "intro":
+    var logic = this.sceneLogic[target.scene.name];
+    if (logic && logic.handleClicked) logic.handleClicked(target);
+}
+
+Logic.prototype.handleDragStart = function(target)
+{
+}
+
+Logic.prototype.handleDrag = function(target)
+{
+}
+
+Logic.prototype.handleDragStop = function(target)
+{
+}
+
+/* *** */
+
+function IntroLogic(logic)
+{
+    this.logic = this;
+
+    this.initScene = function(scene) {
+	scene.getThing("door").setState("closed");
+	scene.getThing("cupboard").setState("closed");
+    }
+
+    this.handleClicked = function(target) {
 	switch(target.thing.name) {
 	case "candle":
 	    console.log("CANDLE");
+	    //target.thing.setVisible(false);
+	    //gameState.screen.setScene("road");
 	    break;
 
 	case "cupboard":
@@ -55,18 +86,17 @@ Logic.prototype.handleThingClicked = function(target)
 	    break;
 
 	}
-	break;
     }
 }
 
-Logic.prototype.handleDragStart = function(target)
+function RoadLogic(logic)
 {
+    this.logic = this;
+
+    this.initScene = function(scene) {
+    }
+
+    this.handleClicked = function(target) {
+    }
 }
 
-Logic.prototype.handleDrag = function(target)
-{
-}
-
-Logic.prototype.handleDragStop = function(target)
-{
-}

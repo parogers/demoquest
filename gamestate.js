@@ -21,50 +21,66 @@
 
 function GameState(div)
 {
+    // Set pixel scaling to be "nearest neighbour" which makes textures 
+    // render nice and blocky.
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+    // Disable the ticker sinc we don't use it (rendering happens as needed)
+    PIXI.ticker.shared.autoStart = false;
+    PIXI.ticker.shared.stop();
+
     this.div = div;
     // The screen currently displayed
     this.screen = null;
     this.renderer = null;
     this.logic = new Logic();
-    // ...
-    this.screen = new PlayScreen();
+    this.dataList = {};
+
     // Callback function for passing to renderAnimationFrame
     var gameState = this;
     this.staticRenderFrame = function() {
 	gameState.renderFrame();
     };
+    window.addEventListener("resize", function() {
+	gameState.handleResize();
+    });
+    // Call our resize handler to setup the render area at the correct size
+    this.handleResize();
 
     // Setup mouse and/or touch handlers
-    var m = new MouseAdapter(window, this.div);
+    var m = new MouseAdapter(this.div);
     this.setupInputHandlers(m);
 
-    this.handleResize();
+    var self = this;
+    this.screen = new LoadingScreen();
+    this.screen.onDone(function() {
+	self._startGame();
+    });
+    this.screen.start();
 }
 
+/* Attach the player events to the various input handlers. An event adapter
+ * should be passed in here. (eg MouseAdapter) */
 GameState.prototype.setupInputHandlers = function(m)
 {
-    var gameState = this;
+    var gs = this;
     m.onClick(function(x, y) {
-	if (gameState.screen && gameState.screen.handleClick) {
-	    gameState.screen.handleClick(x, y);
+	if (gs.screen && gs.screen.handleClick) {
+	    gs.screen.handleClick(x, y);
 	}
     });
-
     m.onDragStart(function(x, y) {
-	if (gameState.screen && gameState.screen.handleDragStart) {
-	    gameState.screen.handleDragStart(x, y);
+	if (gs.screen && gs.screen.handleDragStart) {
+	    gs.screen.handleDragStart(x, y);
 	}
     });
-
     m.onDrag(function(x, y) {
-	if (gameState.screen && gameState.screen.handleDrag) {
-	    gameState.screen.handleDrag(x, y);
+	if (gs.screen && gs.screen.handleDrag) {
+	    gs.screen.handleDrag(x, y);
 	}
     });
-
     m.onDragStop(function(x, y) {
-	if (gameState.screen && gameState.screen.handleDragStop) {
-	    gameState.screen.handleDragStop(x, y);
+	if (gs.screen && gs.screen.handleDragStop) {
+	    gs.screen.handleDragStop(x, y);
 	}
     });
 }
@@ -81,9 +97,13 @@ GameState.prototype.getBoundingClientRect = function()
     return this.renderer.view.getBoundingClientRect();
 }
 
+/* Renders the current screen. Should be called from requestAnimationFrame */
 GameState.prototype.renderFrame = function()
 {
     if (this.screen) {
+	if (!this.screen.stage) {
+	    throw Error("screen has no stage defined: " + this.screen.name);
+	}
 	this.renderer.render(this.screen.stage);
     }
 }
@@ -106,34 +126,29 @@ GameState.prototype.handleResize = function()
     this.div.style.width = this.renderer.width;
     this.div.style.height = this.renderer.height;
 
-    if (this.screen) {
+    if (this.screen && this.screen.handleResize) {
 	this.screen.handleResize();
     }
     this.redraw();
 }
 
-/* Various mouse/touch event handlers. The coordinates are given relative to
- * the render canvas. */
-GameState.prototype.handleClick = function(x, y)
+GameState.prototype._startGame = function()
 {
-    if (this.screen && this.screen.handleClick) 
-	this.screen.handleClick(x, y);
-}
+    this.dataList = this.screen.dataList;
+    this.screen = new PlayScreen(this.logic, this.dataList);
 
-GameState.prototype.handleDragStart = function(x, y)
-{
-    if (this.screen && this.screen.handleDragStart) 
-	this.screen.handleDragStart(x, y);
-}
+    // Attach to various events exposed by the PlayScreen
+    var self = this;
+    this.screen.onGameOver(function() {
+	// 
+    });
+    this.screen.onComplete(function() {
+	// 
+    });
+    this.screen.onRedraw(function() {
+	self.redraw();
+    });
 
-GameState.prototype.handleDrag = function(x, y)
-{
-    if (this.screen && this.screen.handleDrag) 
-	this.screen.handleDrag(x, y);
-}
-
-GameState.prototype.handleDragStop = function(x, y)
-{
-    if (this.screen && this.screen.handleDragStop) 
-	this.screen.handleDragStop(x, y);
+    // Now change to the opening scene
+    this.screen.setScene("intro");
 }

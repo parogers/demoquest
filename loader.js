@@ -15,159 +15,178 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-Loader = function() 
+/**********/
+/* Loader */
+/**********/
+
+function Loader()
 {
-    var exports = {};
+    // The list of resource paths (eg path to image) to load
+    this.queue = [];
+    // The list of loaded resources (eg the images themselves)
+    this.loaded = [];
+    this._onload = null;
+    this._onerror = null;
+    this._ondone = null;
+}
 
-    /**********/
-    /* Loader */
-    /**********/
+Loader.prototype.onload = function(handler)
+{
+    this._onload = handler;
+    return this;
+}
 
-    function Loader()
-    {
-	// The list of resource paths (eg path to image) to load
-	this.queue = [];
-	// The list of loaded resources (eg the images themselves)
-	this.loaded = [];
-	this._onload = null;
-	this._onerror = null;
-	this._ondone = null;
+Loader.prototype.onerror = function(handler)
+{
+    this._onerror = handler;
+    return this;
+}
+
+Loader.prototype.ondone = function(handler)
+{
+    this._ondone = handler;
+    return this;
+}
+
+Loader.prototype.handleError = function(src)
+{
+    if (this._onerror) this._onerror(src);    
+}
+
+Loader.prototype.handleDone = function()
+{
+    if (this._ondone) this._ondone(this.loaded);
+}
+
+Loader.prototype.handleLoaded = function(obj, src, arg)
+{
+    var i = this.queue.indexOf(src);
+    if (i === -1) {
+	console.log("ERROR: cannot dequeue " + src);
+	return;
     }
 
-    Loader.prototype.onload = function(handler)
-    {
-	this._onload = handler;
-	return this;
-    }
+    this.queue[i] = this.queue[this.queue.length-1];
+    this.queue.pop();
+    this.loaded.push(obj);
 
-    Loader.prototype.onerror = function(handler)
-    {
-	this._onerror = handler;
-	return this;
-    }
+    if (this._onload) this._onload(obj, arg);
 
-    Loader.prototype.ondone = function(handler)
-    {
-	this._ondone = handler;
-	return this;
+    if (this.queue.length === 0) {
+	this.handleDone();
     }
+}
 
-    Loader.prototype.handleError = function(src)
-    {
-	if (this._onerror) this._onerror(src);    
+/*******************/
+/* SceneDataLoader */
+/*******************/
+
+function SceneDataLoader()
+{
+    Loader.call(this);
+}
+SceneDataLoader.prototype = Object.create(Loader.prototype);
+
+SceneDataLoader.prototype.handleDone = function()
+{
+    var scenes = {};
+    for (var scn of this.loaded) {
+	scenes[scn.name] = scn;
     }
+    if (this._ondone) this._ondone(scenes);
+}
 
-    Loader.prototype.handleDone = function()
-    {
-	if (this._ondone) this._ondone(this.loaded);
-    }
+SceneDataLoader.prototype.add = function(src, arg)
+{
+    this.queue.push(src);
 
-    Loader.prototype.handleLoaded = function(obj, src, arg)
-    {
-	var i = this.queue.indexOf(src);
-	if (i === -1) {
-	    console.log("ERROR: cannot dequeue " + src);
-	    return;
+    var req = new XMLHttpRequest();
+    req.overrideMimeType("application/json");
+
+    // Add a timestamp to avoid caching this
+    var srcPath = src + "?time=" + (new Date()).getTime();
+    req.open("GET", srcPath, true);
+
+    req.onerror = function(ldr) {
+	return function() {
+	    ldr.handleError(src);
 	}
+    }(this);
 
-	this.queue[i] = this.queue[this.queue.length-1];
-	this.queue.pop();
-	this.loaded.push(obj);
-
-	if (this._onload) this._onload(obj, arg);
-
-	if (this.queue.length === 0) {
-	    this.handleDone();
-	}
-    }
-
-    /***************/
-    /* ImageLoader */
-    /***************/
-
-    function ImageLoader()
-    {
-	Loader.call(this);
-    }
-    ImageLoader.prototype = Object.create(Loader.prototype);
-
-    ImageLoader.prototype.add = function(src, arg)
-    {
-	var img = new Image();
-	img.onload = function(ldr) {
-	    return function() {
-		ldr.handleLoaded(img, src, arg);
+    req.onreadystatechange = function(ldr) {
+	return function() {
+	    if (req.readyState == 4 && req.status == "200") {
+		// Parse the JSON and extract the scene info
+		// TODO - handle exceptions here
+		scn = SceneData.fromJSON(src, req.responseText);
+		scn.src = src;
+		ldr.handleLoaded(scn, src, arg);
 	    }
-	}(this);
+	};
+    }(this);
+    req.send(null);
+}
 
-	img.onerror = function(ldr) {
-	    return function() {
-		ldr.handleError(src)
-	    }
-	}(this);
-	img.src = src;
-	this.queue.push(src);
+/*****************/
+/* LoadingScreen */
+/*****************/
+
+/* Loads various game resources while showing a loading screen/progress to
+ * the player. */
+function LoadingScreen()
+{
+    this.name = "LoadingScreen";
+    this.stage = new PIXI.Container();
+    this.started = false;
+
+    this.eventManager = new EventManager();
+    this.onDone = this.eventManager.hook("done");
+}
+
+LoadingScreen.prototype.start = function()
+{
+    if (!this.started) {
+	this.started = true;
+	this._loadSceneData();
     }
+}
 
-    function loadImages(srcList)
-    {
-	var ldr = new ImageLoader();
-	for (src of srcList) ldr.add(src);
-	return ldr;
+LoadingScreen.prototype._loadSceneData = function()
+{
+    // Load all the scene meta data here, then the scene images below
+    var ldr = new SceneDataLoader();
+    var screen = this;
+    for (var scene of SCENES) {
+	ldr.add("media/scenes/" + scene + "/scene.json");
     }
-    exports.ImageLoader = ImageLoader;
-    exports.loadImages = loadImages;
+    ldr.ondone(function(dataList) {
+	screen._loadSceneImages(dataList);
+    });
+    ldr.onerror(function(src) {
+	console.log("Error loading scene: " + src);
+    });
+    ldr.onload(function(scn, src) {
+	console.log("Loaded scene: " + scn.name);
+    });
+    console.log("Loading scene meta data");
+}
 
-    /*******************/
-    /* SceneDataLoader */
-    /*******************/
+/* Called when the basic scene data is loaded. This function loads the layer
+ * and thing textures for each scene. */
+LoadingScreen.prototype._loadSceneImages = function(dataList)
+{
+    this.dataList = dataList;
+    console.log("Loading scene images");
+    // Queue up the texture maps associated with the various scenes
+    PIXI.loader.defaultQueryString = "nocache=" + (new Date()).getTime();
+    for (var name in dataList) {
+	PIXI.loader.add(dataList[name].spritesPath);
+    };
+    //PIXI.loader.on("progress", progresscb);
 
-    function SceneDataLoader()
-    {
-	Loader.call(this);
-    }
-    SceneDataLoader.prototype = Object.create(Loader.prototype);
-
-    SceneDataLoader.prototype.handleDone = function()
-    {
-	var scenes = {};
-	for (var scn of this.loaded) {
-	    scenes[scn.name] = scn;
-	}
-	if (this._ondone) this._ondone(scenes);
-    }
-
-    SceneDataLoader.prototype.add = function(src, arg)
-    {
-	this.queue.push(src);
-
-	var req = new XMLHttpRequest();
-	req.overrideMimeType("application/json");
-
-	// Add a timestamp to avoid caching this
-	var srcPath = src + "?time=" + (new Date()).getTime();
-	req.open("GET", srcPath, true);
-
-	req.onerror = function(ldr) {
-	    return function() {
-		ldr.handleError(src);
-	    }
-	}(this);
-
-	req.onreadystatechange = function(ldr) {
-	    return function() {
-		if (req.readyState == 4 && req.status == "200") {
-		    // Parse the JSON and extract the scene info
-		    // TODO - handle exceptions here
-		    scn = SceneData.fromJSON(src, req.responseText);
-		    scn.src = src;
-		    ldr.handleLoaded(scn, src, arg);
-		}
-	    };
-	}(this);
-	req.send(null);
-    }
-    exports.SceneDataLoader = SceneDataLoader;
-
-    return exports;
-}();
+    var self = this;
+    PIXI.loader.load(function() {
+	console.log("DONE loading scene images");
+	self.eventManager.dispatch("done");
+    });
+}

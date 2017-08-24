@@ -55,10 +55,15 @@ Scene.fromData = function(sceneData)
 	    sprite.y = spriteData["y"] - layer.getHeight()/2;
 	    layer.addSprite(sprite);
 
+	    // If the sprite name is of the form "something_blah" then actually
+	    // it belongs to a thing named "something" and visually represents 
+	    // the state "blah". (eg bird_flying) Otherwise the entire sprite
+	    // name is assumed to be the thing name, in the default state.
 	    var n = sprite.name.indexOf("_");
 	    var thingName = sprite.name;
-	    var stateName = "";
+	    var stateName = "default";
 	    if (n !== -1) {
+		// Parse out the thing and state names
 		thingName = sprite.name.substr(0, n);
 		stateName = sprite.name.substr(n+1);
 	    }
@@ -178,8 +183,6 @@ function SceneData(scenePath)
 {
     // Descriptive scene name
     this.name = null;
-    // Logic for this scene (handles player interactions and gameplay logic)
-    this.logic = null;
     // Relative path to the scene directory (ends with '/')
     this.scenePath = scenePath;
     this.spritesFile = "sprites.json";
@@ -303,14 +306,59 @@ Layer.prototype.addSprite = function(sprite)
     this.container.addChild(sprite);
 }
 
+/*********/
+/* Thing */
+/*********/
+
+/* A thing is a collection of sprites, each sprite representing a different
+ * visual state. For example, a bird would be represented by certain sprites
+ * such as the bird in flight, the bird sitting on a branch, etc. */
+function Thing(name)
+{
+    // Sprites associated with this thing, stored by "state" name
+    this.sprites = {};
+    this.state = "";
+    this.name = name;
+}
+
+/* Sets the current "state" of this thing. It sets as visible the sprite 
+ * called thingName + "_" + state, and sets all others as invisible. */
+Thing.prototype.setState = function(state)
+{
+    if (!this.sprites[state]) {
+	throw Error("invalid thing state: " + state);
+    }
+    for (var spriteName in this.sprites) {
+	this.sprites[spriteName].visible = false;
+    }
+    this.sprites[state].visible = true;
+    this.state = state;
+}
+
+Thing.prototype.setVisible = function(b)
+{
+    if (!this.sprites["default"]) {
+	throw Error("thing has no default state");
+    }
+    for (var spriteName in this.sprites) {
+	this.sprites[spriteName].visible = false;
+    }
+    this.sprites["default"].visible = b;
+}
+
 /**************/
 /* PlayScreen */
 /**************/
 
-function PlayScreen()
+function PlayScreen(logic, dataList)
 {
-    // The scene displayed
+    this.name = "PlayScreen";
+    // The scene currently displayed (Scene instance)
     this.scene = null;
+    // The gameplay logic
+    this.logic = logic;
+    // The collection of all scenes (SceneData) in the game
+    this.dataList = dataList;
     // The top-level PIXI container that holds the scene sprites. This 
     // container gets scaled to fit the canvas.
     this.stage = new PIXI.Container();
@@ -321,15 +369,24 @@ function PlayScreen()
     // The mouse cursor position when the player started dragging around
     this.dragStartX = 0;
     this.dragStartY = 0;
+    // Setup some events for communicating with the main game state
+    this.eventManager = new EventManager();
+    this.onComplete = this.eventManager.hook("complete");
+    this.onGameOver = this.eventManager.hook("gameover");
+    this.onRedraw = this.eventManager.hook("redraw");
 }
 
-PlayScreen.prototype.setScene = function(scn)
+PlayScreen.prototype.setScene = function(name)
 {
-    this.scene = scn;
+    var scene = Scene.fromData(this.dataList[name]);
+    this.scene = scene;
+    this.scene.setCameraPos(-1);
+
     this.stage.children = [];
-    this.stage.addChild(scn.container);
+    this.stage.addChild(scene.container);
     this.handleResize();
-    gameState.logic.initScene(scn);
+    this.logic.initScene(scene);
+    this.eventManager.dispatch("redraw");
 }
 
 /* Called when the game window is resized. This scales the scene to fit the 
@@ -352,8 +409,8 @@ PlayScreen.prototype.handleClick = function(x, y)
 	var yp = y/this.displayScale;
 	var args = this.scene.checkHit(xp, yp);
 	if (args.thing) {
-	    gameState.logic.handleThingClicked(args);
-	    gameState.redraw();
+	    this.logic.handleClicked(args);
+	    this.eventManager.dispatch("redraw");
 	}
     }
 }
@@ -394,42 +451,13 @@ PlayScreen.prototype.handleDrag = function(dx, dy)
 	// Dragging a thing
 	this.dragging.x = this.dragStartX + dx/this.displayScale;
 	this.dragging.y = this.dragStartY + dy/this.displayScale;
-	gameState.redraw();
+	this.eventManager.dispatch("redraw");
 
     } else {
 	// Panning the scene around
 	var pos = this.dragStartX - dx / (window.innerWidth/4);
 	pos = Math.max(Math.min(pos, 1), -1);
 	this.scene.setCameraPos(pos);
-	gameState.redraw();
+	this.eventManager.dispatch("redraw");
     }
-}
-
-/*********/
-/* Thing */
-/*********/
-
-/* A thing is a collection of sprites, each sprite representing a different
- * visual state. For example, a bird would be represented by certain sprites
- * such as the bird in flight, the bird sitting on a branch, etc. */
-function Thing(name)
-{
-    // Sprites associated with this thing, stored by "state" name
-    this.sprites = {};
-    this.state = "";
-    this.name = name;
-}
-
-/* Sets the current "state" of this thing. It sets as visible the sprite 
- * called thingName + "_" + state, and sets all others as invisible. */
-Thing.prototype.setState = function(state)
-{
-    if (!this.sprites[state]) {
-	throw Error("invalid thing state: " + state);
-    }
-    for (var spriteName in this.sprites) {
-	this.sprites[spriteName].visible = false;
-    }
-    this.sprites[state].visible = true;
-    this.state = state;
 }

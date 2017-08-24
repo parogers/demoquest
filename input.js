@@ -29,14 +29,9 @@
  *    from the start of the dragging action is passed into the callback.
  *  - dragStop - The dragging action is finished.
 */
-function MouseAdapter(outside, src)
+function MouseAdapter(src)
 {
     this.src = src;
-    // Various attached callbacks
-    this.onClickHandler = null;
-    this.onDragHandler = null;
-    this.onDragStartHandler = null;
-    this.onDragStopHandler = null;
     // Whether the mouse button is currently being pressed
     this.pressing = false;
     // We track the number of mousemove events
@@ -44,29 +39,18 @@ function MouseAdapter(outside, src)
     this.dragStartX = 0;
     this.dragStartY = 0;
 
+    // Setup some event handlers for dispatching below
+    var mgr = new EventManager();
+    this.onClick = mgr.hook("click");
+    this.onDrag = mgr.hook("drag");
+    this.onDragStart = mgr.hook("dragStart");
+    this.onDragStop = mgr.hook("dragStop");
+
     var mouse = this;
 
-    outside.addEventListener("mousemove", function(event) {
-	if (!mouse.pressing) return;
-
-	// If the mouse just started moving, issue a drag start event
-	if (mouse.movements === 0 && mouse.onDragStartHandler) {
-	    var rect = src.getBoundingClientRect();
-	    var x = event.clientX - rect.left;
-	    var y = event.clientY - rect.top;
-	    mouse.onDragStartHandler(x, y);
-	}
-	mouse.movements++;
-
-	if (mouse.onDragHandler) {
-	    // The drag coordinates are always given relative to where the
-	    // user starting dragging.
-	    mouse.onDragHandler(
-		event.clientX-mouse.dragStartX, 
-		event.clientY-mouse.dragStartY);
-	}
-    });
-
+    // Attach the mousedown event to the render area, so the player has to 
+    // click on the element (eg render area) to start dragging, or to 
+    // interact with an object.
     src.addEventListener("mousedown", function(event) {
 	mouse.pressing = true;
 	mouse.movements = 0;
@@ -74,41 +58,46 @@ function MouseAdapter(outside, src)
 	mouse.dragStartY = event.clientY;
     });
 
-    outside.addEventListener("mouseup", function(event) {
+    // However we attach the mousemove event to the whole window, so the player
+    // can drag outside the render area and still pan around.
+    window.addEventListener("mousemove", function(event) {
+	if (!mouse.pressing) return;
+
+	// If the mouse just started moving, issue a drag start event
+	if (mouse.movements === 0) {
+	    var rect = src.getBoundingClientRect();
+	    var x = event.clientX - rect.left;
+	    var y = event.clientY - rect.top;
+	    mgr.dispatch("dragStart", x, y);
+	}
+	mouse.movements++;
+
+	// The drag coordinates are always given relative to where the
+	// user starting dragging.
+	mgr.dispatch(
+	    "drag",
+	    event.clientX-mouse.dragStartX, 
+	    event.clientY-mouse.dragStartY);
+    });
+
+    // Attach the mouseup event to the window, so we can pickup on the event
+    // even if the player has dragged out of the render area.
+    window.addEventListener("mouseup", function(event) {
 	var rect = src.getBoundingClientRect();
 	var x = event.clientX - rect.left;
 	var y = event.clientY - rect.top;
 	// If the mouse didn't move at all, it's a click event. Otherwise we
-	// were dragging and should issue a drag stop event.
-	if (mouse.movements === 0) {
-	    if (mouse.onClickHandler) {
-		mouse.onClickHandler(x, y);
-	    }
-	} else if (mouse.onDragStopHandler) {
-	    mouse.onDragStopHandler(x, y);
+	// were dragging and should issue a drag stop event. Also note we 
+	// make sure the mouse cursor is within the render area before issuing
+	// the click event. (ie you can't click things that are out of view
+	if (mouse.movements === 0 && x >= 0 && y >= 0 && 
+	    x <= rect.right && y <= rect.bottom) {
+	    mgr.dispatch("click", x, y);
+	} else {
+	    mgr.dispatch("dragStop", x, y);
 	}
 	mouse.pressing = false;
     });
-}
-
-MouseAdapter.prototype.onClick = function(handler) {
-    this.onClickHandler = handler;
-    return this;
-}
-
-MouseAdapter.prototype.onDrag = function(handler) {
-    this.onDragHandler = handler;
-    return this;
-}
-
-MouseAdapter.prototype.onDragStart = function(handler) {
-    this.onDragStartHandler = handler;
-    return this;
-}
-
-MouseAdapter.prototype.onDragStop = function(handler) {
-    this.onDragStopHandler = handler;
-    return this;
 }
 
 /****************/
