@@ -48,6 +48,20 @@ function getNativeHeight(img)
     return tmp.height;
 }
 
+function makeSolidColourTexture(colour, width, height)
+{
+    // Use an HTML canvas to render a solid area of colour
+    var canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    var ctx = canvas.getContext("2d");
+    ctx.fillStyle = colour;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    return PIXI.Texture.fromCanvas(canvas);
+}
+
 /****************/
 /* EventManager */
 /****************/
@@ -66,6 +80,11 @@ EventManager.prototype.addEventListener = function(event, callback)
     }
     this.callbacks[event].push(callback);
     return this;
+}
+
+EventManager.prototype.dispatcher = function()
+{
+    return this.dispatch.bind(this);
 }
 
 /* Trigger all callbacks attached to the given event name */

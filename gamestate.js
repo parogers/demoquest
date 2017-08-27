@@ -124,7 +124,7 @@ GameState.prototype.handleResize = function()
     this.div.style.height = this.renderer.height;
 
     if (this.screen && this.screen.handleResize) {
-	this.screen.handleResize();
+	this.screen.handleResize(this.renderer.width, this.renderer.height);
     }
     this.redraw();
 }
@@ -132,7 +132,11 @@ GameState.prototype.handleResize = function()
 GameState.prototype._startGame = function()
 {
     this.dataList = this.screen.dataList;
-    this.screen = new PlayScreen(this.logic, this.dataList);
+    this.screen = new PlayScreen(
+	this.logic, 
+	this.dataList,
+	this.renderer.width, 
+	this.renderer.height);
 
     // Attach to various events exposed by the PlayScreen
     this.screen.onGameOver((

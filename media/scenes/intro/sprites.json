@@ -25,7 +25,7 @@
                 "h": 19,
                 "w": 26,
                 "x": 1,
-                "y": 168
+                "y": 176
             },
             "rotated": false,
             "sourceSize": {
@@ -45,7 +45,7 @@
                 "h": 18,
                 "w": 51,
                 "x": 1,
-                "y": 188
+                "y": 196
             },
             "rotated": false,
             "sourceSize": {
@@ -95,6 +95,86 @@
             "spriteSourceSize": {
                 "h": 27,
                 "w": 13,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "letter": {
+            "frame": {
+                "h": 5,
+                "w": 6,
+                "x": 1,
+                "y": 220
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 5,
+                "w": 6
+            },
+            "spriteSourceSize": {
+                "h": 5,
+                "w": 6,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "paintings": {
+            "frame": {
+                "h": 7,
+                "w": 18,
+                "x": 1,
+                "y": 168
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 7,
+                "w": 18
+            },
+            "spriteSourceSize": {
+                "h": 7,
+                "w": 18,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "pocketwatch": {
+            "frame": {
+                "h": 4,
+                "w": 3,
+                "x": 1,
+                "y": 215
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 4,
+                "w": 3
+            },
+            "spriteSourceSize": {
+                "h": 4,
+                "w": 3,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "suitcase": {
+            "frame": {
+                "h": 9,
+                "w": 10,
+                "x": 1,
+                "y": 226
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 9,
+                "w": 10
+            },
+            "spriteSourceSize": {
+                "h": 9,
+                "w": 10,
                 "x": 0,
                 "y": 0
             },
@@ -168,7 +248,7 @@
         "scale": "1",
         "size": {
             "W": 130,
-            "h": 208
+            "h": 237
         },
         "version": "1"
     }

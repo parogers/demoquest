@@ -34,25 +34,29 @@ Logic.prototype.initScene = function(scene)
     if (logic && logic.initScene) logic.initScene(scene);
 }
 
-Logic.prototype.handleClicked = function(target)
+Logic.prototype.handleClicked = function(ctx)
 {
-    var logic = this.sceneLogic[target.scene.name];
-    if (logic && logic.handleClicked) logic.handleClicked(target);
+    var logic = this.sceneLogic[ctx.scene.name];
+    if (logic && logic.handleClicked) logic.handleClicked(ctx);
 }
 
-Logic.prototype.handleDragStart = function(target)
-{
-}
-
-Logic.prototype.handleDrag = function(target)
+Logic.prototype.handleDragStart = function(ctx)
 {
 }
 
-Logic.prototype.handleDragStop = function(target)
+Logic.prototype.handleDrag = function(ctx)
 {
 }
 
-/* *** */
+Logic.prototype.handleDragStop = function(ctx)
+{
+}
+
+/***************/
+/* Scene Logic */
+/***************/
+
+/* Logic classes for the various scenes in the game */
 
 function IntroLogic(logic)
 {
@@ -63,26 +67,28 @@ function IntroLogic(logic)
 	scene.getThing("cupboard").setState("closed");
     }
 
-    this.handleClicked = function(target) {
-	switch(target.thing.name) {
+    this.handleClicked = function(ctx) {
+	switch(ctx.thing.name) {
 	case "candle":
 	    console.log("CANDLE");
-	    //target.thing.setVisible(false);
+	    //ctx.thing.setVisible(false);
 	    //gameState.screen.setScene("road");
+	    ctx.screen.showMessage(
+		"A candle for evening work. I won't need it.");
 	    break;
 
 	case "cupboard":
-	    if (target.thing.state === "open") 
-		target.thing.setState("closed");
+	    if (ctx.thing.state === "open") 
+		ctx.thing.setState("closed");
 	    else
-		target.thing.setState("open");
+		ctx.thing.setState("open");
 	    break;
 
 	case "door":
-	    if (target.thing.state === "open") 
-		target.thing.setState("closed");
+	    if (ctx.thing.state === "open") 
+		ctx.thing.setState("closed");
 	    else
-		target.thing.setState("open");
+		ctx.thing.setState("open");
 	    break;
 
 	}
@@ -96,7 +102,7 @@ function RoadLogic(logic)
     this.initScene = function(scene) {
     }
 
-    this.handleClicked = function(target) {
+    this.handleClicked = function(ctx) {
     }
 }
 

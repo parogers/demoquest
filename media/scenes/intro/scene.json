@@ -2,6 +2,7 @@
     "title": "Cabin",
     "name": "intro",
     "description": "Your cabin",
+    "camera": "-1",
     "layers": [
         {
             "name": "sunset",
@@ -30,6 +31,11 @@
                     "y": 5
                 },
                 {
+                    "name": "paintings",
+                    "x": 34,
+                    "y": 6
+                },
+                {
                     "name": "cupboard_closed",
                     "x": 57,
                     "y": 2
@@ -38,6 +44,21 @@
                     "name": "cupboard_open",
                     "x": 44,
                     "y": 2
+                },
+                {
+                    "name": "pocketwatch",
+                    "x": 11,
+                    "y": 21
+                },
+                {
+                    "name": "letter",
+                    "x": 4,
+                    "y": 21
+                },
+                {
+                    "name": "suitcase",
+                    "x": 87,
+                    "y": 23
                 }
             ]
         }

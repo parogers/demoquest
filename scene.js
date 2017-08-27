@@ -67,14 +67,17 @@ Scene.fromData = function(sceneData)
 		thingName = sprite.name.substr(0, n);
 		stateName = sprite.name.substr(n+1);
 	    }
-	    var thing = scn.things[thingName];
-	    if (!thing) {
+	    var thing = null;
+	    if (scn.things.hasOwnProperty(thingName)) {
+		thing = scn.things[thingName];
+	    }else {
 		thing = scn.things[thingName] = new Thing(thingName);
 	    }
 	    thing.sprites[stateName] = sprite;
 	    scn.thingsBySpriteName[sprite.name] = thing;
 	}
     }
+    scn.setCameraPos(sceneData.cameraX, sceneData.cameraY);
     return scn;
 }
 
@@ -113,7 +116,7 @@ Scene.prototype.getTexture = function(name)
 /* Set the camera position within the scene. The position is from -1 (furthest
  * left) to 1 (furthest right) with 0 being the centre of the scene. This 
  * code moves the layers around to simulate parallax scrolling. */
-Scene.prototype.setCameraPos = function(xpos)
+Scene.prototype.setCameraPos = function(xpos, ypos)
 {
     var backWidth = this.getBaseSize().width;
     var centreX = 0;
@@ -122,6 +125,7 @@ Scene.prototype.setCameraPos = function(xpos)
 	layer.container.x = pos;
     }
     this.cameraX = xpos;
+    // TODO - handle ypos...
 }
 
 /* Returns the scene element under the position (given relative to the top
@@ -193,8 +197,9 @@ function SceneData(scenePath)
     this.title = null;
     // The layers that makeup the scene (Layer instances)
     this.layers = [];
-    // The camera position (-1 to 1)
+    // The default camera position for the scene (-1 to 1)
     this.cameraX = 0;
+    this.cameraY = 0;
 }
 
 SceneData.fromJSON = function(src, raw)
@@ -206,6 +211,18 @@ SceneData.fromJSON = function(src, raw)
     scn.name = data["name"];
     scn.title = data["title"];
     scn.description = data["description"];
+
+    var pos = data["camera"];
+    if (pos !== undefined) {
+	pos = pos.split(",");
+	if (pos.length === 1) {
+	    scn.cameraX = parseInt(pos[0]);
+	} else if (pos.length === 2) {
+	    scn.cameraX = parseInt(pos[0]);
+	    scn.cameraY = parseInt(pos[1]);
+	}
+    }
+
     // Build the layers
     /*for (var layerData of data["layers"]) {
 	var layer = new Layer(layerData["name"]);
@@ -344,120 +361,4 @@ Thing.prototype.setVisible = function(b)
 	this.sprites[spriteName].visible = false;
     }
     this.sprites["default"].visible = b;
-}
-
-/**************/
-/* PlayScreen */
-/**************/
-
-function PlayScreen(logic, dataList)
-{
-    this.name = "PlayScreen";
-    // The scene currently displayed (Scene instance)
-    this.scene = null;
-    // The gameplay logic
-    this.logic = logic;
-    // The collection of all scenes (SceneData) in the game
-    this.dataList = dataList;
-    // The top-level PIXI container that holds the scene sprites. This 
-    // container gets scaled to fit the canvas.
-    this.stage = new PIXI.Container();
-    this.displayScale = 1;
-    // The thing being dragged around, or null if no dragging is happening
-    // or the player is panning around instead.
-    this.dragging = null;
-    // The mouse cursor position when the player started dragging around
-    this.dragStartX = 0;
-    this.dragStartY = 0;
-    // Setup some events for communicating with the main game state
-    this.eventManager = new EventManager();
-    this.onComplete = this.eventManager.hook("complete");
-    this.onGameOver = this.eventManager.hook("gameover");
-    this.onRedraw = this.eventManager.hook("redraw");
-}
-
-PlayScreen.prototype.setScene = function(name)
-{
-    var scene = Scene.fromData(this.dataList[name]);
-    this.scene = scene;
-    this.scene.setCameraPos(-1);
-
-    this.stage.children = [];
-    this.stage.addChild(scene.container);
-    this.handleResize();
-    this.logic.initScene(scene);
-    this.eventManager.dispatch("redraw");
-}
-
-/* Called when the game window is resized. This scales the scene to fit the 
- * available space. */
-PlayScreen.prototype.handleResize = function()
-{
-    if (this.scene) {
-	var renderer = gameState.renderer;
-	this.displayScale = renderer.height/this.scene.getBaseSize().height;
-	this.stage.scale.set(this.displayScale);
-	this.stage.x = renderer.width/2;
-	this.stage.y = renderer.height/2;
-    }
-}
-
-PlayScreen.prototype.handleClick = function(x, y)
-{
-    if (this.scene) {
-	var xp = x/this.displayScale;
-	var yp = y/this.displayScale;
-	var args = this.scene.checkHit(xp, yp);
-	if (args.thing) {
-	    this.logic.handleClicked(args);
-	    this.eventManager.dispatch("redraw");
-	}
-    }
-}
-
-PlayScreen.prototype.handleDragStart = function(x, y)
-{
-    if (!this.scene) return;
-
-    var xp = x/this.displayScale;
-    var yp = y/this.displayScale;
-    var args = this.scene.checkHit(xp, yp);
-    if (false) { //args.thing) {
-	// Dragging an object
-	this.dragging = this.scene.getThing(args.layer, args.thing);
-	this.dragStartX = this.dragging.x;
-	this.dragStartY = this.dragging.y;
-	/*var rect = thing.getBoundingClientRect();
-	this.dragging = args;
-	this.dragStartX = parseInt(thing.style.left);
-	this.dragStartY = parseInt(thing.style.top);*/
-    } else {
-	// Panning the scene
-	this.dragging = null;
-	this.dragStartX = this.scene.cameraX;
-    }
-}
-
-PlayScreen.prototype.handleDragStop = function(x, y)
-{
-    this.dragging = null;
-}
-
-PlayScreen.prototype.handleDrag = function(dx, dy)
-{
-    if (!this.scene) return;
-
-    if (this.dragging) {
-	// Dragging a thing
-	this.dragging.x = this.dragStartX + dx/this.displayScale;
-	this.dragging.y = this.dragStartY + dy/this.displayScale;
-	this.eventManager.dispatch("redraw");
-
-    } else {
-	// Panning the scene around
-	var pos = this.dragStartX - dx / (window.innerWidth/4);
-	pos = Math.max(Math.min(pos, 1), -1);
-	this.scene.setCameraPos(pos);
-	this.eventManager.dispatch("redraw");
-    }
 }
