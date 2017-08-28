@@ -70,24 +70,24 @@ function GameState(div)
  * should be passed in here. (eg MouseAdapter) */
 GameState.prototype.setupInputHandlers = function(m)
 {
-    m.onClick((function(x, y) {
+    m.onClick((function(evt) {
 	if (this.screen && this.screen.handleClick) {
-	    this.screen.handleClick(x, y);
+	    this.screen.handleClick(evt);
 	}
     }).bind(this));
-    m.onDragStart((function(x, y) {
+    m.onDragStart((function(evt) {
 	if (this.screen && this.screen.handleDragStart) {
-	    this.screen.handleDragStart(x, y);
+	    this.screen.handleDragStart(evt);
 	}
     }).bind(this));
-    m.onDrag((function(x, y) {
+    m.onDrag((function(evt) {
 	if (this.screen && this.screen.handleDrag) {
-	    this.screen.handleDrag(x, y);
+	    this.screen.handleDrag(evt);
 	}
     }).bind(this));
-    m.onDragStop((function(x, y) {
+    m.onDragStop((function(evt) {
 	if (this.screen && this.screen.handleDragStop) {
-	    this.screen.handleDragStop(x, y);
+	    this.screen.handleDragStop(evt);
 	}
     }).bind(this));
 }

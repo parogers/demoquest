@@ -66,6 +66,10 @@ function PlayScreen(logic, dataList, width, height)
 
 PlayScreen.prototype.setScene = function(name)
 {
+    if (this.scene) {
+	this.logic.leaveScene(new LogicContext(this, this.scene));
+    }
+
     var scene = Scene.fromData(this.dataList[name]);
     this.scene = scene;
     this.sceneStage.children = [];
@@ -94,17 +98,17 @@ PlayScreen.prototype.handleResize = function(width, height)
     }
 }
 
-PlayScreen.prototype.handleClick = function(x, y)
+PlayScreen.prototype.handleClick = function(evt)
 {
     if (this.dialog) {
 	// Forward the click to the dialog box
-	this.dialog.handleClick(x, y);
+	this.dialog.handleClick(evt);
 	return;
     }
 
     if (this.scene) {
-	var xp = x/this.displayScale;
-	var yp = y/this.displayScale;
+	var xp = evt.x/this.displayScale;
+	var yp = evt.y/this.displayScale;
 	var args = this.scene.checkHit(xp, yp);
 	if (args.thing) {
 	    var ctx = new LogicContext(
@@ -116,17 +120,17 @@ PlayScreen.prototype.handleClick = function(x, y)
     }
 }
 
-PlayScreen.prototype.handleDragStart = function(x, y)
+PlayScreen.prototype.handleDragStart = function(evt)
 {
     if (this.dialog) {
 	// Forward the event to the dialog box
-	this.dialog.handleDragStart(x, y);
+	this.dialog.handleDragStart(evt);
 	return;
     }
     if (!this.scene) return;
 
-    var xp = x/this.displayScale;
-    var yp = y/this.displayScale;
+    var xp = evt.x/this.displayScale;
+    var yp = evt.y/this.displayScale;
     var args = this.scene.checkHit(xp, yp);
     if (false) { //args.thing) {
 	// Dragging an object
@@ -144,34 +148,43 @@ PlayScreen.prototype.handleDragStart = function(x, y)
     }
 }
 
-PlayScreen.prototype.handleDragStop = function(x, y)
+PlayScreen.prototype.handleDragStop = function(evt)
 {
     if (this.dialog) {
 	// Forward the event to the dialog box
-	this.dialog.handleDragStop(x, y);
+	this.dialog.handleDragStop(evt);
 	return;
+    }
+    // If the player clicked and panned the scene around only a short distance,
+    // count this as a click event.
+    var dist = 5;
+    if (!this.dragging && 
+	Math.abs(evt.x - evt.dragStartX) < dist && 
+	Math.abs(evt.y - evt.dragStartY) < dist) 
+    {
+	this.handleClick(evt);
     }
     this.dragging = null;
 }
 
-PlayScreen.prototype.handleDrag = function(dx, dy)
+PlayScreen.prototype.handleDrag = function(evt)
 {
     if (this.dialog) {
 	// Forward the event to the dialog box
-	this.dialog.handleDrag(dx, dy);
+	this.dialog.handleDrag(evt);
 	return;
     }
     if (!this.scene) return;
 
     if (this.dragging) {
 	// Dragging a thing
-	this.dragging.x = this.dragStartX + dx/this.displayScale;
-	this.dragging.y = this.dragStartY + dy/this.displayScale;
+	this.dragging.x = this.dragStartX + evt.dx/this.displayScale;
+	this.dragging.y = this.dragStartY + evt.dy/this.displayScale;
 	this.dispatch("redraw");
 
     } else {
 	// Panning the scene around
-	var pos = this.dragStartX - dx / (window.innerWidth/4);
+	var pos = this.dragStartX - evt.dx / (window.innerWidth/4);
 	pos = Math.max(Math.min(pos, 1), -1);
 	this.scene.setCameraPos(pos);
 	this.dispatch("redraw");
@@ -180,6 +193,7 @@ PlayScreen.prototype.handleDrag = function(dx, dy)
 
 PlayScreen.prototype.showMessage = function(msg, options)
 {
+    // Merge together the default and supplied dialog options
     var merged = {};
     for (var key in this.dialogDefaults) 
 	merged[key] = this.dialogDefaults[key];
@@ -194,9 +208,12 @@ PlayScreen.prototype.showMessage = function(msg, options)
     this.dialog.show(this.stage);
     this.dispatch("redraw");
 
+    // We pause the gameplay so events don't trigger while the player reads
+    this.pause();
     this.dialog.onClosed((function() {
 	this.dialog = null;
 	this.dispatch("redraw");
+	this.resume();
     }).bind(this));
 }
 
@@ -207,13 +224,10 @@ PlayScreen.prototype.startTimer = function(callback, delay)
 {
     var tm = new Timer((
 	function() {
-	    var ctx = new LogicContext(this, this.scene);
-	    var ret = callback(ctx);
+	    var ret = callback(new LogicContext(this, this.scene));
 	    if (!ret) {
 		// No more callbacks - remove the timer from the list
-		var n = this.timers.indexOf(tm)
-		this.timers = this.timers.slice(0, n).concat(
-		    this.timers.slice(n+1));
+		this.cancelTimer(tm);
 	    }
 	    this.dispatch("redraw");
 	    return ret;
@@ -221,6 +235,15 @@ PlayScreen.prototype.startTimer = function(callback, delay)
     ).bind(this), delay);
     this.timers.push(tm);
     return tm;
+}
+
+PlayScreen.prototype.cancelTimer = function(tm)
+{
+    var n = this.timers.indexOf(tm)
+    tm.pause();
+    if (n !== -1) {
+	this.timers = this.timers.slice(0, n).concat(this.timers.slice(n+1));
+    }
 }
 
 /* Pause the gameplay. This happens when showing the player a message */
@@ -305,7 +328,7 @@ Dialog.prototype.hide = function(delay)
     }*/
 }
 
-Dialog.prototype.handleClick = function(x, y)
+Dialog.prototype.handleClick = function(evt)
 {
     this.hide();
 }

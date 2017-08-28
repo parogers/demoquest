@@ -53,8 +53,6 @@ function MouseAdapter(src)
 	function(event) {
 	    this.pressing = true;
 	    this.movements = 0;
-	    this.dragStartX = event.clientX;
-	    this.dragStartY = event.clientY;
 	}
     ).bind(this));
 
@@ -69,15 +67,20 @@ function MouseAdapter(src)
 		var rect = this.src.getBoundingClientRect();
 		var x = event.clientX - rect.left;
 		var y = event.clientY - rect.top;
-		mgr.dispatch("dragStart", x, y);
+		mgr.dispatch("dragStart", new GameEvent({x: x, y: y}));
+
+		this.dragStartX = event.clientX;
+		this.dragStartY = event.clientY;
+
+	    } else {
+		// The drag coordinates are always given relative to where the
+		// user starting dragging.
+		var evt = new GameEvent({
+		    dx: event.clientX-this.dragStartX, 
+		    dy: event.clientY-this.dragStartY});
+		mgr.dispatch("drag", evt);
 	    }
 	    this.movements++;
-	    // The drag coordinates are always given relative to where the
-	    // user starting dragging.
-	    mgr.dispatch(
-		"drag",
-		event.clientX-this.dragStartX, 
-		event.clientY-this.dragStartY);
 	}
     ).bind(this));
 
@@ -92,15 +95,27 @@ function MouseAdapter(src)
 	    // were dragging and should issue a drag stop event. Also note we 
 	    // make sure the mouse cursor is within the area before issuing
 	    // the click event. (ie you can't click things that are out of view
+	    var evt = new GameEvent({x: x, y: y});
 	    if (this.movements === 0 && x >= 0 && y >= 0 && 
 		x <= rect.right && y <= rect.bottom) {
-		mgr.dispatch("click", x, y);
+		mgr.dispatch("click", evt);
 	    } else {
-		mgr.dispatch("dragStop", x, y);
+		// Pass in the drag start position (relative to the view area)
+		var rect = this.src.getBoundingClientRect();
+		evt.dragStartX = this.dragStartX - rect.left;
+		evt.dragStartY = this.dragStartY - rect.top;
+		mgr.dispatch("dragStop", evt);
 	    }
 	    this.pressing = false;
 	}
     ).bind(this));
+}
+
+function GameEvent(options)
+{
+    for (var key in options) {
+	this[key] = options[key];
+    }
 }
 
 /****************/

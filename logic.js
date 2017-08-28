@@ -34,6 +34,12 @@ Logic.prototype.initScene = function(ctx)
     if (logic && logic.initScene) logic.initScene(ctx);
 }
 
+Logic.prototype.leaveScene = function(ctx)
+{
+    var logic = this.sceneLogic[ctx.scene.name];
+    if (logic && logic.leaveScene) logic.leaveScene(ctx);
+}
+
 Logic.prototype.handleClicked = function(ctx)
 {
     var logic = this.sceneLogic[ctx.scene.name];
@@ -93,10 +99,11 @@ function IntroLogic(logic)
 	ctx.getThing("door").setState("closed");
 	ctx.getThing("cupboard").setState("closed");
 
-	/*ctx.startTimer(function(ctx) {
-	    ctx.getThing("door").setState("open");
-	    ctx.showMessage("The door opens!");
-	}, 5000);*/
+	ctx.startTimer(function(ctx) {
+	    //ctx.getThing("door").setState("open");
+	    //ctx.showMessage("The door opens!");
+	    console.log("Tick");
+	}, 3000);
 
 	return;
 
@@ -115,6 +122,9 @@ function IntroLogic(logic)
 	timer.cancel();
 	timer.pause();
 	timer.resume();
+    }
+
+    this.leaveScene = function(ctx) {
     }
 
     this.handleClicked = function(ctx) {

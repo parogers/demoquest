@@ -95,6 +95,7 @@ Timer.prototype.pause = function()
     if (!this.paused) {
 	this.paused = true;
 	clearTimeout(this.timeoutEvent);
+	this.timeoutEvent = null;
 	// Update the amount of time left (for when the timer is resumed)
 	this.timeLeft -= (new Date()).getTime() - this.startTime;
     }
@@ -108,6 +109,7 @@ Timer.prototype.resume = function()
 	this.paused = false;
 	this.timeoutEvent = setTimeout((
 	    function() {
+		this.timeoutEvent = null;
 		if (this.callback()) {
 		    this.timeLeft = this.delay;
 		    this.paused = true;
