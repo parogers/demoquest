@@ -28,10 +28,10 @@ function Logic()
     };
 }
 
-Logic.prototype.initScene = function(scene)
+Logic.prototype.initScene = function(ctx)
 {
-    var logic = this.sceneLogic[scene.name];
-    if (logic && logic.initScene) logic.initScene(scene);
+    var logic = this.sceneLogic[ctx.scene.name];
+    if (logic && logic.initScene) logic.initScene(ctx);
 }
 
 Logic.prototype.handleClicked = function(ctx)
@@ -52,6 +52,33 @@ Logic.prototype.handleDragStop = function(ctx)
 {
 }
 
+/****************/
+/* LogicContext */
+/****************/
+
+function LogicContext(screen, scene, thing, sprite)
+{
+    this.screen = screen;
+    this.scene = scene;
+    this.thing = thing;
+    this.sprite = sprite;
+}
+
+LogicContext.prototype.getThing = function(name)
+{
+    return this.scene.getThing(name);
+}
+
+LogicContext.prototype.showMessage = function(msg, options)
+{
+    this.screen.showMessage(msg, options);
+}
+
+LogicContext.prototype.startTimer = function(callback, delay)
+{
+    return this.screen.startTimer(callback, delay);
+}
+
 /***************/
 /* Scene Logic */
 /***************/
@@ -62,18 +89,42 @@ function IntroLogic(logic)
 {
     this.logic = logic;
 
-    this.initScene = function(scene) {
-	scene.getThing("door").setState("closed");
-	scene.getThing("cupboard").setState("closed");
+    this.initScene = function(ctx) {
+	ctx.getThing("door").setState("closed");
+	ctx.getThing("cupboard").setState("closed");
+
+	/*ctx.startTimer(function(ctx) {
+	    ctx.getThing("door").setState("open");
+	    ctx.showMessage("The door opens!");
+	}, 5000);*/
+
+	return;
+
+	var sprite = ctx.getThing("darkness").setVisible(false);
+	sprite.alpha = 0;
+
+	var timer = ctx.startTimer(1000, (
+	    function(ctx) {
+		sprite.alpha = Math.max(sprite.alpha+0.05, 1);
+		if (sprite.alpha >= 1) {
+		    
+		}
+	    }
+	).bind(this));
+
+	timer.cancel();
+	timer.pause();
+	timer.resume();
     }
 
     this.handleClicked = function(ctx) {
-	switch(ctx.thing.name) {
+	switch(ctx.thing.name) 
+	{
 	case "candle":
 	    console.log("CANDLE");
 	    //ctx.thing.setVisible(false);
 	    //gameState.screen.setScene("road");
-	    ctx.screen.showMessage(
+	    ctx.showMessage(
 		"A candle for evening work. I won't need it.");
 	    break;
 
@@ -99,7 +150,7 @@ function RoadLogic(logic)
 {
     this.logic = logic;
 
-    this.initScene = function(scene) {
+    this.initScene = function(ctx) {
     }
 
     this.handleClicked = function(ctx) {

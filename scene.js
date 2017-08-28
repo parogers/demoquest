@@ -46,7 +46,8 @@ Scene.fromData = function(sceneData)
 	var texture = scn.getTexture(layerData.name);
 	var layer = new Layer(layerData.name, texture);
 	scn.addLayer(layer);
-	for (var spriteData of layerData["sprites"]) {
+	for (var spriteData of layerData["sprites"]) 
+	{
 	    var texture = scn.getTexture(spriteData["name"]);
 	    var sprite = new PIXI.Sprite(texture);
 	    sprite.name = spriteData["name"];
@@ -70,7 +71,7 @@ Scene.fromData = function(sceneData)
 	    var thing = null;
 	    if (scn.things.hasOwnProperty(thingName)) {
 		thing = scn.things[thingName];
-	    }else {
+	    } else {
 		thing = scn.things[thingName] = new Thing(thingName);
 	    }
 	    thing.sprites[stateName] = sprite;
@@ -149,7 +150,6 @@ Scene.prototype.checkHit = function(x, y)
 	if (sprite) {
 	    var thing = this.thingsBySpriteName[sprite.name];
 	    return {
-		scene: this, 
 		layer: layer, 
 		sprite: sprite, 
 		thing: thing
@@ -158,20 +158,10 @@ Scene.prototype.checkHit = function(x, y)
 
 	// Now check if they clicked on this layer itself
 	if (layer.checkHit(xp, yp)) {
-	    return {scene: this, layer: layer, sprite: null, thing: null};
+	    return {layer: layer, sprite: null, thing: null};
 	}
     }
-    return {scene: this, layer: null, sprite: null, thing: null};
-}
-
-Scene.prototype.getLayer = function(name)
-{
-    for (var layer of this.layers) {
-	if (layer.name === name) {
-	    return layer;
-	}
-    }
-    return null;
+    return {layer: null, sprite: null, thing: null};
 }
 
 Scene.prototype.getThing = function(name)
@@ -222,23 +212,6 @@ SceneData.fromJSON = function(src, raw)
 	    scn.cameraY = parseInt(pos[1]);
 	}
     }
-
-    // Build the layers
-    /*for (var layerData of data["layers"]) {
-	var layer = new Layer(layerData["name"]);
-	layer.src = layerData["background"];
-	if (layerData["things"]) {
-	    layer.things = layerData["things"];
-	}
-	scn.layers.push(layer);
-    }*/
-    /*
-    try {
-	scn.logic = eval(data["logic"]);
-    } catch(e) {
-	console.log("ERROR parsing scene logic for " + scn.name + ": " + e);
-    }
-    */
     scn.layers = data["layers"];
     scn.rawJSON = raw;
     return scn;
@@ -338,6 +311,12 @@ function Thing(name)
     this.name = name;
 }
 
+Thing.prototype.getSprite = function(state)
+{
+    if (state === undefined) state = this.state;
+    return this.sprites[state];
+}
+
 /* Sets the current "state" of this thing. It sets as visible the sprite 
  * called thingName + "_" + state, and sets all others as invisible. */
 Thing.prototype.setState = function(state)
@@ -350,6 +329,7 @@ Thing.prototype.setState = function(state)
     }
     this.sprites[state].visible = true;
     this.state = state;
+    return this.getSprite();
 }
 
 Thing.prototype.setVisible = function(b)
@@ -360,5 +340,7 @@ Thing.prototype.setVisible = function(b)
     for (var spriteName in this.sprites) {
 	this.sprites[spriteName].visible = false;
     }
+    if (b === undefined) b = true;
     this.sprites["default"].visible = b;
+    return this.getSprite();
 }

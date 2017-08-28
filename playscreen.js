@@ -60,7 +60,8 @@ function PlayScreen(logic, dataList, width, height)
 	background: "white",
 	lightbox: "black"
     };
-
+    // List of currently active timers in the game (Timer instances)
+    this.timers = [];
 }
 
 PlayScreen.prototype.setScene = function(name)
@@ -70,7 +71,7 @@ PlayScreen.prototype.setScene = function(name)
     this.sceneStage.children = [];
     this.sceneStage.addChild(scene.container);
     this._updateDisplayScale();
-    this.logic.initScene(scene);
+    this.logic.initScene(new LogicContext(this, this.scene));
     this.dispatch("redraw");
 }
 
@@ -106,8 +107,10 @@ PlayScreen.prototype.handleClick = function(x, y)
 	var yp = y/this.displayScale;
 	var args = this.scene.checkHit(xp, yp);
 	if (args.thing) {
-	    args.screen = this;
-	    this.logic.handleClicked(args);
+	    var ctx = new LogicContext(
+		this, this.scene, 
+		args.thing, args.sprite);
+	    this.logic.handleClicked(ctx);
 	    this.dispatch("redraw");
 	}
     }
@@ -195,6 +198,46 @@ PlayScreen.prototype.showMessage = function(msg, options)
 	this.dialog = null;
 	this.dispatch("redraw");
     }).bind(this));
+}
+
+/* Starts an in-game timer for the given callback. This timer can be paused
+ * and resumed. (eg when transitionin between scenes and when showing dialog
+ * boxes) */
+PlayScreen.prototype.startTimer = function(callback, delay)
+{
+    var tm = new Timer((
+	function() {
+	    var ctx = new LogicContext(this, this.scene);
+	    var ret = callback(ctx);
+	    if (!ret) {
+		// No more callbacks - remove the timer from the list
+		var n = this.timers.indexOf(tm)
+		this.timers = this.timers.slice(0, n).concat(
+		    this.timers.slice(n+1));
+	    }
+	    this.dispatch("redraw");
+	    return ret;
+	}
+    ).bind(this), delay);
+    this.timers.push(tm);
+    return tm;
+}
+
+/* Pause the gameplay. This happens when showing the player a message */
+PlayScreen.prototype.pause = function()
+{
+    // Pause all timers
+    for (var tm of this.timers) {
+	tm.pause();
+    }
+}
+
+/* Resume the gameplay after pausing */
+PlayScreen.prototype.resume = function()
+{
+    for (var tm of this.timers) {
+	tm.resume();
+    }
 }
 
 /**********/
