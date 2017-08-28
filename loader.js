@@ -134,14 +134,18 @@ SceneDataLoader.prototype.add = function(src, arg)
 
 /* Loads various game resources while showing a loading screen/progress to
  * the player. */
-function LoadingScreen()
+function LoadingScreen(viewWidth, viewHeight)
 {
     this.name = "LoadingScreen";
     this.stage = new PIXI.Container();
     this.started = false;
+    this.viewWidth = viewWidth;
+    this.viewHeight = viewHeight;
 
-    this.eventManager = new EventManager();
-    this.onDone = this.eventManager.hook("done");
+    var mgr = new EventManager();
+    this.dispatch = mgr.dispatcher();
+    this.onRedraw = mgr.hook("redraw");
+    this.onDone = mgr.hook("done");
 }
 
 LoadingScreen.prototype.start = function()
@@ -150,6 +154,20 @@ LoadingScreen.prototype.start = function()
 	this.started = true;
 	this._loadSceneData();
     }
+}
+
+LoadingScreen.prototype._showMessage = function(msg)
+{
+    var fontSize = this.viewHeight*0.05;
+    var text = new PIXI.Text(msg, {
+	fontSize: fontSize, 
+	fill: "white",
+    });
+    text.x = this.viewWidth*0.05;
+    text.y = this.viewHeight*0.05;
+    this.stage.children = [];
+    this.stage.addChild(text);
+    this.dispatch("redraw");
 }
 
 LoadingScreen.prototype._loadSceneData = function()
@@ -176,7 +194,7 @@ LoadingScreen.prototype._loadSceneData = function()
 	    console.log("Loaded scene: " + scn.name);
 	}
     ).bind(this));
-    console.log("Loading scene meta data");
+    this._showMessage("Loading scene meta data");
 }
 
 /* Called when the basic scene data is loaded. This function loads the layer
@@ -184,16 +202,20 @@ LoadingScreen.prototype._loadSceneData = function()
 LoadingScreen.prototype._loadSceneImages = function(dataList)
 {
     this.dataList = dataList;
-    console.log("Loading scene images");
+    this._showMessage("Loading scene images");
     // Queue up the texture maps associated with the various scenes
     PIXI.loader.defaultQueryString = "nocache=" + (new Date()).getTime();
     for (var name in dataList) {
 	PIXI.loader.add(dataList[name].spritesPath);
     };
-    //PIXI.loader.on("progress", progresscb);
+    PIXI.loader.on("progress", (
+	function(loader, res) {
+	    //console.log(res);
+	    //this._showMessage("Loading scene images: " + res.url);
+	}
+    ).bind(this));
 
     PIXI.loader.load((function() {
-	console.log("DONE loading scene images");
-	this.eventManager.dispatch("done");
+	this.dispatch("done");
     }).bind(this));
 }

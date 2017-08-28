@@ -49,10 +49,20 @@ function GameState(div)
     var m = new MouseAdapter(this.div);
     this.setupInputHandlers(m);
 
-    this.screen = new LoadingScreen();
-    this.screen.onDone((function() {
-	this._startGame();
-    }).bind(this));
+    this.screen = new LoadingScreen(this.renderer.width, this.renderer.height);
+
+    this.screen.onDone((
+	function() {
+	    this._startGame();
+	}
+    ).bind(this));
+
+    this.screen.onRedraw((
+	function() {
+	    this.redraw();
+	}
+    ).bind(this));
+
     this.screen.start();
 }
 
