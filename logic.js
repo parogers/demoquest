@@ -134,8 +134,8 @@ function IntroLogic(logic)
 	    console.log("CANDLE");
 	    //ctx.thing.setVisible(false);
 	    //gameState.screen.setScene("road");
-	    ctx.showMessage(
-		"A candle for evening work. I won't need it.");
+	    ctx.showMessage("A candle for evening work. I won't need it.");
+	    ctx.showMessage("Or maybe I will!");
 	    break;
 
 	case "cupboard":

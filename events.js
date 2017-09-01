@@ -68,7 +68,7 @@ EventManager.prototype.dispatch = function(event)
 EventManager.prototype.hook = function(event)
 {
     return (function(callback) {
-	this.addEventListener(event, callback);
+	return this.addEventListener(event, callback);
     }).bind(this);
 }
 

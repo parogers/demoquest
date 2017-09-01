@@ -34,6 +34,7 @@ function GameState(div)
     this.renderer = null;
     this.logic = new Logic();
     this.dataList = {};
+    this.lastRenderTime = null;
 
     // Callback function for passing to renderAnimationFrame
     this.staticRenderFrame = (function() {
@@ -107,12 +108,29 @@ GameState.prototype.getBoundingClientRect = function()
 /* Renders the current screen. Should be called from requestAnimationFrame */
 GameState.prototype.renderFrame = function()
 {
-    if (this.screen) {
-	if (!this.screen.stage) {
-	    throw Error("screen has no stage defined: " + this.screen.name);
+    if (!this.screen) return;
+
+    var redraw = false;
+    if (this.screen.update) 
+    {
+	var now = (new Date()).getTime();
+	var dt = 0;
+	if (this.lastRenderTime !== null) {
+	    dt = (now - this.lastRenderTime)/1000.0;
 	}
-	this.renderer.render(this.screen.stage);
+	this.lastRenderTime = now;
+	redraw = this.screen.update(dt);
     }
+
+    if (!this.screen.stage) {
+	throw Error("screen has no stage defined: " + this.screen.name);
+    }
+    this.renderer.render(this.screen.stage);
+
+    if (redraw) 
+	this.redraw();
+    else
+	this.lastRenderTime = null;
 }
 
 GameState.prototype.handleResize = function()

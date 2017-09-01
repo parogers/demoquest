@@ -33,15 +33,11 @@ function PlayScreen(logic, dataList, width, height)
     this.stage = new PIXI.Container();
     this.sceneStage = new PIXI.Container();
     this.stage.addChild(this.sceneStage);
-    // The dialog box shown to the player (Dialog instance)
-    this.dialog = null;
     // The size of the viewing area
     this.viewWidth = width;
     this.viewHeight = height;
     this.sceneStage.x = width/2;
     this.sceneStage.y = height/2;
-    // How much to scale the scene graphics to fit the view area
-    this.displayScale = 1;
     // The thing being dragged around, or null if no dragging is happening
     // or the player is panning around instead.
     this.dragging = null;
@@ -49,11 +45,11 @@ function PlayScreen(logic, dataList, width, height)
     this.dragStartX = 0;
     this.dragStartY = 0;
     // Setup some events for communicating with the main game state
-    this.eventManager = new EventManager();
-    this.onComplete = this.eventManager.hook("complete");
-    this.onGameOver = this.eventManager.hook("gameover");
-    this.onRedraw = this.eventManager.hook("redraw");
-    this.dispatch = this.eventManager.dispatcher();
+    var mgr = new EventManager();
+    this.onComplete = mgr.hook("complete");
+    this.onGameOver = mgr.hook("gameover");
+    this.onRedraw = mgr.hook("redraw");
+    this.dispatch = mgr.dispatcher();
 
     this.dialogDefaults = {
 	fill: "black",
@@ -62,6 +58,46 @@ function PlayScreen(logic, dataList, width, height)
     };
     // List of currently active timers in the game (Timer instances)
     this.timers = [];
+    // List of animation callback functions
+    this.updateCallbacks = [];
+
+    // Setup the dialog/message area and attach some event handlers
+    this.dialog = new Dialog(
+	this.viewWidth, this.viewHeight, 
+	this.stage, this.dialogDefaults);
+
+    this.dialog.onUpdate((function(cb) {
+	this.addUpdate(cb);
+    }).bind(this));
+
+    this.dialog.onRedraw((function() {
+	this.dispatch("redraw");
+    }).bind(this));
+
+    this.dialog.onClosed((function() {
+	this.dispatch("redraw");
+	this.resume();
+    }).bind(this));
+}
+
+/* Called for every frame that is rendered by the game state. (called before
+ * rendering to screen) Returns true to request another frame be rendered 
+ * after this one, or false otherwise. */
+PlayScreen.prototype.update = function(dt)
+{
+    var lst = [];
+    for (var callback of this.updateCallbacks) {
+	if (callback(dt)) lst.push(callback);
+    }
+    this.updateCallbacks = lst;
+    // Request more redraws while there is stuff to animate (via callbacks)
+    return (this.updateCallbacks.length > 0);
+}
+
+PlayScreen.prototype.addUpdate = function(callback)
+{
+    this.updateCallbacks.push(callback);
+    if (this.updateCallbacks.length === 1) this.dispatch("redraw");
 }
 
 PlayScreen.prototype.setScene = function(name)
@@ -74,15 +110,14 @@ PlayScreen.prototype.setScene = function(name)
     this.scene = scene;
     this.sceneStage.children = [];
     this.sceneStage.addChild(scene.container);
-    this._updateDisplayScale();
+    this.sceneStage.scale.set(this.getDisplayScale());
     this.logic.initScene(new LogicContext(this, this.scene));
     this.dispatch("redraw");
 }
 
-PlayScreen.prototype._updateDisplayScale = function()
+PlayScreen.prototype.getDisplayScale = function()
 {
-    this.displayScale = this.viewHeight/this.scene.getBaseSize().height;
-    this.sceneStage.scale.set(this.displayScale);
+    return this.viewWidth/this.scene.getBaseSize().width;
 }
 
 /* Called when the game window is resized. This scales the scene to fit the 
@@ -94,21 +129,22 @@ PlayScreen.prototype.handleResize = function(width, height)
 	this.viewHeight = height;
 	this.sceneStage.x = width/2;
 	this.sceneStage.y = height/2;
-	this._updateDisplayScale();
+	this.sceneStage.scale.set(this.getDisplayScale());
+	this.dialog.handleResize(width, height);
     }
 }
 
 PlayScreen.prototype.handleClick = function(evt)
 {
-    if (this.dialog) {
-	// Forward the click to the dialog box
-	this.dialog.handleClick(evt);
+    // A direct click will dismiss the dialog box
+    if (this.dialog.isShown()) {
+	this.dialog.hide();
 	return;
     }
 
     if (this.scene) {
-	var xp = evt.x/this.displayScale;
-	var yp = evt.y/this.displayScale;
+	var xp = evt.x/this.getDisplayScale();
+	var yp = evt.y/this.getDisplayScale();
 	var args = this.scene.checkHit(xp, yp);
 	if (args.thing) {
 	    var ctx = new LogicContext(
@@ -122,15 +158,15 @@ PlayScreen.prototype.handleClick = function(evt)
 
 PlayScreen.prototype.handleDragStart = function(evt)
 {
-    if (this.dialog) {
-	// Forward the event to the dialog box
-	this.dialog.handleDragStart(evt);
-	return;
+    if (this.dialog.isShown()) {
+	setTimeout((function() {
+	    this.dialog.hide();
+	}).bind(this), 1000);
     }
     if (!this.scene) return;
 
-    var xp = evt.x/this.displayScale;
-    var yp = evt.y/this.displayScale;
+    var xp = evt.x/this.getDisplayScale();
+    var yp = evt.y/this.getDisplayScale();
     var args = this.scene.checkHit(xp, yp);
     if (false) { //args.thing) {
 	// Dragging an object
@@ -150,11 +186,6 @@ PlayScreen.prototype.handleDragStart = function(evt)
 
 PlayScreen.prototype.handleDragStop = function(evt)
 {
-    if (this.dialog) {
-	// Forward the event to the dialog box
-	this.dialog.handleDragStop(evt);
-	return;
-    }
     // If the player clicked and panned the scene around only a short distance,
     // count this as a click event.
     var dist = 5;
@@ -169,17 +200,12 @@ PlayScreen.prototype.handleDragStop = function(evt)
 
 PlayScreen.prototype.handleDrag = function(evt)
 {
-    if (this.dialog) {
-	// Forward the event to the dialog box
-	this.dialog.handleDrag(evt);
-	return;
-    }
     if (!this.scene) return;
 
     if (this.dragging) {
 	// Dragging a thing
-	this.dragging.x = this.dragStartX + evt.dx/this.displayScale;
-	this.dragging.y = this.dragStartY + evt.dy/this.displayScale;
+	this.dragging.x = this.dragStartX + evt.dx/this.getDisplayScale();
+	this.dragging.y = this.dragStartY + evt.dy/this.getDisplayScale();
 	this.dispatch("redraw");
 
     } else {
@@ -191,30 +217,15 @@ PlayScreen.prototype.handleDrag = function(evt)
     }
 }
 
-PlayScreen.prototype.showMessage = function(msg, options)
+PlayScreen.prototype.showMessage = function(msg)
 {
     // Merge together the default and supplied dialog options
-    var merged = {};
+    /*var merged = {};
     for (var key in this.dialogDefaults) 
 	merged[key] = this.dialogDefaults[key];
     for (var key in options) 
-	merged[key] = options[key];
-
-    this.dialog = new Dialog(
-	msg, 
-	gameState.renderer.width, 
-	gameState.renderer.height, 
-	merged);
-    this.dialog.show(this.stage);
-    this.dispatch("redraw");
-
-    // We pause the gameplay so events don't trigger while the player reads
-    this.pause();
-    this.dialog.onClosed((function() {
-	this.dialog = null;
-	this.dispatch("redraw");
-	this.resume();
-    }).bind(this));
+	merged[key] = options[key];*/
+    this.dialog.showMessage(msg);
 }
 
 /* Starts an in-game timer for the given callback. This timer can be paused
@@ -261,86 +272,4 @@ PlayScreen.prototype.resume = function()
     for (var tm of this.timers) {
 	tm.resume();
     }
-}
-
-/**********/
-/* Dialog */
-/**********/
-
-function Dialog(msg, width, height, options)
-{
-    this.container = new PIXI.Container();
-
-    var mgr = new EventManager();
-    this.onClosed = mgr.hook("closed");
-    this.dispatch = mgr.dispatcher();
-
-    this._setMessage(msg, width, height, options);
-}
-
-Dialog.prototype._setMessage = function(msg, width, height, options)
-{
-    var pad = height*0.02;
-    var fontSize = height*0.05;
-    var text = new PIXI.Text(msg, {
-	fontSize: fontSize, 
-	wordWrap: true,
-	fontStyle: "italic",
-	fill: options.fill,
-	wordWrapWidth: width-2*pad
-    });
-
-    // Render a solid colour
-    var texture = makeSolidColourTexture(
-	options.background, width, text.height+2*pad);
-    var bg = new PIXI.Sprite(texture);
-
-    var texture = makeSolidColourTexture(
-	options.lightbox, width, height);
-    var lightbox = new PIXI.Sprite(texture);
-    lightbox.alpha = 0.65;
-
-    this.container.addChild(lightbox);
-    this.container.addChild(bg);
-    this.container.addChild(text);
-
-    // Now position everything, a little offset from the bottom
-    bg.y = height-bg.height-(height*0.03);
-    text.x = pad;
-    text.y = bg.y+pad;
-}
-
-Dialog.prototype.show = function(stage)
-{
-    stage.addChild(this.container);
-}
-
-Dialog.prototype.hide = function(delay)
-{
-    this.container.parent.removeChild(this.container);
-    this.dispatch("closed");
-
-/*    if (delay) {
-	// ....
-	setTimeout((function() {
-	}).bind(this), duration*delay);
-    } else {
-    }*/
-}
-
-Dialog.prototype.handleClick = function(evt)
-{
-    this.hide();
-}
-
-Dialog.prototype.handleDragStart = function(x, y)
-{
-}
-
-Dialog.prototype.handleDragStop = function(x, y)
-{
-}
-
-Dialog.prototype.handleDrag = function(x, y)
-{
 }
