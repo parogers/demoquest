@@ -133,7 +133,6 @@ function IntroLogic(logic)
 	case "candle":
 	    console.log("CANDLE");
 	    //ctx.thing.setVisible(false);
-	    //gameState.screen.setScene("road");
 	    ctx.showMessage("A candle for evening work. I won't need it.");
 	    ctx.showMessage("Or maybe I will!");
 	    break;
@@ -146,10 +145,12 @@ function IntroLogic(logic)
 	    break;
 
 	case "door":
-	    if (ctx.thing.state === "open") 
+	    if (ctx.thing.state === "open") {
 		ctx.thing.setState("closed");
-	    else
+	    } else {
 		ctx.thing.setState("open");
+		ctx.screen.changeScene("road");
+	    }
 	    break;
 
 	}

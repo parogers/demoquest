@@ -36,14 +36,16 @@ function PlayScreen(logic, dataList, width, height)
     // The size of the viewing area
     this.viewWidth = width;
     this.viewHeight = height;
-    this.sceneStage.x = width/2;
-    this.sceneStage.y = height/2;
     // The thing being dragged around, or null if no dragging is happening
     // or the player is panning around instead.
     this.dragging = null;
     // The mouse cursor position when the player started dragging around
     this.dragStartX = 0;
     this.dragStartY = 0;
+    // List of currently active timers in the game (Timer instances)
+    this.timers = [];
+    // List of animation callback functions
+    this.updateCallbacks = [];
     // Setup some events for communicating with the main game state
     var mgr = new EventManager();
     this.onComplete = mgr.hook("complete");
@@ -56,10 +58,6 @@ function PlayScreen(logic, dataList, width, height)
 	background: "white",
 	lightbox: "black"
     };
-    // List of currently active timers in the game (Timer instances)
-    this.timers = [];
-    // List of animation callback functions
-    this.updateCallbacks = [];
 
     // Setup the dialog/message area and attach some event handlers
     this.dialog = new Dialog(
@@ -100,6 +98,48 @@ PlayScreen.prototype.addUpdate = function(callback)
     if (this.updateCallbacks.length === 1) this.dispatch("redraw");
 }
 
+PlayScreen.prototype.changeScene = function(name)
+{
+    if (this.scene === null) {
+	// Slow fade into the starting scene
+	this.setScene(name);
+	this.pause();
+	var fader = new Fader(this.viewWidth, this.viewHeight, -1, 2);
+	fader.start(this.stage);
+	this.addUpdate((function(dt) {
+	    if (!fader.update(dt)) {
+		this.resume();
+		return false;
+	    }
+	    return true;
+	}).bind(this));
+	
+    } else {
+	// Fade out, switch scenes, then fade back in
+	var fadeout = new Fader(this.viewWidth, this.viewHeight, 1, 1);
+	var fadein = new Fader(this.viewWidth, this.viewHeight, -1, 1);
+	this.stage.removeChild(fadeout.sprite);
+	this.pause();
+	fadeout.start(this.stage);
+	this.addUpdate((function(dt) {
+	    if (!fadeout.update(dt)) 
+	    {
+		this.setScene(name);
+		fadein.start(this.stage);
+		this.addUpdate((function(dt) {
+		    if (!fadein.update(dt)) {
+			this.resume();
+			return false;
+		    }
+		    return true;
+		}).bind(this));
+		return false;
+	    }
+	    return true;
+	}).bind(this));
+    }
+}
+
 PlayScreen.prototype.setScene = function(name)
 {
     if (this.scene) {
@@ -111,8 +151,9 @@ PlayScreen.prototype.setScene = function(name)
     this.sceneStage.children = [];
     this.sceneStage.addChild(scene.container);
     this.sceneStage.scale.set(this.getDisplayScale());
+    this.sceneStage.x = this.viewWidth/2;
+    this.sceneStage.y = this.viewHeight/2;
     this.logic.initScene(new LogicContext(this, this.scene));
-    this.dispatch("redraw");
 }
 
 PlayScreen.prototype.getDisplayScale = function()
@@ -210,7 +251,7 @@ PlayScreen.prototype.handleDrag = function(evt)
 
     } else {
 	// Panning the scene around
-	var pos = this.dragStartX - evt.dx / (window.innerWidth/4);
+	var pos = this.dragStartX - evt.dx / (window.innerWidth/2);
 	pos = Math.max(Math.min(pos, 1), -1);
 	this.scene.setCameraPos(pos);
 	this.dispatch("redraw");
@@ -219,12 +260,9 @@ PlayScreen.prototype.handleDrag = function(evt)
 
 PlayScreen.prototype.showMessage = function(msg)
 {
-    // Merge together the default and supplied dialog options
-    /*var merged = {};
-    for (var key in this.dialogDefaults) 
-	merged[key] = this.dialogDefaults[key];
-    for (var key in options) 
-	merged[key] = options[key];*/
+    // Pause game play and show the message (will be resumed when the 
+    // dialog box is closed)
+    this.pause();
     this.dialog.showMessage(msg);
 }
 

@@ -186,5 +186,5 @@ GameState.prototype._startGame = function()
     ).bind(this));
 
     // Now change to the opening scene
-    this.screen.setScene("intro");
+    this.screen.changeScene("intro");
 }

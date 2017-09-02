@@ -61,3 +61,58 @@ function makeSolidColourTexture(colour, width, height)
 
     return PIXI.Texture.fromCanvas(canvas);
 }
+
+/**********/
+/* Screen */
+/**********/
+
+function Screen()
+{
+    this.renderer = null;
+    this.width = width;
+    this.height = height;
+
+    var mgr = new EventManager();
+    this.dispatch = mgr.dispatcher();
+    this.onResize = mgr.hook("resize");
+}
+
+Screen.prototype.handleResize = function(renderer)
+{
+    this.renderer = renderer;
+    this.width = renderer.width;
+    this.height = renderer.height;
+}
+
+/*********/
+/* Fader */
+/*********/
+
+function Fader(width, height, dir, duration)
+{
+    var txt = makeSolidColourTexture("black", width, height);
+    this.sprite = new PIXI.Sprite(txt);
+    this.sprite.alpha = (dir === 1 ? 0 : 1);
+    this.duration = duration;
+    this.dir = dir;
+}
+
+Fader.prototype.start = function(stage)
+{
+    stage.addChild(this.sprite);
+}
+
+Fader.prototype.update = function(dt)
+{
+    this.sprite.alpha += this.dir*dt/this.duration;
+    if (this.dir > 0 && this.sprite.alpha >= 1) {
+	this.sprite.alpha = 1;
+	this.sprite.parent.removeChild(this.sprite);
+	return false;
+    } else if (this.dir < 0 && this.sprite.alpha <= 0) {
+	this.sprite.alpha = 0;
+	this.sprite.parent.removeChild(this.sprite);
+	return false;
+    }
+    return true;
+}

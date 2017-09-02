@@ -36,7 +36,8 @@ function Dialog(width, height, stage, options)
 
     this.state = "idle";
 
-    // Render a solid colour
+    // Render a solid colour. We cache it here for efficiency, and scale it 
+    // to whatever size is needed below. 
     var texture = makeSolidColourTexture(this.options.background, 10, 10);
     this.bg = new PIXI.Sprite(texture);
     this.container.addChild(this.bg);
