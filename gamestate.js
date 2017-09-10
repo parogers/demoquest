@@ -36,6 +36,8 @@ function GameState(div)
     this.dataList = {};
     this.lastRenderTime = null;
 
+    //this.screen = new Screen();
+
     // Callback function for passing to renderAnimationFrame
     this.staticRenderFrame = (function() {
 	this.renderFrame();

@@ -25,7 +25,7 @@
                 "h": 19,
                 "w": 26,
                 "x": 1,
-                "y": 176
+                "y": 171
             },
             "rotated": false,
             "sourceSize": {
@@ -45,7 +45,7 @@
                 "h": 18,
                 "w": 51,
                 "x": 1,
-                "y": 196
+                "y": 191
             },
             "rotated": false,
             "sourceSize": {
@@ -62,19 +62,19 @@
         },
         "door_closed": {
             "frame": {
-                "h": 32,
-                "w": 128,
+                "h": 27,
+                "w": 15,
                 "x": 1,
                 "y": 107
             },
             "rotated": false,
             "sourceSize": {
-                "h": 32,
-                "w": 128
+                "h": 27,
+                "w": 15
             },
             "spriteSourceSize": {
-                "h": 32,
-                "w": 128,
+                "h": 27,
+                "w": 15,
                 "x": 0,
                 "y": 0
             },
@@ -85,7 +85,7 @@
                 "h": 27,
                 "w": 13,
                 "x": 1,
-                "y": 140
+                "y": 135
             },
             "rotated": false,
             "sourceSize": {
@@ -105,7 +105,7 @@
                 "h": 5,
                 "w": 6,
                 "x": 1,
-                "y": 220
+                "y": 215
             },
             "rotated": false,
             "sourceSize": {
@@ -125,7 +125,7 @@
                 "h": 7,
                 "w": 18,
                 "x": 1,
-                "y": 168
+                "y": 163
             },
             "rotated": false,
             "sourceSize": {
@@ -145,7 +145,7 @@
                 "h": 4,
                 "w": 3,
                 "x": 1,
-                "y": 215
+                "y": 210
             },
             "rotated": false,
             "sourceSize": {
@@ -165,7 +165,7 @@
                 "h": 9,
                 "w": 10,
                 "x": 1,
-                "y": 226
+                "y": 221
             },
             "rotated": false,
             "sourceSize": {
@@ -248,7 +248,7 @@
         "scale": "1",
         "size": {
             "W": 130,
-            "h": 237
+            "h": 232
         },
         "version": "1"
     }

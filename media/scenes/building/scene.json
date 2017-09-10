@@ -1,0 +1,36 @@
+{
+    "title": "Building",
+    "name": "building",
+    "description": "An abandoned cabin",
+    "camera": "-1",
+    "layers": [
+        {
+            "name": "background",
+            "sprites": []
+        },
+        {
+            "name": "incloset",
+            "sprites": []
+        },
+        {
+            "name": "wall",
+            "sprites": [
+                {
+                    "name": "door_open",
+                    "x": 20,
+                    "y": 5
+                },
+                {
+                    "name": "closet_open",
+                    "x": 137,
+                    "y": 5
+                },
+                {
+                    "name": "closet_closed",
+                    "x": 137,
+                    "y": 5
+                }
+            ]
+        }
+    ]
+}

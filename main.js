@@ -15,7 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-var SCENES = ["road", "intro"];
+// TODO - store these in an automatically generated json file (via make)
+var SCENES = ["road", "intro", "cave"];
 var gameState = null;
 
 function onload()

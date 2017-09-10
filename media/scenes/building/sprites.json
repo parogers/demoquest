@@ -1,0 +1,135 @@
+{
+    "frames": {
+        "background": {
+            "frame": {
+                "h": 32,
+                "w": 32,
+                "x": 1,
+                "y": 1
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 32
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 32,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "closet_closed": {
+            "frame": {
+                "h": 27,
+                "w": 22,
+                "x": 1,
+                "y": 156
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 27,
+                "w": 22
+            },
+            "spriteSourceSize": {
+                "h": 27,
+                "w": 22,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "closet_open": {
+            "frame": {
+                "h": 27,
+                "w": 22,
+                "x": 1,
+                "y": 128
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 27,
+                "w": 22
+            },
+            "spriteSourceSize": {
+                "h": 27,
+                "w": 22,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "door_open": {
+            "frame": {
+                "h": 27,
+                "w": 14,
+                "x": 1,
+                "y": 100
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 27,
+                "w": 14
+            },
+            "spriteSourceSize": {
+                "h": 27,
+                "w": 14,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "incloset": {
+            "frame": {
+                "h": 32,
+                "w": 162,
+                "x": 1,
+                "y": 34
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 162
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 162,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "wall": {
+            "frame": {
+                "h": 32,
+                "w": 164,
+                "x": 1,
+                "y": 67
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 164
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 164,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        }
+    },
+    "meta": {
+        "app": "makescene.py conversion",
+        "format": "RGBA8888",
+        "image": "sprites.png",
+        "scale": "1",
+        "size": {
+            "W": 166,
+            "h": 185
+        },
+        "version": "1"
+    }
+}

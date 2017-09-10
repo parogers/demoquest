@@ -1,0 +1,40 @@
+{
+    "title": "Cave",
+    "name": "cave",
+    "description": "A cave deep underground",
+    "camera": "-1",
+    "layers": [
+        {
+            "name": "background",
+            "sprites": []
+        },
+        {
+            "name": "wall",
+            "sprites": []
+        },
+        {
+            "name": "ladder",
+            "sprites": [
+                {
+                    "name": "ladder",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
+        },
+        {
+            "name": "table",
+            "sprites": [
+                {
+                    "name": "key",
+                    "x": 56,
+                    "y": 22
+                }
+            ]
+        },
+        {
+            "name": "darkness",
+            "sprites": []
+        }
+    ]
+}

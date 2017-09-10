@@ -132,7 +132,6 @@ function IntroLogic(logic)
 	{
 	case "candle":
 	    console.log("CANDLE");
-	    //ctx.thing.setVisible(false);
 	    ctx.showMessage("A candle for evening work. I won't need it.");
 	    ctx.showMessage("Or maybe I will!");
 	    break;
@@ -160,11 +159,45 @@ function IntroLogic(logic)
 function RoadLogic(logic)
 {
     this.logic = logic;
+    this.bush1Moved = false;
+    this.bush2Moved = false;
 
     this.initScene = function(ctx) {
+	ctx.getThing("bush1").setVisible(!this.bush1Moved);
+	ctx.getThing("bush2").setVisible(!this.bush2Moved);
     }
 
     this.handleClicked = function(ctx) {
+	switch(ctx.thing.name) 
+	{
+	case "bush1":
+	    this.bush1Moved = true;
+	    ctx.thing.setVisible(false);
+	    if (this.bush2Moved) {
+		ctx.showMessage("You clear away some brush revealing a cave!")
+	    } else {
+		ctx.showMessage("You clear away some brush. You see something behind it!")
+	    }
+	    break;
+
+	case "bush2":
+	    this.bush2Moved = true;
+	    ctx.thing.setVisible(false);
+	    if (this.bush1Moved) {
+		ctx.showMessage("You clear away some brush revealing a cave!")
+	    } else {
+		ctx.showMessage("You clear away some brush. You see something behind it!")
+	    }
+	    break;
+
+	case "cave":
+	    if (!this.bush1Moved || !this.bush2Moved) {
+		ctx.showMessage("I must clear the way first.");
+	    } else {
+		ctx.screen.changeScene("cave");
+	    }
+	    break;
+	}
     }
 }
 

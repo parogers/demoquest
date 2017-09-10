@@ -34,20 +34,6 @@ function getTransparencyMask(renderer, texture)
     return mask;
 }
 
-function getNativeWidth(img)
-{
-    var tmp = new Image();
-    tmp.src = img.src;
-    return tmp.width;
-}
-
-function getNativeHeight(img)
-{
-    var tmp = new Image();
-    tmp.src = img.src;
-    return tmp.height;
-}
-
 function makeSolidColourTexture(colour, width, height)
 {
     // Use an HTML canvas to render a solid area of colour
@@ -77,7 +63,7 @@ function Screen()
     this.onResize = mgr.hook("resize");
 }
 
-Screen.prototype.handleResize = function(renderer)
+Screen.prototype.configure = function(renderer)
 {
     this.renderer = renderer;
     this.width = renderer.width;

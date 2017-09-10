@@ -22,8 +22,8 @@
                 },
                 {
                     "name": "door_closed",
-                    "x": 0,
-                    "y": 0
+                    "x": 111,
+                    "y": 5
                 },
                 {
                     "name": "door_open",

@@ -238,8 +238,8 @@ function Layer(name, texture)
     this.background.anchor.set(0.5, 0.5);
     this.container.addChild(this.background);
     // The list of sprites rendered in this scene (stored by name)
-    this.sprites = {};
-    // The transparency masks for the rendered sprites
+    //this.sprites = {};
+    // The transparency masks for the rendered sprites (by name)
     this.masks = {};
 }
 
@@ -269,9 +269,10 @@ Layer.prototype.checkHit = function(x, y)
  * instance in this layer. If so, this returns the sprite. */
 Layer.prototype.checkHitSprite = function(x, y)
 {
-    for (var name in this.sprites) {
-	var sprite = this.sprites[name];
-	if (sprite.visible && 
+    var reversed = this.container.children.slice().reverse();
+    for (var sprite of reversed) {
+	if (sprite.name && 
+	    sprite.visible && 
 	    x >= sprite.x && 
 	    y >= sprite.y && 
 	    x < sprite.x + sprite.width && 
@@ -279,7 +280,7 @@ Layer.prototype.checkHitSprite = function(x, y)
 	{
 	    var xp = (x-sprite.x)|0;
 	    var yp = (y-sprite.y)|0;
-	    if (this.masks && this.masks[name][xp][yp] === 255) 
+	    if (this.masks && this.masks[sprite.name][xp][yp] === 255) 
 		return sprite;
 	}
     }
@@ -289,7 +290,7 @@ Layer.prototype.checkHitSprite = function(x, y)
 Layer.prototype.addSprite = function(sprite)
 {
     // TODO - check for duplicates
-    this.sprites[sprite.name] = sprite;
+    //this.sprites[sprite.name] = sprite;
     this.masks[sprite.name] = getTransparencyMask(
 	gameState.renderer, 
 	sprite.texture);
