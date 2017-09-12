@@ -16,7 +16,7 @@
  */
 
 // TODO - store these in an automatically generated json file (via make)
-var SCENES = ["road", "intro", "cave"];
+var SCENES = ["road", "intro", "cave", "closet"];
 var gameState = null;
 
 function onload()

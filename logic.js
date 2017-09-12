@@ -24,7 +24,8 @@ function Logic()
     // Scene specific logic stored by name
     this.sceneLogic = {
 	"intro" : new IntroLogic(this),
-	"road" : new RoadLogic(this)
+	"road" : new RoadLogic(this),
+	"closet" : new ClosetLogic(this)
     };
 }
 
@@ -72,7 +73,11 @@ function LogicContext(screen, scene, thing, sprite)
 
 LogicContext.prototype.getThing = function(name)
 {
-    return this.scene.getThing(name);
+    var thing = this.scene.getThing(name);
+    if (!thing) {
+	console.log("ERROR: can't find thing: " + name);
+    }
+    return thing;
 }
 
 LogicContext.prototype.showMessage = function(msg, options)
@@ -83,6 +88,11 @@ LogicContext.prototype.showMessage = function(msg, options)
 LogicContext.prototype.startTimer = function(callback, delay)
 {
     return this.screen.startTimer(callback, delay);
+}
+
+LogicContext.prototype.addUpdate = function(callback)
+{
+    return this.screen.addUpdate(callback);
 }
 
 /***************/
@@ -201,3 +211,63 @@ function RoadLogic(logic)
     }
 }
 
+function ClosetLogic(logic)
+{
+    this.logic = logic;
+
+    this.initScene = function(ctx) {
+	this.timer = 0;
+	this.state = "start";
+
+	ctx.getThing("trigger").onVisible(function(ctx) {
+	    console.log("VISIBLE!");
+	});
+
+	ctx.addUpdate((function(dt) {
+	    if (this.timer > 0) {
+		this.timer -= dt;
+		return true;
+	    }
+	    switch(this.state) {
+	    case "start":
+		// Wait for the scene to fade in a bit
+		this.state = "opening";
+		this.timer = 1.5;
+		//this.offset = 0;
+		break;
+	    case "opening":
+		// Opening the crack
+		var sprite = ctx.getThing("crack").getSprite();
+		var stop = ctx.getThing("darkright").getSprite();
+		var thing = ctx.getThing("crack");
+		//this.offset += dt;
+		//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
+		sprite.x += 10*dt;
+		if (sprite.x > stop.x) {
+		    sprite.visible = false;
+		    this.state = "brighter";
+		    this.timer = 2;
+		}
+		break;
+	    case "brighter":
+		var sprite1 = ctx.getThing("darkright").getSprite();
+		var sprite2 = ctx.getThing("darkleft").getSprite();
+		sprite1.alpha -= 0.2*dt;
+		sprite2.alpha -= 0.2*dt;
+		if (sprite1.alpha < 0) {
+		    sprite1.visible = false;
+		    sprite2.visible = false;
+		    return false;
+		}
+		break;
+	    }
+	    return true;
+	}).bind(this));
+    }
+
+    this.handleClicked = function(ctx) {
+	switch(ctx.thing.name) 
+	{
+	}
+    }
+}

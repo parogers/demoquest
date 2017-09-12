@@ -1,5 +1,5 @@
 
-SCENES = intro road cave building
+SCENES = intro road cave building closet
 
 MAKE_TARGETS = $(patsubst %,media/scenes/%/scene.json,$(SCENES))
 

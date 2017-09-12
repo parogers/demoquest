@@ -43,12 +43,12 @@ Scene.fromData = function(sceneData)
     // Build the layers and contained sprites
     for (var layerData of sceneData.layers) 
     {
-	var texture = scn.getTexture(layerData.name);
+	var texture = scn.sceneData.getTexture(layerData.name);
 	var layer = new Layer(layerData.name, texture);
 	scn.addLayer(layer);
 	for (var spriteData of layerData["sprites"]) 
 	{
-	    var texture = scn.getTexture(spriteData["name"]);
+	    var texture = scn.sceneData.getTexture(spriteData["name"]);
 	    var sprite = new PIXI.Sprite(texture);
 	    sprite.name = spriteData["name"];
 	    sprite.anchor.set(0, 0);
@@ -98,20 +98,6 @@ Scene.prototype.addLayer = function(layer)
     layer.scene = this;
     this.layers.push(layer);
     this.container.addChild(layer.container);
-}
-
-/* Returns a PIXI texture given it's name (assuemd to belong to this scene */
-Scene.prototype.getTexture = function(name)
-{
-    var res = PIXI.loader.resources[this.sceneData.spritesPath];
-    if (!res) {
-	throw Error("No such sprite resource: " + this.sceneData.spritesPath);
-    }
-    var texture = res.textures[name];
-    if (!texture) {
-	throw Error("No such texture: " + name);
-    }
-    return texture;
 }
 
 /* Set the camera position within the scene. The position is from -1 (furthest
@@ -217,6 +203,20 @@ SceneData.fromJSON = function(src, raw)
     return scn;
 }
 
+/* Returns a PIXI texture given it's name (assuemd to belong to this scene */
+SceneData.prototype.getTexture = function(name)
+{
+    var res = PIXI.loader.resources[this.spritesPath];
+    if (!res) {
+	throw Error("No such sprite resource: " + this.spritesPath);
+    }
+    var texture = res.textures[name];
+    if (!texture) {
+	throw Error("No such texture: " + name);
+    }
+    return texture;
+}
+
 /*********/
 /* Layer */
 /*********/
@@ -308,8 +308,8 @@ function Thing(name)
 {
     // Sprites associated with this thing, stored by "state" name
     this.sprites = {};
-    this.state = "";
     this.name = name;
+    this.state = "default";
 }
 
 Thing.prototype.getSprite = function(state)

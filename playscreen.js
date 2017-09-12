@@ -36,6 +36,7 @@ function PlayScreen(logic, dataList, width, height)
     // The size of the viewing area
     this.viewWidth = width;
     this.viewHeight = height;
+    this.cutScene = false;
     // The thing being dragged around, or null if no dragging is happening
     // or the player is panning around instead.
     this.dragging = null;
@@ -51,6 +52,7 @@ function PlayScreen(logic, dataList, width, height)
     this.onComplete = mgr.hook("complete");
     this.onGameOver = mgr.hook("gameover");
     this.onRedraw = mgr.hook("redraw");
+    this.onVisible = mgr.hook("thing-visible");
     this.dispatch = mgr.dispatcher();
 
     this.dialogDefaults = {
@@ -142,6 +144,9 @@ PlayScreen.prototype.changeScene = function(name)
 
 PlayScreen.prototype.setScene = function(name)
 {
+    if (!this.dataList[name]) {
+	throw Exception("No such scene: " + name);
+    }
     if (this.scene) {
 	this.logic.leaveScene(new LogicContext(this, this.scene));
     }
@@ -153,6 +158,12 @@ PlayScreen.prototype.setScene = function(name)
     this.sceneStage.scale.set(this.getDisplayScale());
     this.sceneStage.x = this.viewWidth/2;
     this.sceneStage.y = this.viewHeight/2;
+    // Attach signal handlers to each thing
+    for (var name in this.scene.things) {
+	var thing = this.scene.things[name];
+	var mgr = new EventManager();
+	thing.onVisible = mgr.hook("visible");
+    }
     this.logic.initScene(new LogicContext(this, this.scene));
 }
 
@@ -183,17 +194,18 @@ PlayScreen.prototype.handleClick = function(evt)
 	return;
     }
 
-    if (this.scene) {
-	var xp = evt.x/this.getDisplayScale();
-	var yp = evt.y/this.getDisplayScale();
-	var args = this.scene.checkHit(xp, yp);
-	if (args.thing) {
-	    var ctx = new LogicContext(
-		this, this.scene, 
-		args.thing, args.sprite);
-	    this.logic.handleClicked(ctx);
-	    this.dispatch("redraw");
-	}
+    if (!this.scene) return;
+    if (this.cutScene) return;
+
+    var xp = evt.x/this.getDisplayScale();
+    var yp = evt.y/this.getDisplayScale();
+    var args = this.scene.checkHit(xp, yp);
+    if (args.thing) {
+	var ctx = new LogicContext(
+	    this, this.scene, 
+	    args.thing, args.sprite);
+	this.logic.handleClicked(ctx);
+	this.dispatch("redraw");
     }
 }
 
@@ -205,6 +217,7 @@ PlayScreen.prototype.handleDragStart = function(evt)
 	}).bind(this), 1000);
     }
     if (!this.scene) return;
+    if (this.cutScene) return;
 
     var xp = evt.x/this.getDisplayScale();
     var yp = evt.y/this.getDisplayScale();
@@ -242,6 +255,7 @@ PlayScreen.prototype.handleDragStop = function(evt)
 PlayScreen.prototype.handleDrag = function(evt)
 {
     if (!this.scene) return;
+    if (this.cutScene) return;
 
     if (this.dragging) {
 	// Dragging a thing
@@ -255,6 +269,8 @@ PlayScreen.prototype.handleDrag = function(evt)
 	pos = Math.max(Math.min(pos, 1), -1);
 	this.scene.setCameraPos(pos);
 	this.dispatch("redraw");
+	// Now figure out what's in view and send visibility events
+	// ...
     }
 }
 
@@ -293,6 +309,15 @@ PlayScreen.prototype.cancelTimer = function(tm)
     if (n !== -1) {
 	this.timers = this.timers.slice(0, n).concat(this.timers.slice(n+1));
     }
+}
+
+PlayScreen.prototype.getThingEvents = function(thing)
+{
+    var name = thing.name || thing;
+    if (this.thingEventManager.hasOwnProperty(name)) {
+	return this.thingEventManagers[name];
+    }
+    return null;
 }
 
 /* Pause the gameplay. This happens when showing the player a message */

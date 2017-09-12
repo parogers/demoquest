@@ -22,139 +22,119 @@
         },
         "bookshelf": {
             "frame": {
-                "h": 32,
-                "w": 164,
+                "h": 23,
+                "w": 21,
                 "x": 1,
-                "y": 100
+                "y": 67
             },
             "rotated": false,
             "sourceSize": {
-                "h": 32,
-                "w": 164
+                "h": 23,
+                "w": 21
             },
             "spriteSourceSize": {
-                "h": 32,
-                "w": 164,
+                "h": 23,
+                "w": 21,
                 "x": 0,
                 "y": 0
             },
             "trimmed": false
         },
-        "boxes": {
+        "crack": {
             "frame": {
                 "h": 32,
-                "w": 164,
+                "w": 10,
                 "x": 1,
-                "y": 133
+                "y": 190
             },
             "rotated": false,
             "sourceSize": {
                 "h": 32,
-                "w": 164
+                "w": 10
             },
             "spriteSourceSize": {
                 "h": 32,
-                "w": 164,
+                "w": 10,
                 "x": 0,
                 "y": 0
             },
             "trimmed": false
         },
-        "closet_closed": {
-            "frame": {
-                "h": 27,
-                "w": 22,
-                "x": 1,
-                "y": 231
-            },
-            "rotated": false,
-            "sourceSize": {
-                "h": 27,
-                "w": 22
-            },
-            "spriteSourceSize": {
-                "h": 27,
-                "w": 22,
-                "x": 0,
-                "y": 0
-            },
-            "trimmed": false
-        },
-        "closet_open": {
-            "frame": {
-                "h": 27,
-                "w": 22,
-                "x": 1,
-                "y": 203
-            },
-            "rotated": false,
-            "sourceSize": {
-                "h": 27,
-                "w": 22
-            },
-            "spriteSourceSize": {
-                "h": 27,
-                "w": 22,
-                "x": 0,
-                "y": 0
-            },
-            "trimmed": false
-        },
-        "clothes": {
-            "frame": {
-                "h": 8,
-                "w": 30,
-                "x": 1,
-                "y": 166
-            },
-            "rotated": false,
-            "sourceSize": {
-                "h": 8,
-                "w": 30
-            },
-            "spriteSourceSize": {
-                "h": 8,
-                "w": 30,
-                "x": 0,
-                "y": 0
-            },
-            "trimmed": false
-        },
-        "door_open": {
-            "frame": {
-                "h": 27,
-                "w": 14,
-                "x": 1,
-                "y": 175
-            },
-            "rotated": false,
-            "sourceSize": {
-                "h": 27,
-                "w": 14
-            },
-            "spriteSourceSize": {
-                "h": 27,
-                "w": 14,
-                "x": 0,
-                "y": 0
-            },
-            "trimmed": false
-        },
-        "incloset": {
+        "darkleft": {
             "frame": {
                 "h": 32,
-                "w": 162,
+                "w": 43,
                 "x": 1,
-                "y": 34
+                "y": 124
             },
             "rotated": false,
             "sourceSize": {
                 "h": 32,
-                "w": 162
+                "w": 43
             },
             "spriteSourceSize": {
                 "h": 32,
-                "w": 162,
+                "w": 43,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "darkright": {
+            "frame": {
+                "h": 32,
+                "w": 43,
+                "x": 1,
+                "y": 157
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 43
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 43,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "door": {
+            "frame": {
+                "h": 32,
+                "w": 96,
+                "x": 1,
+                "y": 91
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 96
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 96,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "trigger": {
+            "frame": {
+                "h": 9,
+                "w": 6,
+                "x": 1,
+                "y": 223
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 9,
+                "w": 6
+            },
+            "spriteSourceSize": {
+                "h": 9,
+                "w": 6,
                 "x": 0,
                 "y": 0
             },
@@ -163,18 +143,18 @@
         "wall": {
             "frame": {
                 "h": 32,
-                "w": 164,
+                "w": 64,
                 "x": 1,
-                "y": 67
+                "y": 34
             },
             "rotated": false,
             "sourceSize": {
                 "h": 32,
-                "w": 164
+                "w": 64
             },
             "spriteSourceSize": {
                 "h": 32,
-                "w": 164,
+                "w": 64,
                 "x": 0,
                 "y": 0
             },
@@ -187,8 +167,8 @@
         "image": "sprites.png",
         "scale": "1",
         "size": {
-            "W": 166,
-            "h": 260
+            "W": 98,
+            "h": 234
         },
         "version": "1"
     }

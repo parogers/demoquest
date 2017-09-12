@@ -1,0 +1,47 @@
+{
+    "title": "Closet",
+    "name": "closet",
+    "description": "A closet",
+    "camera": "0",
+    "layers": [
+        {
+            "name": "background",
+            "sprites": []
+        },
+        {
+            "name": "wall",
+            "sprites": [
+                {
+                    "name": "bookshelf",
+                    "x": 27,
+                    "y": 9
+                }
+            ]
+        },
+        {
+            "name": "door",
+            "sprites": [
+                {
+                    "name": "darkleft",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "darkright",
+                    "x": 53,
+                    "y": 0
+                },
+                {
+                    "name": "crack",
+                    "x": 43,
+                    "y": 0
+                },
+                {
+                    "name": "trigger",
+                    "x": 90,
+                    "y": 10
+                }
+            ]
+        }
+    ]
+}

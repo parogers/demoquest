@@ -16,6 +16,21 @@
             "name": "wall",
             "sprites": [
                 {
+                    "name": "bookshelf",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
+        },
+        {
+            "name": "boxes",
+            "sprites": [
+                {
+                    "name": "clothes",
+                    "x": 86,
+                    "y": 24
+                },
+                {
                     "name": "door_open",
                     "x": 20,
                     "y": 5
