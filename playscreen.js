@@ -54,6 +54,7 @@ function PlayScreen(logic, dataList, width, height)
     this.onRedraw = mgr.hook("redraw");
     this.onVisible = mgr.hook("thing-visible");
     this.dispatch = mgr.dispatcher();
+    this.redraw = mgr.dispatcher("redraw");
 
     this.dialogDefaults = {
 	fill: "black",
@@ -71,11 +72,11 @@ function PlayScreen(logic, dataList, width, height)
     }).bind(this));
 
     this.dialog.onRedraw((function() {
-	this.dispatch("redraw");
+	this.redraw();
     }).bind(this));
 
     this.dialog.onClosed((function() {
-	this.dispatch("redraw");
+	this.redraw();
 	this.resume();
     }).bind(this));
 }
@@ -97,7 +98,7 @@ PlayScreen.prototype.update = function(dt)
 PlayScreen.prototype.addUpdate = function(callback)
 {
     this.updateCallbacks.push(callback);
-    if (this.updateCallbacks.length === 1) this.dispatch("redraw");
+    if (this.updateCallbacks.length === 1) this.redraw();
 }
 
 PlayScreen.prototype.changeScene = function(name)
@@ -205,7 +206,7 @@ PlayScreen.prototype.handleClick = function(evt)
 	    this, this.scene, 
 	    args.thing, args.sprite);
 	this.logic.handleClicked(ctx);
-	this.dispatch("redraw");
+	this.redraw();
     }
 }
 
@@ -261,14 +262,14 @@ PlayScreen.prototype.handleDrag = function(evt)
 	// Dragging a thing
 	this.dragging.x = this.dragStartX + evt.dx/this.getDisplayScale();
 	this.dragging.y = this.dragStartY + evt.dy/this.getDisplayScale();
-	this.dispatch("redraw");
+	this.redraw();
 
     } else {
 	// Panning the scene around
 	var pos = this.dragStartX - evt.dx / (window.innerWidth/2);
 	pos = Math.max(Math.min(pos, 1), -1);
 	this.scene.setCameraPos(pos);
-	this.dispatch("redraw");
+	this.redraw();
 	// Now figure out what's in view and send visibility events
 	// ...
     }
@@ -294,7 +295,7 @@ PlayScreen.prototype.startTimer = function(callback, delay)
 		// No more callbacks - remove the timer from the list
 		this.cancelTimer(tm);
 	    }
-	    this.dispatch("redraw");
+	    this.redraw();
 	    return ret;
 	}
     ).bind(this), delay);

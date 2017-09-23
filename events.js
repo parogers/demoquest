@@ -35,8 +35,13 @@ EventManager.prototype.addEventListener = function(event, callback)
     return this;
 }
 
-EventManager.prototype.dispatcher = function()
+EventManager.prototype.dispatcher = function(event)
 {
+    if (event) {
+	return (function() {
+	    this.dispatch(event);
+	}).bind(this);
+    }
     return this.dispatch.bind(this);
 }
 
