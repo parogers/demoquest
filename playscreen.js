@@ -15,6 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Logic = require("./logic");
+var Events = require("./events");
+var Dialog = require("./dialog");
+var Scene = require("./scene");
+var Utils = require("./utils");
+
 /**************/
 /* PlayScreen */
 /**************/
@@ -48,7 +54,7 @@ function PlayScreen(logic, dataList, width, height)
     // List of animation callback functions
     this.updateCallbacks = [];
     // Setup some events for communicating with the main game state
-    var mgr = new EventManager();
+    var mgr = new Events.EventManager();
     this.onComplete = mgr.hook("complete");
     this.onGameOver = mgr.hook("gameover");
     this.onRedraw = mgr.hook("redraw");
@@ -67,18 +73,18 @@ function PlayScreen(logic, dataList, width, height)
 	this.viewWidth, this.viewHeight, 
 	this.stage, this.dialogDefaults);
 
-    this.dialog.onUpdate((function(cb) {
+    this.dialog.onUpdate(cb => {
 	this.addUpdate(cb);
-    }).bind(this));
+    });
 
-    this.dialog.onRedraw((function() {
+    this.dialog.onRedraw(cb => {
 	this.redraw();
-    }).bind(this));
+    });
 
-    this.dialog.onClosed((function() {
+    this.dialog.onClosed(cb => {
 	this.redraw();
 	this.resume();
-    }).bind(this));
+    });
 }
 
 /* Called for every frame that is rendered by the game state. (called before
@@ -107,39 +113,39 @@ PlayScreen.prototype.changeScene = function(name)
 	// Slow fade into the starting scene
 	this.setScene(name);
 	this.pause();
-	var fader = new Fader(this.viewWidth, this.viewHeight, -1, 2);
+	var fader = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 2);
 	fader.start(this.stage);
-	this.addUpdate((function(dt) {
+	this.addUpdate(dt => {
 	    if (!fader.update(dt)) {
 		this.resume();
 		return false;
 	    }
 	    return true;
-	}).bind(this));
+	});
 	
     } else {
 	// Fade out, switch scenes, then fade back in
-	var fadeout = new Fader(this.viewWidth, this.viewHeight, 1, 1);
-	var fadein = new Fader(this.viewWidth, this.viewHeight, -1, 1);
+	var fadeout = new Utils.Fader(this.viewWidth, this.viewHeight, 1, 1);
+	var fadein = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 1);
 	this.stage.removeChild(fadeout.sprite);
 	this.pause();
 	fadeout.start(this.stage);
-	this.addUpdate((function(dt) {
+	this.addUpdate(dt => {
 	    if (!fadeout.update(dt)) 
 	    {
 		this.setScene(name);
 		fadein.start(this.stage);
-		this.addUpdate((function(dt) {
+		this.addUpdate(dt => {
 		    if (!fadein.update(dt)) {
 			this.resume();
 			return false;
 		    }
 		    return true;
-		}).bind(this));
+		});
 		return false;
 	    }
 	    return true;
-	}).bind(this));
+	});
     }
 }
 
@@ -149,10 +155,10 @@ PlayScreen.prototype.setScene = function(name)
 	throw Exception("No such scene: " + name);
     }
     if (this.scene) {
-	this.logic.leaveScene(new LogicContext(this, this.scene));
+	this.logic.leaveScene(new Logic.LogicContext(this, this.scene));
     }
 
-    var scene = Scene.fromData(this.dataList[name]);
+    var scene = Scene.Scene.fromData(this.dataList[name]);
     this.scene = scene;
     this.sceneStage.children = [];
     this.sceneStage.addChild(scene.container);
@@ -162,10 +168,10 @@ PlayScreen.prototype.setScene = function(name)
     // Attach signal handlers to each thing
     for (var name in this.scene.things) {
 	var thing = this.scene.things[name];
-	var mgr = new EventManager();
+	var mgr = new Events.EventManager();
 	thing.onVisible = mgr.hook("visible");
     }
-    this.logic.initScene(new LogicContext(this, this.scene));
+    this.logic.initScene(new Logic.LogicContext(this, this.scene));
 }
 
 PlayScreen.prototype.getDisplayScale = function()
@@ -202,7 +208,7 @@ PlayScreen.prototype.handleClick = function(evt)
     var yp = evt.y/this.getDisplayScale();
     var args = this.scene.checkHit(xp, yp);
     if (args.thing) {
-	var ctx = new LogicContext(
+	var ctx = new Logic.LogicContext(
 	    this, this.scene, 
 	    args.thing, args.sprite);
 	this.logic.handleClicked(ctx);
@@ -213,9 +219,9 @@ PlayScreen.prototype.handleClick = function(evt)
 PlayScreen.prototype.handleDragStart = function(evt)
 {
     if (this.dialog.isShown()) {
-	setTimeout((function() {
+	setTimeout(() => {
 	    this.dialog.hide();
-	}).bind(this), 1000);
+	}, 1000);
     }
     if (!this.scene) return;
     if (this.cutScene) return;
@@ -288,17 +294,15 @@ PlayScreen.prototype.showMessage = function(msg)
  * boxes) */
 PlayScreen.prototype.startTimer = function(callback, delay)
 {
-    var tm = new Timer((
-	function() {
-	    var ret = callback(new LogicContext(this, this.scene));
-	    if (!ret) {
-		// No more callbacks - remove the timer from the list
-		this.cancelTimer(tm);
-	    }
-	    this.redraw();
-	    return ret;
+    var tm = new Events.Timer(() => {
+	var ret = callback(new Logic.LogicContext(this, this.scene));
+	if (!ret) {
+	    // No more callbacks - remove the timer from the list
+	    this.cancelTimer(tm);
 	}
-    ).bind(this), delay);
+	this.redraw();
+	return ret;
+    }, delay);
     this.timers.push(tm);
     return tm;
 }
@@ -337,3 +341,6 @@ PlayScreen.prototype.resume = function()
 	tm.resume();
     }
 }
+
+module.exports = PlayScreen;
+

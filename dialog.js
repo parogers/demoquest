@@ -15,6 +15,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Events = require("./events");
+var Utils = require("./utils");
+
 /**********/
 /* Dialog */
 /**********/
@@ -28,7 +31,7 @@ function Dialog(width, height, stage, options)
     this.messages = [];
     this.stage = stage;
 
-    var mgr = new EventManager();
+    var mgr = new Events.EventManager();
     this.onClosed = mgr.hook("closed");
     this.onRedraw = mgr.hook("redraw");
     this.onUpdate = mgr.hook("update");
@@ -38,7 +41,7 @@ function Dialog(width, height, stage, options)
 
     // Render a solid colour. We cache it here for efficiency, and scale it 
     // to whatever size is needed below. 
-    var texture = makeSolidColourTexture(this.options.background, 10, 10);
+    var texture = Utils.makeSolidColourTexture(this.options.background, 10, 10);
     this.bg = new PIXI.Sprite(texture);
     this.container.addChild(this.bg);
 }
@@ -101,22 +104,20 @@ Dialog.prototype.show = function()
     this.delay = 0.15;
     this.stage.addChild(this.container);
     // Have the dialog box slide into view from below
-    this.dispatch("update", (
-	function(dt) {
-	    if (this.delay > 0) {
-		this.delay -= dt;
-		return true;
-	    }
-	    this.container.y -= this.viewHeight*dt;
-	    if (this.container.y < this.desty) 
-	    {
-		this.container.y = this.desty;
-		this.state = "shown";
-		return false;
-	    }
+    this.dispatch("update", dt => {
+	if (this.delay > 0) {
+	    this.delay -= dt;
 	    return true;
 	}
-    ).bind(this));
+	this.container.y -= this.viewHeight*dt;
+	if (this.container.y < this.desty) 
+	{
+	    this.container.y = this.desty;
+	    this.state = "shown";
+	    return false;
+	}
+	return true;
+    });
 }
 
 Dialog.prototype.hide = function(delay)
@@ -125,24 +126,22 @@ Dialog.prototype.hide = function(delay)
     this.state = "hiding";
 
     // Have the dialog box slide off screen
-    this.dispatch("update", (
-	function(dt) {
-	    this.container.y += (1.2*this.viewHeight)*dt;
-	    if (this.container.y > this.viewHeight) 
-	    {
-		this.container.parent.removeChild(this.container);
-		this.state = "idle";
-		if (this.messages.length > 0) {
-		    // Show the next message
-		    this.showMessage(this.messages.shift());
-		} else {
-		    this.dispatch("closed");
-		}
-		return false;
+    this.dispatch("update", dt => {
+	this.container.y += (1.2*this.viewHeight)*dt;
+	if (this.container.y > this.viewHeight) 
+	{
+	    this.container.parent.removeChild(this.container);
+	    this.state = "idle";
+	    if (this.messages.length > 0) {
+		// Show the next message
+		this.showMessage(this.messages.shift());
+	    } else {
+		this.dispatch("closed");
 	    }
-	    return true;
+	    return false;
 	}
-    ).bind(this));
+	return true;
+    });
 }
 
 Dialog.prototype.handleResize = function(width, height)
@@ -151,3 +150,5 @@ Dialog.prototype.handleResize = function(width, height)
     this.viewHeight = height;
     // TODO - handle resize when a message is displayed currently
 }
+
+module.exports = Dialog;

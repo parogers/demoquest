@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// TODO - store these in an automatically generated json file (via make)
-var SCENES = ["road", "intro", "cave", "closet"];
+var GameState = require("./gamestate");
+
 var gameState = null;
 
-function onload()
+function start()
 {
     var div = document.getElementById("canvas-area");
     gameState = new GameState(div);
@@ -51,3 +51,6 @@ function onload()
     stage.handleScreenResize();
 */
 }
+
+module.exports.start = start;
+

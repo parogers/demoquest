@@ -120,14 +120,12 @@ function IntroLogic(logic)
 	var sprite = ctx.getThing("darkness").setVisible(false);
 	sprite.alpha = 0;
 
-	var timer = ctx.startTimer(1000, (
-	    function(ctx) {
-		sprite.alpha = Math.max(sprite.alpha+0.05, 1);
-		if (sprite.alpha >= 1) {
-		    
-		}
+	var timer = ctx.startTimer(1000, ctx => {
+	    sprite.alpha = Math.max(sprite.alpha+0.05, 1);
+	    if (sprite.alpha >= 1) {
+		
 	    }
-	).bind(this));
+	});
 
 	timer.cancel();
 	timer.pause();
@@ -223,7 +221,7 @@ function ClosetLogic(logic)
 	    console.log("VISIBLE!");
 	});
 
-	ctx.addUpdate((function(dt) {
+	ctx.addUpdate(dt => {
 	    if (this.timer > 0) {
 		this.timer -= dt;
 		return true;
@@ -262,7 +260,7 @@ function ClosetLogic(logic)
 		break;
 	    }
 	    return true;
-	}).bind(this));
+	});
     }
 
     this.handleClicked = function(ctx) {
@@ -271,3 +269,8 @@ function ClosetLogic(logic)
 	}
     }
 }
+
+module.exports = {
+    Logic: Logic,
+    LogicContext: LogicContext
+};

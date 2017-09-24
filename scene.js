@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Utils = require("./utils");
+
 /*********/
 /* Scene */
 /*********/
@@ -40,11 +42,18 @@ Scene.fromData = function(sceneData)
     var scn = new Scene();
     scn.name = sceneData.name;
     scn.sceneData = sceneData;
+
+    var renderer = PIXI.autoDetectRenderer({
+	width: 100, 
+	height: 100,
+    });
+
     // Build the layers and contained sprites
     for (var layerData of sceneData.layers) 
     {
 	var texture = scn.sceneData.getTexture(layerData.name);
-	var layer = new Layer(layerData.name, texture);
+	var mask = Utils.getTransparencyMask(renderer, texture);
+	var layer = new Layer(layerData.name, texture, mask);
 	scn.addLayer(layer);
 	for (var spriteData of layerData["sprites"]) 
 	{
@@ -54,7 +63,9 @@ Scene.fromData = function(sceneData)
 	    sprite.anchor.set(0, 0);
 	    sprite.x = spriteData["x"] - layer.getWidth()/2;
 	    sprite.y = spriteData["y"] - layer.getHeight()/2;
-	    layer.addSprite(sprite);
+
+	    var mask = Utils.getTransparencyMask(renderer, sprite.texture);
+	    layer.addSprite(sprite, mask);
 
 	    // If the sprite name is of the form "something_blah" then actually
 	    // it belongs to a thing named "something" and visually represents 
@@ -223,14 +234,14 @@ SceneData.prototype.getTexture = function(name)
 
 /* A layer is a "slice" of a level consisting of an image along with a 
  * collection of things. */
-function Layer(name, texture)
+function Layer(name, texture, mask)
 {
     this.scene = null;
     // The layer name (unique to the scene)
     this.name = name;
     // The transparency mask for the image. Useful for determining whether
     // the user clicks on a piece of this layer.
-    this.mask = getTransparencyMask(gameState.renderer, texture);
+    this.mask = mask;
     // The container holding the background image, and all thing sprites 
     // on this layer.
     this.container = new PIXI.Container();
@@ -287,13 +298,11 @@ Layer.prototype.checkHitSprite = function(x, y)
     return null;
 }
 
-Layer.prototype.addSprite = function(sprite)
+Layer.prototype.addSprite = function(sprite, mask)
 {
     // TODO - check for duplicates
     //this.sprites[sprite.name] = sprite;
-    this.masks[sprite.name] = getTransparencyMask(
-	gameState.renderer, 
-	sprite.texture);
+    this.masks[sprite.name] = mask;
     this.container.addChild(sprite);
 }
 
@@ -345,3 +354,9 @@ Thing.prototype.setVisible = function(b)
     this.sprites["default"].visible = b;
     return this.getSprite();
 }
+
+module.exports = {
+    Scene: Scene,
+    SceneData: SceneData,
+    Thing: Thing
+};

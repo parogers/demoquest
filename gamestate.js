@@ -15,6 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Logic = require("./logic");
+var Input = require("./input");
+var Loader = require("./loader");
+var PlayScreen = require("./playscreen");
+
 /*************/
 /* GameState */
 /*************/
@@ -32,39 +37,36 @@ function GameState(div)
     // The screen currently displayed
     this.screen = null;
     this.renderer = null;
-    this.logic = new Logic();
+    this.logic = new Logic.Logic();
     this.dataList = {};
     this.lastRenderTime = null;
 
     //this.screen = new Screen();
 
     // Callback function for passing to renderAnimationFrame
-    this.staticRenderFrame = (function() {
+    this.staticRenderFrame = (() => {
 	this.renderFrame();
-    }).bind(this);
-    window.addEventListener("resize", (function() {
+    });
+    window.addEventListener("resize", () => {
 	this.handleResize();
-    }).bind(this));
+    });
     // Call our resize handler to setup the render area at the correct size
     this.handleResize();
 
     // Setup mouse and/or touch handlers
-    var m = new MouseAdapter(this.div);
+    var m = new Input.MouseAdapter(this.div);
     this.setupInputHandlers(m);
 
-    this.screen = new LoadingScreen(this.renderer.width, this.renderer.height);
+    this.screen = new Loader.LoadingScreen(
+	this.renderer.width, this.renderer.height);
 
-    this.screen.onDone((
-	function() {
-	    this._startGame();
-	}
-    ).bind(this));
+    this.screen.onDone(() => {
+	this._startGame();
+    });
 
-    this.screen.onRedraw((
-	function() {
-	    this.redraw();
-	}
-    ).bind(this));
+    this.screen.onRedraw(() => {
+	this.redraw();
+    });
 
     this.screen.start();
 }
@@ -73,26 +75,26 @@ function GameState(div)
  * should be passed in here. (eg MouseAdapter) */
 GameState.prototype.setupInputHandlers = function(m)
 {
-    m.onClick((function(evt) {
+    m.onClick(evt => {
 	if (this.screen && this.screen.handleClick) {
 	    this.screen.handleClick(evt);
 	}
-    }).bind(this));
-    m.onDragStart((function(evt) {
+    });
+    m.onDragStart(evt => {
 	if (this.screen && this.screen.handleDragStart) {
 	    this.screen.handleDragStart(evt);
 	}
-    }).bind(this));
-    m.onDrag((function(evt) {
+    });
+    m.onDrag(evt => {
 	if (this.screen && this.screen.handleDrag) {
 	    this.screen.handleDrag(evt);
 	}
-    }).bind(this));
-    m.onDragStop((function(evt) {
+    });
+    m.onDragStop(evt => {
 	if (this.screen && this.screen.handleDragStop) {
 	    this.screen.handleDragStop(evt);
 	}
-    }).bind(this));
+    });
 }
 
 /* Schedule a redraw of the game screen */
@@ -169,24 +171,19 @@ GameState.prototype._startGame = function()
 	this.renderer.height);
 
     // Attach to various events exposed by the PlayScreen
-    this.screen.onGameOver((
-	function() {
-	    // 
-	}
-    ).bind(this));
+    this.screen.onGameOver(() => {
+	// ...
+    });
 
-    this.screen.onComplete((
-	function() {
-	    // 
-	}
-    ).bind(this));
+    this.screen.onComplete(() => {
+	// ...
+    });
 
-    this.screen.onRedraw((
-	function() {
-	    this.redraw();
-	}
-    ).bind(this));
-
+    this.screen.onRedraw(() => {
+	this.redraw();
+    });
     // Now change to the opening scene
     this.screen.changeScene("intro");
 }
+
+module.exports = GameState;

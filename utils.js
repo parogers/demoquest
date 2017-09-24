@@ -102,3 +102,9 @@ Fader.prototype.update = function(dt)
     }
     return true;
 }
+
+module.exports = {
+    makeSolidColourTexture: makeSolidColourTexture,
+    getTransparencyMask: getTransparencyMask,
+    Fader: Fader
+};

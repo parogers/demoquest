@@ -38,9 +38,9 @@ EventManager.prototype.addEventListener = function(event, callback)
 EventManager.prototype.dispatcher = function(event)
 {
     if (event) {
-	return (function() {
+	return (() => {
 	    this.dispatch(event);
-	}).bind(this);
+	});
     }
     return this.dispatch.bind(this);
 }
@@ -72,9 +72,9 @@ EventManager.prototype.dispatch = function(event)
  */
 EventManager.prototype.hook = function(event)
 {
-    return (function(callback) {
+    return (callback => {
 	return this.addEventListener(event, callback);
-    }).bind(this);
+    });
 }
 
 /*********/
@@ -112,15 +112,18 @@ Timer.prototype.resume = function()
     if (this.paused) {
 	this.startTime = (new Date()).getTime();
 	this.paused = false;
-	this.timeoutEvent = setTimeout((
-	    function() {
-		this.timeoutEvent = null;
-		if (this.callback()) {
-		    this.timeLeft = this.delay;
-		    this.paused = true;
-		    this.resume();
-		}
+	this.timeoutEvent = setTimeout((() => {
+	    this.timeoutEvent = null;
+	    if (this.callback()) {
+		this.timeLeft = this.delay;
+		this.paused = true;
+		this.resume();
 	    }
-	).bind(this), this.timeLeft);
+	}), this.timeLeft);
     }
 }
+
+module.exports = {
+    EventManager: EventManager,
+    Timer: Timer
+};

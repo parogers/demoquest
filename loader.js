@@ -15,6 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Events = require("./events");
+var Scene = require("./scene");
+
+// TODO - store these in an automatically generated json file (via make)
+var SCENES = ["road", "intro", "cave", "closet"];
+
 /**********/
 /* Loader */
 /**********/
@@ -107,23 +113,19 @@ SceneDataLoader.prototype.add = function(src, arg)
     var srcPath = src + "?time=" + (new Date()).getTime();
     req.open("GET", srcPath, true);
 
-    req.onerror = (
-	function() {
-	    this.handleError(src);
-	}
-    ).bind(this);
+    req.onerror = (() => {
+	this.handleError(src);
+    });
 
-    req.onreadystatechange = (
-	function() {
-	    if (req.readyState == 4 && req.status == "200") {
-		// Parse the JSON and extract the scene info
-		// TODO - handle exceptions here
-		scn = SceneData.fromJSON(src, req.responseText);
-		scn.src = src;
-		this.handleLoaded(scn, src, arg);
-	    }
+    req.onreadystatechange = (() => {
+	if (req.readyState == 4 && req.status == "200") {
+	    // Parse the JSON and extract the scene info
+	    // TODO - handle exceptions here
+	    var scn = Scene.SceneData.fromJSON(src, req.responseText);
+	    scn.src = src;
+	    this.handleLoaded(scn, src, arg);
 	}
-    ).bind(this);
+    });
 
     req.send(null);
 }
@@ -142,7 +144,7 @@ function LoadingScreen(viewWidth, viewHeight)
     this.viewWidth = viewWidth;
     this.viewHeight = viewHeight;
 
-    var mgr = new EventManager();
+    var mgr = new Events.EventManager();
     this.dispatch = mgr.dispatcher();
     this.onRedraw = mgr.hook("redraw");
     this.onDone = mgr.hook("done");
@@ -177,23 +179,17 @@ LoadingScreen.prototype._loadSceneData = function()
     for (var scene of SCENES) {
 	ldr.add("media/scenes/" + scene + "/scene.json");
     }
-    ldr.ondone((
-	function(dataList) {
+    ldr.ondone(dataList => {
 	    this._loadSceneImages(dataList);
-	}
-    ).bind(this));
+    });
 
-    ldr.onerror((
-	function(src) {
-	    console.log("Error loading scene: " + src);
-	}
-    ).bind(this));
+    ldr.onerror(src => {
+	console.log("Error loading scene: " + src);
+    });
 
-    ldr.onload((
-	function(scn, src) {
-	    console.log("Loaded scene: " + scn.name);
-	}
-    ).bind(this));
+    ldr.onload((scn, src) => {
+	console.log("Loaded scene: " + scn.name);
+    });
     this._showMessage("Loading scene meta data");
 }
 
@@ -208,14 +204,16 @@ LoadingScreen.prototype._loadSceneImages = function(dataList)
     for (var name in dataList) {
 	PIXI.loader.add(dataList[name].spritesPath);
     };
-    PIXI.loader.on("progress", (
-	function(loader, res) {
-	    //console.log(res);
-	    //this._showMessage("Loading scene images: " + res.url);
-	}
-    ).bind(this));
+    PIXI.loader.on("progress", (loader, res) => {
+	//console.log(res);
+	//this._showMessage("Loading scene images: " + res.url);
+    });
 
-    PIXI.loader.load((function() {
+    PIXI.loader.load(() => {
 	this.dispatch("done");
-    }).bind(this));
+    });
 }
+
+module.exports = {
+    LoadingScreen: LoadingScreen
+};
