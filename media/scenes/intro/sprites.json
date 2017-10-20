@@ -5,7 +5,7 @@
                 "h": 6,
                 "w": 6,
                 "x": 1,
-                "y": 100
+                "y": 133
             },
             "rotated": false,
             "sourceSize": {
@@ -25,7 +25,7 @@
                 "h": 19,
                 "w": 26,
                 "x": 1,
-                "y": 171
+                "y": 204
             },
             "rotated": false,
             "sourceSize": {
@@ -45,7 +45,7 @@
                 "h": 18,
                 "w": 51,
                 "x": 1,
-                "y": 191
+                "y": 224
             },
             "rotated": false,
             "sourceSize": {
@@ -65,7 +65,7 @@
                 "h": 27,
                 "w": 15,
                 "x": 1,
-                "y": 107
+                "y": 140
             },
             "rotated": false,
             "sourceSize": {
@@ -85,7 +85,7 @@
                 "h": 27,
                 "w": 13,
                 "x": 1,
-                "y": 135
+                "y": 168
             },
             "rotated": false,
             "sourceSize": {
@@ -105,7 +105,7 @@
                 "h": 5,
                 "w": 6,
                 "x": 1,
-                "y": 215
+                "y": 248
             },
             "rotated": false,
             "sourceSize": {
@@ -120,12 +120,32 @@
             },
             "trimmed": false
         },
+        "outside": {
+            "frame": {
+                "h": 32,
+                "w": 128,
+                "x": 1,
+                "y": 67
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 128
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 128,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
         "paintings": {
             "frame": {
                 "h": 7,
                 "w": 18,
                 "x": 1,
-                "y": 163
+                "y": 196
             },
             "rotated": false,
             "sourceSize": {
@@ -145,7 +165,7 @@
                 "h": 4,
                 "w": 3,
                 "x": 1,
-                "y": 210
+                "y": 243
             },
             "rotated": false,
             "sourceSize": {
@@ -165,7 +185,7 @@
                 "h": 9,
                 "w": 10,
                 "x": 1,
-                "y": 221
+                "y": 254
             },
             "rotated": false,
             "sourceSize": {
@@ -225,7 +245,7 @@
                 "h": 32,
                 "w": 128,
                 "x": 1,
-                "y": 67
+                "y": 100
             },
             "rotated": false,
             "sourceSize": {
@@ -248,7 +268,7 @@
         "scale": "1",
         "size": {
             "W": 130,
-            "h": 232
+            "h": 265
         },
         "version": "1"
     }

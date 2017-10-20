@@ -10,7 +10,13 @@
         },
         {
             "name": "terrain",
-            "sprites": []
+            "sprites": [
+                {
+                    "name": "outside",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
         },
         {
             "name": "wall",

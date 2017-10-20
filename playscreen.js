@@ -107,12 +107,26 @@ PlayScreen.prototype.addUpdate = function(callback)
     if (this.updateCallbacks.length === 1) this.redraw();
 }
 
-PlayScreen.prototype.changeScene = function(name)
+PlayScreen.prototype.changeScene = function(name, args)
 {
+    if (!this.dataList.hasOwnProperty(name)) {
+	throw Error("No such scene: " + name);
+    }
+
+    // Default camera position for a new scene
+    let cameraX = -1;
+    let cameraY = 0;
+
+    if (args) {
+        if (args.cameraX !== undefined) cameraX = args.cameraX;
+        if (args.cameraY !== undefined) cameraY = args.cameraY;
+    }
+
     if (this.scene === null) {
 	// Slow fade into the starting scene
 	this.setScene(name);
 	this.pause();
+        this.setCameraPos(cameraX, cameraY)
 	var fader = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 2);
 	fader.start(this.stage);
 	this.addUpdate(dt => {
@@ -134,6 +148,7 @@ PlayScreen.prototype.changeScene = function(name)
 	    if (!fadeout.update(dt)) 
 	    {
 		this.setScene(name);
+                this.setCameraPos(cameraX, cameraY)
 		fadein.start(this.stage);
 		this.addUpdate(dt => {
 		    if (!fadein.update(dt)) {
@@ -152,10 +167,14 @@ PlayScreen.prototype.changeScene = function(name)
 PlayScreen.prototype.setScene = function(name)
 {
     if (!this.dataList[name]) {
-	throw Exception("No such scene: " + name);
+	throw Error("No such scene: " + name);
     }
     if (this.scene) {
-	this.logic.leaveScene(new Logic.LogicContext(this, this.scene));
+        let ctx = this.logic.makeContext({
+            screen: this,
+            scene: this.scene
+        });
+	this.logic.leaveScene(ctx);
     }
 
     var scene = Scene.Scene.fromData(this.dataList[name]);
@@ -165,13 +184,17 @@ PlayScreen.prototype.setScene = function(name)
     this.sceneStage.scale.set(this.getDisplayScale());
     this.sceneStage.x = this.viewWidth/2;
     this.sceneStage.y = this.viewHeight/2;
-    // Attach signal handlers to each thing
-    for (var name in this.scene.things) {
-	var thing = this.scene.things[name];
-	var mgr = new Events.EventManager();
-	thing.onVisible = mgr.hook("visible");
-    }
-    this.logic.initScene(new Logic.LogicContext(this, this.scene));
+
+    let ctx = this.logic.makeContext({
+        screen: this, 
+        scene: this.scene
+    })
+    this.logic.initScene(ctx);
+}
+
+PlayScreen.prototype.setCameraPos = function(xpos, ypos)
+{
+    this.scene.setCameraPos(xpos, ypos);
 }
 
 PlayScreen.prototype.getDisplayScale = function()
@@ -208,9 +231,12 @@ PlayScreen.prototype.handleClick = function(evt)
     var yp = evt.y/this.getDisplayScale();
     var args = this.scene.checkHit(xp, yp);
     if (args.thing) {
-	var ctx = new Logic.LogicContext(
-	    this, this.scene, 
-	    args.thing, args.sprite);
+	var ctx = this.logic.makeContext({
+            screen: this,
+            scene: this.scene, 
+	    thing: args.thing, 
+            sprite: args.sprite
+        });
 	this.logic.handleClicked(ctx);
 	this.redraw();
     }
@@ -295,7 +321,11 @@ PlayScreen.prototype.showMessage = function(msg)
 PlayScreen.prototype.startTimer = function(callback, delay)
 {
     var tm = new Events.Timer(() => {
-	var ret = callback(new Logic.LogicContext(this, this.scene));
+        let ctx = this.logic.makeContext({
+            screen: this,
+            scene: this.scene
+        });
+	let ret = callback(ctx);
 	if (!ret) {
 	    // No more callbacks - remove the timer from the list
 	    this.cancelTimer(tm);
@@ -309,20 +339,11 @@ PlayScreen.prototype.startTimer = function(callback, delay)
 
 PlayScreen.prototype.cancelTimer = function(tm)
 {
-    var n = this.timers.indexOf(tm)
+    let n = this.timers.indexOf(tm)
     tm.pause();
     if (n !== -1) {
 	this.timers = this.timers.slice(0, n).concat(this.timers.slice(n+1));
     }
-}
-
-PlayScreen.prototype.getThingEvents = function(thing)
-{
-    var name = thing.name || thing;
-    if (this.thingEventManager.hasOwnProperty(name)) {
-	return this.thingEventManagers[name];
-    }
-    return null;
 }
 
 /* Pause the gameplay. This happens when showing the player a message */

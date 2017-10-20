@@ -16,7 +16,6 @@
  */
 
 var GameState = require("./gamestate");
-
 var gameState = null;
 
 function start()
@@ -52,5 +51,12 @@ function start()
 */
 }
 
-module.exports.start = start;
+function getState()
+{
+    return gameState;
+}
 
+module.exports = {
+    start: start,
+    getState: getState
+};

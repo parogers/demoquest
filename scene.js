@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Events = require("./events");
 var Utils = require("./utils");
 
 /*********/
@@ -116,14 +117,18 @@ Scene.prototype.addLayer = function(layer)
  * code moves the layers around to simulate parallax scrolling. */
 Scene.prototype.setCameraPos = function(xpos, ypos)
 {
-    var backWidth = this.getBaseSize().width;
-    var centreX = 0;
-    for (var layer of this.layers) {
-	var pos = centreX-xpos*(layer.getWidth()/2-backWidth/2);
-	layer.container.x = pos;
+    if (xpos !== this.cameraX || ypos !== this.cameraY) 
+    {
+	var backWidth = this.getBaseSize().width;
+	var centreX = 0;
+	for (var layer of this.layers) {
+	    var pos = centreX-xpos*(layer.getWidth()/2-backWidth/2);
+	    layer.container.x = pos;
+	}
+	this.cameraX = xpos;
+	// TODO - handle ypos...
+	this.updateVisible();
     }
-    this.cameraX = xpos;
-    // TODO - handle ypos...
 }
 
 /* Returns the scene element under the position (given relative to the top
@@ -164,6 +169,11 @@ Scene.prototype.checkHit = function(x, y)
 Scene.prototype.getThing = function(name)
 {
     return this.things[name];
+}
+
+/* Emits a 'visible' message for each thing currently visible on the screen */
+Scene.prototype.updateVisible = function()
+{
 }
 
 /*************/
@@ -291,7 +301,7 @@ Layer.prototype.checkHitSprite = function(x, y)
 	{
 	    var xp = (x-sprite.x)|0;
 	    var yp = (y-sprite.y)|0;
-	    if (this.masks && this.masks[sprite.name][xp][yp] === 255) 
+	    if (this.masks && this.masks[sprite.name][xp][yp] > 0)
 		return sprite;
 	}
     }
@@ -319,6 +329,10 @@ function Thing(name)
     this.sprites = {};
     this.name = name;
     this.state = "default";
+
+    var mgr = new Events.EventManager();
+    this.onVisible = mgr.hook("visible");
+    this.dispatch = mgr.dispatcher();
 }
 
 Thing.prototype.getSprite = function(state)

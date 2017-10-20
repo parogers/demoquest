@@ -38,6 +38,7 @@ function GameState(div)
     this.screen = null;
     this.renderer = null;
     this.logic = new Logic.Logic();
+    this.state = new Logic.State();
     this.dataList = {};
     this.lastRenderTime = null;
 

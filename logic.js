@@ -16,59 +16,82 @@
  */
 
 /*********/
+/* State */
+/*********/
+
+class State
+{
+    constructor() {
+        this.hasRedKey = false;
+        this.bush1Moved = false;
+        this.bush2Moved = false;
+    }
+}
+
+/*********/
 /* Logic */
 /*********/
 
-function Logic()
+class Logic
 {
-    // Scene specific logic stored by name
-    this.sceneLogic = {
-	"intro" : new IntroLogic(this),
-	"road" : new RoadLogic(this),
-	"closet" : new ClosetLogic(this)
-    };
-}
+    constructor() {
+	// Scene specific logic stored by name
+        this.state = new State();
+	this.sceneLogic = {
+	    "intro" : new IntroLogic(),
+	    "road" : new RoadLogic(),
+	    "closet" : new ClosetLogic(),
+	    "cave" : new CaveLogic()
+	};
+    }
 
-Logic.prototype.initScene = function(ctx)
-{
-    var logic = this.sceneLogic[ctx.scene.name];
-    if (logic && logic.initScene) logic.initScene(ctx);
-}
+    makeContext(args) {
+        return new LogicContext(this.state, args);
+    }
 
-Logic.prototype.leaveScene = function(ctx)
-{
-    var logic = this.sceneLogic[ctx.scene.name];
-    if (logic && logic.leaveScene) logic.leaveScene(ctx);
-}
+    initScene(ctx) {
+	var logic = this.sceneLogic[ctx.scene.name];
+	if (logic && logic.initScene) logic.initScene(ctx);
+    }
 
-Logic.prototype.handleClicked = function(ctx)
-{
-    var logic = this.sceneLogic[ctx.scene.name];
-    if (logic && logic.handleClicked) logic.handleClicked(ctx);
-}
+    leaveScene(ctx) {
+	var logic = this.sceneLogic[ctx.scene.name];
+	if (logic && logic.leaveScene) logic.leaveScene(ctx);
+    }
 
-Logic.prototype.handleDragStart = function(ctx)
-{
-}
+    handleClicked(ctx) {
+	var logic = this.sceneLogic[ctx.scene.name];
+	if (logic && logic.handleClicked) logic.handleClicked(ctx);
+    }
 
-Logic.prototype.handleDrag = function(ctx)
-{
-}
+    handleDragStart(ctx) {
+    }
 
-Logic.prototype.handleDragStop = function(ctx)
-{
+    handleDrag(ctx) {
+    }
+
+    handleDragStop(ctx) {
+    }
+
 }
 
 /****************/
 /* LogicContext */
 /****************/
 
-function LogicContext(screen, scene, thing, sprite)
+function LogicContext(state, args)
 {
-    this.screen = screen;
-    this.scene = scene;
-    this.thing = thing;
-    this.sprite = sprite;
+    this.state = state;
+    this.screen = null;
+    this.scene = null;
+    this.thing = null;
+    this.sprite = null;
+    if (args) {
+        this.screen = args.screen;
+        this.scene = args.scene;
+        this.thing = args.thing;
+        this.sprite = args.sprite;
+    }
 }
 
 LogicContext.prototype.getThing = function(name)
@@ -101,11 +124,12 @@ LogicContext.prototype.addUpdate = function(callback)
 
 /* Logic classes for the various scenes in the game */
 
-function IntroLogic(logic)
+class IntroLogic
 {
-    this.logic = logic;
+    constructor() {
+    }
 
-    this.initScene = function(ctx) {
+    initScene(ctx) {
 	ctx.getThing("door").setState("closed");
 	ctx.getThing("cupboard").setState("closed");
 
@@ -132,10 +156,10 @@ function IntroLogic(logic)
 	timer.resume();
     }
 
-    this.leaveScene = function(ctx) {
+    leaveScene(ctx) {
     }
 
-    this.handleClicked = function(ctx) {
+    handleClicked(ctx) {
 	switch(ctx.thing.name) 
 	{
 	case "candle":
@@ -156,32 +180,33 @@ function IntroLogic(logic)
 		ctx.thing.setState("closed");
 	    } else {
 		ctx.thing.setState("open");
-		ctx.screen.changeScene("road");
 	    }
 	    break;
 
+	case "outside":
+	    ctx.screen.changeScene("road");
+	    break;
 	}
     }
 }
 
-function RoadLogic(logic)
+class RoadLogic
 {
-    this.logic = logic;
-    this.bush1Moved = false;
-    this.bush2Moved = false;
-
-    this.initScene = function(ctx) {
-	ctx.getThing("bush1").setVisible(!this.bush1Moved);
-	ctx.getThing("bush2").setVisible(!this.bush2Moved);
+    constructor() {
     }
 
-    this.handleClicked = function(ctx) {
+    initScene(ctx) {
+	ctx.getThing("bush1").setVisible(!ctx.state.bush1Moved);
+	ctx.getThing("bush2").setVisible(!ctx.state.bush2Moved);
+    }
+
+    handleClicked(ctx) {
 	switch(ctx.thing.name) 
 	{
 	case "bush1":
-	    this.bush1Moved = true;
+	    ctx.state.bush1Moved = true;
 	    ctx.thing.setVisible(false);
-	    if (this.bush2Moved) {
+	    if (ctx.state.bush2Moved) {
 		ctx.showMessage("You clear away some brush revealing a cave!")
 	    } else {
 		ctx.showMessage("You clear away some brush. You see something behind it!")
@@ -189,9 +214,9 @@ function RoadLogic(logic)
 	    break;
 
 	case "bush2":
-	    this.bush2Moved = true;
+	    ctx.state.bush2Moved = true;
 	    ctx.thing.setVisible(false);
-	    if (this.bush1Moved) {
+	    if (ctx.state.bush1Moved) {
 		ctx.showMessage("You clear away some brush revealing a cave!")
 	    } else {
 		ctx.showMessage("You clear away some brush. You see something behind it!")
@@ -199,7 +224,7 @@ function RoadLogic(logic)
 	    break;
 
 	case "cave":
-	    if (!this.bush1Moved || !this.bush2Moved) {
+	    if (!ctx.state.bush1Moved || !ctx.state.bush2Moved) {
 		ctx.showMessage("I must clear the way first.");
 	    } else {
 		ctx.screen.changeScene("cave");
@@ -209,11 +234,12 @@ function RoadLogic(logic)
     }
 }
 
-function ClosetLogic(logic)
+class ClosetLogic
 {
-    this.logic = logic;
+    constructor() {
+    }
 
-    this.initScene = function(ctx) {
+    initScene(ctx) {
 	this.timer = 0;
 	this.state = "start";
 
@@ -263,14 +289,39 @@ function ClosetLogic(logic)
 	});
     }
 
-    this.handleClicked = function(ctx) {
+    handleClicked(ctx) {
 	switch(ctx.thing.name) 
 	{
 	}
     }
 }
 
+class CaveLogic
+{
+    constructor() {
+    }
+
+    initScene(ctx) 
+    {
+        //ctx.getThing("key").setVisible(
+    }
+
+    handleClicked(ctx) 
+    {
+	switch(ctx.thing.name) 
+	{
+        case "ladder":
+	    ctx.screen.changeScene("road", {cameraX: 1});
+            break;
+
+        case "key":
+            break;
+	}
+    }
+}
+
 module.exports = {
     Logic: Logic,
-    LogicContext: LogicContext
+    LogicContext: LogicContext,
+    State: State
 };

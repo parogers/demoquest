@@ -18,9 +18,6 @@
 var Events = require("./events");
 var Scene = require("./scene");
 
-// TODO - store these in an automatically generated json file (via make)
-var SCENES = ["road", "intro", "cave", "closet"];
-
 /**********/
 /* Loader */
 /**********/
@@ -87,9 +84,33 @@ Loader.prototype.handleLoaded = function(obj, src, arg)
 /* SceneDataLoader */
 /*******************/
 
-function SceneDataLoader()
+function SceneDataLoader(indexPath)
 {
     Loader.call(this);
+
+    // First load index.json which will tell us what scenes to load
+    var req = new XMLHttpRequest();
+    req.overrideMimeType("application/json");
+
+    // Add a timestamp to avoid caching this
+    var srcPath = indexPath + "?time=" + (new Date()).getTime();
+    req.open("GET", srcPath, true);
+
+    req.onerror = (() => {
+	this.handleError(indexPath);
+    });
+    req.onreadystatechange = (() => {
+	if (req.readyState == 4 && req.status == "200") {
+	    // TODO - handle exceptions here
+	    var scenes = JSON.parse(req.responseText);
+	    var n = indexPath.lastIndexOf("/");
+	    var basedir = indexPath.substr(0, n+1);
+	    for (var scene of scenes) {
+		this.add(basedir + scene + "/scene.json");
+	    }
+	}
+    });
+    req.send(null);
 }
 SceneDataLoader.prototype = Object.create(Loader.prototype);
 
@@ -175,10 +196,7 @@ LoadingScreen.prototype._showMessage = function(msg)
 LoadingScreen.prototype._loadSceneData = function()
 {
     // Load all the scene meta data here, then the scene images below
-    var ldr = new SceneDataLoader();
-    for (var scene of SCENES) {
-	ldr.add("media/scenes/" + scene + "/scene.json");
-    }
+    var ldr = new SceneDataLoader("media/scenes/index.json");
     ldr.ondone(dataList => {
 	    this._loadSceneImages(dataList);
     });

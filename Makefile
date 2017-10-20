@@ -7,9 +7,13 @@ BUNDLE_JS=demoquest.js
 SCENES=intro road cave building closet
 
 MAKE_SCENES=$(patsubst %,media/scenes/%/scene.json,$(SCENES))
-SCENE_TARGETS = $(call MAKE_TARGETS)
+SCENE_TARGETS = $(call MAKE_SCENES)
 
 all: $(SCENE_TARGETS) $(BUNDLE_DIST)
+
+media/scenes/index.json: $(SCENE_TARGETS)
+	@echo BUILDING: scene index
+	@./tools/makeindex.py > $@
 
 # Scene generation
 media/scenes/%/scene.json: rawmedia/%.xcf
