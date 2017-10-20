@@ -344,7 +344,7 @@ Thing.prototype.getSprite = function(state)
 Thing.prototype.setState = function(state)
 {
     if (!this.sprites[state]) {
-	throw Error("invalid thing state: " + state);
+	throw Error("invalid thing state for " + this.name + ": " + state);
     }
     for (var spriteName in this.sprites) {
 	this.sprites[spriteName].visible = false;

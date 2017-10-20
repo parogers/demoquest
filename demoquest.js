@@ -905,9 +905,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var State = function State() {
 				_classCallCheck(this, State);
 
+				this.checkedDoor = false;
 				this.hasRedKey = false;
 				this.bush1Moved = false;
 				this.bush2Moved = false;
+				this.seenHole1 = false;
+				this.seenHole2 = false;
 };
 
 /*********/
@@ -1096,7 +1099,7 @@ var RoadLogic = function () {
 																				if (ctx.state.bush2Moved) {
 																								ctx.showMessage("You clear away some brush revealing a cave!");
 																				} else {
-																								ctx.showMessage("You clear away some brush. You see something behind it!");
+																								ctx.showMessage("You clear away some brush. There's something behind it!");
 																				}
 																				break;
 
@@ -1106,7 +1109,7 @@ var RoadLogic = function () {
 																				if (ctx.state.bush1Moved) {
 																								ctx.showMessage("You clear away some brush revealing a cave!");
 																				} else {
-																								ctx.showMessage("You clear away some brush. You see something behind it!");
+																								ctx.showMessage("You clear away some brush. There's something behind it!");
 																				}
 																				break;
 
@@ -1115,6 +1118,15 @@ var RoadLogic = function () {
 																								ctx.showMessage("I must clear the way first.");
 																				} else {
 																								ctx.screen.changeScene("cave");
+																				}
+																				break;
+
+																case "house":
+																				if (ctx.state.hasRedKey) {} else if (ctx.state.checkedDoor) {
+																								ctx.showMessage("Maybe I can find a key, or another way in.");
+																				} else {
+																								ctx.showMessage("There's no answer and the door's locked.");
+																								ctx.state.checkedDoor = true;
 																				}
 																				break;
 												}
@@ -1200,7 +1212,8 @@ var CaveLogic = function () {
 				_createClass(CaveLogic, [{
 								key: "initScene",
 								value: function initScene(ctx) {
-												//ctx.getThing("key").setVisible(
+												ctx.getThing("hole2").setState("empty");
+												ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
 								}
 				}, {
 								key: "handleClicked",
@@ -1211,7 +1224,19 @@ var CaveLogic = function () {
 																				break;
 
 																case "key":
+																				ctx.getThing("key").setVisible(false);
+																				ctx.state.hasRedKey = true;
+																				ctx.showMessage("A small key. Odd it was left here.");
 																				break;
+
+																case "hole1":
+																				ctx.showMessage("You see only darkness.");
+																				break;
+
+																case "hole2":
+																				ctx.showMessage("You see only darkness.");
+																				break;
+
 												}
 								}
 				}]);
@@ -1292,389 +1317,388 @@ var Utils = require("./utils");
 /**************/
 
 function PlayScreen(logic, dataList, width, height) {
-   var _this = this;
+    var _this = this;
 
-   this.name = "PlayScreen";
-   // The scene currently displayed (Scene instance)
-   this.scene = null;
-   // The gameplay logic
-   this.logic = logic;
-   // The collection of all scenes (SceneData) in the game
-   this.dataList = dataList;
-   // The top-level PIXI container that holds the scene sprites. This 
-   // container gets scaled to fit the canvas.
-   this.stage = new PIXI.Container();
-   this.sceneStage = new PIXI.Container();
-   this.stage.addChild(this.sceneStage);
-   // The size of the viewing area
-   this.viewWidth = width;
-   this.viewHeight = height;
-   this.cutScene = false;
-   // The thing being dragged around, or null if no dragging is happening
-   // or the player is panning around instead.
-   this.dragging = null;
-   // The mouse cursor position when the player started dragging around
-   this.dragStartX = 0;
-   this.dragStartY = 0;
-   // List of currently active timers in the game (Timer instances)
-   this.timers = [];
-   // List of animation callback functions
-   this.updateCallbacks = [];
-   // Setup some events for communicating with the main game state
-   var mgr = new Events.EventManager();
-   this.onComplete = mgr.hook("complete");
-   this.onGameOver = mgr.hook("gameover");
-   this.onRedraw = mgr.hook("redraw");
-   this.onVisible = mgr.hook("thing-visible");
-   this.dispatch = mgr.dispatcher();
-   this.redraw = mgr.dispatcher("redraw");
+    this.name = "PlayScreen";
+    // The scene currently displayed (Scene instance)
+    this.scene = null;
+    // The gameplay logic
+    this.logic = logic;
+    // The collection of all scenes (SceneData) in the game
+    this.dataList = dataList;
+    // The top-level PIXI container that holds the scene sprites. This 
+    // container gets scaled to fit the canvas.
+    this.stage = new PIXI.Container();
+    this.sceneStage = new PIXI.Container();
+    this.stage.addChild(this.sceneStage);
+    // The size of the viewing area
+    this.viewWidth = width;
+    this.viewHeight = height;
+    this.cutScene = false;
+    // The thing being dragged around, or null if no dragging is happening
+    // or the player is panning around instead.
+    this.dragging = null;
+    // The mouse cursor position when the player started dragging around
+    this.dragStartX = 0;
+    this.dragStartY = 0;
+    // List of currently active timers in the game (Timer instances)
+    this.timers = [];
+    // List of animation callback functions
+    this.updateCallbacks = [];
+    // Setup some events for communicating with the main game state
+    var mgr = new Events.EventManager();
+    this.onComplete = mgr.hook("complete");
+    this.onGameOver = mgr.hook("gameover");
+    this.onRedraw = mgr.hook("redraw");
+    this.onVisible = mgr.hook("thing-visible");
+    this.dispatch = mgr.dispatcher();
+    this.redraw = mgr.dispatcher("redraw");
 
-   this.dialogDefaults = {
-      fill: "black",
-      background: "white",
-      lightbox: "black"
-   };
+    this.dialogDefaults = {
+        fill: "black",
+        background: "white",
+        lightbox: "black"
+    };
 
-   // Setup the dialog/message area and attach some event handlers
-   this.dialog = new Dialog(this.viewWidth, this.viewHeight, this.stage, this.dialogDefaults);
+    // Setup the dialog/message area and attach some event handlers
+    this.dialog = new Dialog(this.viewWidth, this.viewHeight, this.stage, this.dialogDefaults);
 
-   this.dialog.onUpdate(function (cb) {
-      _this.addUpdate(cb);
-   });
+    this.dialog.onUpdate(function (cb) {
+        _this.addUpdate(cb);
+    });
 
-   this.dialog.onRedraw(function (cb) {
-      _this.redraw();
-   });
+    this.dialog.onRedraw(function (cb) {
+        _this.redraw();
+    });
 
-   this.dialog.onClosed(function (cb) {
-      _this.redraw();
-      _this.resume();
-   });
+    this.dialog.onClosed(function (cb) {
+        _this.redraw();
+        _this.resume();
+    });
 }
 
 /* Called for every frame that is rendered by the game state. (called before
  * rendering to screen) Returns true to request another frame be rendered 
  * after this one, or false otherwise. */
 PlayScreen.prototype.update = function (dt) {
-   var lst = [];
-   var _iteratorNormalCompletion = true;
-   var _didIteratorError = false;
-   var _iteratorError = undefined;
+    var lst = [];
+    var _iteratorNormalCompletion = true;
+    var _didIteratorError = false;
+    var _iteratorError = undefined;
 
-   try {
-      for (var _iterator = this.updateCallbacks[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-         var callback = _step.value;
+    try {
+        for (var _iterator = this.updateCallbacks[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var callback = _step.value;
 
-         if (callback(dt)) lst.push(callback);
-      }
-   } catch (err) {
-      _didIteratorError = true;
-      _iteratorError = err;
-   } finally {
-      try {
-         if (!_iteratorNormalCompletion && _iterator.return) {
-            _iterator.return();
-         }
-      } finally {
-         if (_didIteratorError) {
-            throw _iteratorError;
-         }
-      }
-   }
+            if (callback(dt)) lst.push(callback);
+        }
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return) {
+                _iterator.return();
+            }
+        } finally {
+            if (_didIteratorError) {
+                throw _iteratorError;
+            }
+        }
+    }
 
-   this.updateCallbacks = lst;
-   // Request more redraws while there is stuff to animate (via callbacks)
-   return this.updateCallbacks.length > 0;
+    this.updateCallbacks = lst;
+    // Request more redraws while there is stuff to animate (via callbacks)
+    return this.updateCallbacks.length > 0;
 };
 
 PlayScreen.prototype.addUpdate = function (callback) {
-   this.updateCallbacks.push(callback);
-   if (this.updateCallbacks.length === 1) this.redraw();
+    this.updateCallbacks.push(callback);
+    if (this.updateCallbacks.length === 1) this.redraw();
 };
 
 PlayScreen.prototype.changeScene = function (name, args) {
-   var _this2 = this;
+    var _this2 = this;
 
-   if (!this.dataList.hasOwnProperty(name)) {
-      throw Error("No such scene: " + name);
-   }
+    if (!this.dataList.hasOwnProperty(name)) {
+        throw Error("No such scene: " + name);
+    }
 
-   // Default camera position for a new scene
-   var cameraX = -1;
-   var cameraY = 0;
+    // Default camera position for a new scene
+    var cameraX = -1;
+    var cameraY = 0;
 
-   if (args) {
-      if (args.cameraX !== undefined) cameraX = args.cameraX;
-      if (args.cameraY !== undefined) cameraY = args.cameraY;
-   }
+    if (args) {
+        if (args.cameraX !== undefined) cameraX = args.cameraX;
+        if (args.cameraY !== undefined) cameraY = args.cameraY;
+    }
 
-   if (this.scene === null) {
-      // Slow fade into the starting scene
-      this.setScene(name);
-      this.pause();
-      this.setCameraPos(cameraX, cameraY);
-      var fader = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 2);
-      fader.start(this.stage);
-      this.addUpdate(function (dt) {
-         if (!fader.update(dt)) {
-            _this2.resume();
-            return false;
-         }
-         return true;
-      });
-   } else {
-      // Fade out, switch scenes, then fade back in
-      var fadeout = new Utils.Fader(this.viewWidth, this.viewHeight, 1, 1);
-      var fadein = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 1);
-      this.stage.removeChild(fadeout.sprite);
-      this.pause();
-      fadeout.start(this.stage);
-      this.addUpdate(function (dt) {
-         if (!fadeout.update(dt)) {
-            _this2.setScene(name);
-            _this2.setCameraPos(cameraX, cameraY);
-            fadein.start(_this2.stage);
-            _this2.addUpdate(function (dt) {
-               if (!fadein.update(dt)) {
-                  _this2.resume();
-                  return false;
-               }
-               return true;
-            });
-            return false;
-         }
-         return true;
-      });
-   }
+    if (this.scene === null) {
+        // Slow fade into the starting scene
+        this.setScene(name);
+        this.pause();
+        this.setCameraPos(cameraX, cameraY);
+        var fader = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 2);
+        fader.start(this.stage);
+        this.addUpdate(function (dt) {
+            if (!fader.update(dt)) {
+                _this2.resume();
+                return false;
+            }
+            return true;
+        });
+    } else {
+        // Fade out, switch scenes, then fade back in
+        var fadeout = new Utils.Fader(this.viewWidth, this.viewHeight, 1, 1);
+        var fadein = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 1);
+        this.stage.removeChild(fadeout.sprite);
+        this.pause();
+        fadeout.start(this.stage);
+        this.addUpdate(Utils.chainUpdates(function (dt) {
+            if (!fadeout.update(dt)) {
+                _this2.setScene(name);
+                _this2.setCameraPos(cameraX, cameraY);
+                fadein.start(_this2.stage);
+                return false;
+            }
+            return true;
+        }, function (dt) {
+            if (!fadein.update(dt)) {
+                _this2.resume();
+                return false;
+            }
+            return true;
+        }));
+    }
 };
 
 PlayScreen.prototype.setScene = function (name) {
-   if (!this.dataList[name]) {
-      throw Error("No such scene: " + name);
-   }
-   if (this.scene) {
-      var _ctx = this.logic.makeContext({
-         screen: this,
-         scene: this.scene
-      });
-      this.logic.leaveScene(_ctx);
-   }
+    if (!this.dataList[name]) {
+        throw Error("No such scene: " + name);
+    }
+    if (this.scene) {
+        var _ctx = this.logic.makeContext({
+            screen: this,
+            scene: this.scene
+        });
+        this.logic.leaveScene(_ctx);
+    }
 
-   var scene = Scene.Scene.fromData(this.dataList[name]);
-   this.scene = scene;
-   this.sceneStage.children = [];
-   this.sceneStage.addChild(scene.container);
-   this.sceneStage.scale.set(this.getDisplayScale());
-   this.sceneStage.x = this.viewWidth / 2;
-   this.sceneStage.y = this.viewHeight / 2;
+    var scene = Scene.Scene.fromData(this.dataList[name]);
+    this.scene = scene;
+    this.sceneStage.children = [];
+    this.sceneStage.addChild(scene.container);
+    this.sceneStage.scale.set(this.getDisplayScale());
+    this.sceneStage.x = this.viewWidth / 2;
+    this.sceneStage.y = this.viewHeight / 2;
 
-   var ctx = this.logic.makeContext({
-      screen: this,
-      scene: this.scene
-   });
-   this.logic.initScene(ctx);
+    var ctx = this.logic.makeContext({
+        screen: this,
+        scene: this.scene
+    });
+    this.logic.initScene(ctx);
 };
 
 PlayScreen.prototype.setCameraPos = function (xpos, ypos) {
-   this.scene.setCameraPos(xpos, ypos);
+    this.scene.setCameraPos(xpos, ypos);
 };
 
 PlayScreen.prototype.getDisplayScale = function () {
-   return this.viewWidth / this.scene.getBaseSize().width;
+    return this.viewWidth / this.scene.getBaseSize().width;
 };
 
 /* Called when the game window is resized. This scales the scene to fit the 
  * available space. */
 PlayScreen.prototype.handleResize = function (width, height) {
-   if (this.scene) {
-      this.viewWidth = width;
-      this.viewHeight = height;
-      this.sceneStage.x = width / 2;
-      this.sceneStage.y = height / 2;
-      this.sceneStage.scale.set(this.getDisplayScale());
-      this.dialog.handleResize(width, height);
-   }
+    if (this.scene) {
+        this.viewWidth = width;
+        this.viewHeight = height;
+        this.sceneStage.x = width / 2;
+        this.sceneStage.y = height / 2;
+        this.sceneStage.scale.set(this.getDisplayScale());
+        this.dialog.handleResize(width, height);
+    }
 };
 
 PlayScreen.prototype.handleClick = function (evt) {
-   // A direct click will dismiss the dialog box
-   if (this.dialog.isShown()) {
-      this.dialog.hide();
-      return;
-   }
+    // A direct click will dismiss the dialog box
+    if (this.dialog.isShown()) {
+        this.dialog.hide();
+        return;
+    }
 
-   if (!this.scene) return;
-   if (this.cutScene) return;
+    if (!this.scene) return;
+    if (this.cutScene) return;
 
-   var xp = evt.x / this.getDisplayScale();
-   var yp = evt.y / this.getDisplayScale();
-   var args = this.scene.checkHit(xp, yp);
-   if (args.thing) {
-      var ctx = this.logic.makeContext({
-         screen: this,
-         scene: this.scene,
-         thing: args.thing,
-         sprite: args.sprite
-      });
-      this.logic.handleClicked(ctx);
-      this.redraw();
-   }
+    var xp = evt.x / this.getDisplayScale();
+    var yp = evt.y / this.getDisplayScale();
+    var args = this.scene.checkHit(xp, yp);
+    if (args.thing) {
+        var ctx = this.logic.makeContext({
+            screen: this,
+            scene: this.scene,
+            thing: args.thing,
+            sprite: args.sprite
+        });
+        this.logic.handleClicked(ctx);
+        this.redraw();
+    }
 };
 
 PlayScreen.prototype.handleDragStart = function (evt) {
-   var _this3 = this;
+    var _this3 = this;
 
-   if (this.dialog.isShown()) {
-      setTimeout(function () {
-         _this3.dialog.hide();
-      }, 1000);
-   }
-   if (!this.scene) return;
-   if (this.cutScene) return;
+    if (this.dialog.isShown()) {
+        setTimeout(function () {
+            _this3.dialog.hide();
+        }, 1000);
+    }
+    if (!this.scene) return;
+    if (this.cutScene) return;
 
-   var xp = evt.x / this.getDisplayScale();
-   var yp = evt.y / this.getDisplayScale();
-   var args = this.scene.checkHit(xp, yp);
-   if (false) {
-      //args.thing) {
-      // Dragging an object
-      this.dragging = this.scene.getThing(args.layer, args.thing);
-      this.dragStartX = this.dragging.x;
-      this.dragStartY = this.dragging.y;
-      /*var rect = thing.getBoundingClientRect();
-      this.dragging = args;
-      this.dragStartX = parseInt(thing.style.left);
-      this.dragStartY = parseInt(thing.style.top);*/
-   } else {
-      // Panning the scene
-      this.dragging = null;
-      this.dragStartX = this.scene.cameraX;
-   }
+    var xp = evt.x / this.getDisplayScale();
+    var yp = evt.y / this.getDisplayScale();
+    var args = this.scene.checkHit(xp, yp);
+    if (false) {
+        //args.thing) {
+        // Dragging an object
+        this.dragging = this.scene.getThing(args.layer, args.thing);
+        this.dragStartX = this.dragging.x;
+        this.dragStartY = this.dragging.y;
+        /*var rect = thing.getBoundingClientRect();
+        this.dragging = args;
+        this.dragStartX = parseInt(thing.style.left);
+        this.dragStartY = parseInt(thing.style.top);*/
+    } else {
+        // Panning the scene
+        this.dragging = null;
+        this.dragStartX = this.scene.cameraX;
+    }
 };
 
 PlayScreen.prototype.handleDragStop = function (evt) {
-   // If the player clicked and panned the scene around only a short distance,
-   // count this as a click event.
-   var dist = 5;
-   if (!this.dragging && Math.abs(evt.x - evt.dragStartX) < dist && Math.abs(evt.y - evt.dragStartY) < dist) {
-      this.handleClick(evt);
-   }
-   this.dragging = null;
+    // If the player clicked and panned the scene around only a short distance,
+    // count this as a click event.
+    var dist = 5;
+    if (!this.dragging && Math.abs(evt.x - evt.dragStartX) < dist && Math.abs(evt.y - evt.dragStartY) < dist) {
+        this.handleClick(evt);
+    }
+    this.dragging = null;
 };
 
 PlayScreen.prototype.handleDrag = function (evt) {
-   if (!this.scene) return;
-   if (this.cutScene) return;
+    if (!this.scene) return;
+    if (this.cutScene) return;
 
-   if (this.dragging) {
-      // Dragging a thing
-      this.dragging.x = this.dragStartX + evt.dx / this.getDisplayScale();
-      this.dragging.y = this.dragStartY + evt.dy / this.getDisplayScale();
-      this.redraw();
-   } else {
-      // Panning the scene around
-      var pos = this.dragStartX - evt.dx / (window.innerWidth / 2);
-      pos = Math.max(Math.min(pos, 1), -1);
-      this.scene.setCameraPos(pos);
-      this.redraw();
-      // Now figure out what's in view and send visibility events
-      // ...
-   }
+    if (this.dragging) {
+        // Dragging a thing
+        this.dragging.x = this.dragStartX + evt.dx / this.getDisplayScale();
+        this.dragging.y = this.dragStartY + evt.dy / this.getDisplayScale();
+        this.redraw();
+    } else {
+        // Panning the scene around
+        var pos = this.dragStartX - evt.dx / (window.innerWidth / 2);
+        pos = Math.max(Math.min(pos, 1), -1);
+        this.scene.setCameraPos(pos);
+        this.redraw();
+        // Now figure out what's in view and send visibility events
+        // ...
+    }
 };
 
 PlayScreen.prototype.showMessage = function (msg) {
-   // Pause game play and show the message (will be resumed when the 
-   // dialog box is closed)
-   this.pause();
-   this.dialog.showMessage(msg);
+    // Pause game play and show the message (will be resumed when the 
+    // dialog box is closed)
+    this.pause();
+    this.dialog.showMessage(msg);
 };
 
 /* Starts an in-game timer for the given callback. This timer can be paused
  * and resumed. (eg when transitionin between scenes and when showing dialog
  * boxes) */
 PlayScreen.prototype.startTimer = function (callback, delay) {
-   var _this4 = this;
+    var _this4 = this;
 
-   var tm = new Events.Timer(function () {
-      var ctx = _this4.logic.makeContext({
-         screen: _this4,
-         scene: _this4.scene
-      });
-      var ret = callback(ctx);
-      if (!ret) {
-         // No more callbacks - remove the timer from the list
-         _this4.cancelTimer(tm);
-      }
-      _this4.redraw();
-      return ret;
-   }, delay);
-   this.timers.push(tm);
-   return tm;
+    var tm = new Events.Timer(function () {
+        var ctx = _this4.logic.makeContext({
+            screen: _this4,
+            scene: _this4.scene
+        });
+        var ret = callback(ctx);
+        if (!ret) {
+            // No more callbacks - remove the timer from the list
+            _this4.cancelTimer(tm);
+        }
+        _this4.redraw();
+        return ret;
+    }, delay);
+    this.timers.push(tm);
+    return tm;
 };
 
 PlayScreen.prototype.cancelTimer = function (tm) {
-   var n = this.timers.indexOf(tm);
-   tm.pause();
-   if (n !== -1) {
-      this.timers = this.timers.slice(0, n).concat(this.timers.slice(n + 1));
-   }
+    var n = this.timers.indexOf(tm);
+    tm.pause();
+    if (n !== -1) {
+        this.timers = this.timers.slice(0, n).concat(this.timers.slice(n + 1));
+    }
 };
 
 /* Pause the gameplay. This happens when showing the player a message */
 PlayScreen.prototype.pause = function () {
-   // Pause all timers
-   var _iteratorNormalCompletion2 = true;
-   var _didIteratorError2 = false;
-   var _iteratorError2 = undefined;
+    // Pause all timers
+    var _iteratorNormalCompletion2 = true;
+    var _didIteratorError2 = false;
+    var _iteratorError2 = undefined;
 
-   try {
-      for (var _iterator2 = this.timers[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-         var tm = _step2.value;
+    try {
+        for (var _iterator2 = this.timers[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var tm = _step2.value;
 
-         tm.pause();
-      }
-   } catch (err) {
-      _didIteratorError2 = true;
-      _iteratorError2 = err;
-   } finally {
-      try {
-         if (!_iteratorNormalCompletion2 && _iterator2.return) {
-            _iterator2.return();
-         }
-      } finally {
-         if (_didIteratorError2) {
-            throw _iteratorError2;
-         }
-      }
-   }
+            tm.pause();
+        }
+    } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                _iterator2.return();
+            }
+        } finally {
+            if (_didIteratorError2) {
+                throw _iteratorError2;
+            }
+        }
+    }
 };
 
 /* Resume the gameplay after pausing */
 PlayScreen.prototype.resume = function () {
-   var _iteratorNormalCompletion3 = true;
-   var _didIteratorError3 = false;
-   var _iteratorError3 = undefined;
+    var _iteratorNormalCompletion3 = true;
+    var _didIteratorError3 = false;
+    var _iteratorError3 = undefined;
 
-   try {
-      for (var _iterator3 = this.timers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-         var tm = _step3.value;
+    try {
+        for (var _iterator3 = this.timers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            var tm = _step3.value;
 
-         tm.resume();
-      }
-   } catch (err) {
-      _didIteratorError3 = true;
-      _iteratorError3 = err;
-   } finally {
-      try {
-         if (!_iteratorNormalCompletion3 && _iterator3.return) {
-            _iterator3.return();
-         }
-      } finally {
-         if (_didIteratorError3) {
-            throw _iteratorError3;
-         }
-      }
-   }
+            tm.resume();
+        }
+    } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                _iterator3.return();
+            }
+        } finally {
+            if (_didIteratorError3) {
+                throw _iteratorError3;
+            }
+        }
+    }
 };
 
 module.exports = PlayScreen;
@@ -2204,7 +2228,7 @@ Thing.prototype.getSprite = function (state) {
  * called thingName + "_" + state, and sets all others as invisible. */
 Thing.prototype.setState = function (state) {
     if (!this.sprites[state]) {
-        throw Error("invalid thing state: " + state);
+        throw Error("invalid thing state for " + this.name + ": " + state);
     }
     for (var spriteName in this.sprites) {
         this.sprites[spriteName].visible = false;
@@ -2283,6 +2307,22 @@ function makeSolidColourTexture(colour, width, height) {
     return PIXI.Texture.fromCanvas(canvas);
 }
 
+/* Returns an function that chains together a series of update functions.
+ * This should be used with 'PlayScreen.addUpdate'. A function should return 
+ * false to signal it's completion, at which point the next function in line
+ * will be called. */
+function chainUpdates() {
+    var callbacks = Array.prototype.slice.call(arguments);
+    return function (dt) {
+        if (callbacks.length === 0) return false;
+        if (!callbacks[0](dt)) {
+            callbacks.shift();
+            return !!callbacks;
+        }
+        return true;
+    };
+}
+
 /**********/
 /* Screen */
 /**********/
@@ -2336,7 +2376,8 @@ Fader.prototype.update = function (dt) {
 module.exports = {
     makeSolidColourTexture: makeSolidColourTexture,
     getTransparencyMask: getTransparencyMask,
-    Fader: Fader
+    Fader: Fader,
+    chainUpdates: chainUpdates
 };
 
 },{}]},{},[7])(7)

@@ -13,12 +13,12 @@
             "sprites": []
         },
         {
-            "name": "house",
+            "name": "roadway",
             "sprites": [
                 {
-                    "name": "door",
-                    "x": 19,
-                    "y": 17
+                    "name": "house",
+                    "x": 17,
+                    "y": 14
                 }
             ]
         },

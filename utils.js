@@ -48,6 +48,23 @@ function makeSolidColourTexture(colour, width, height)
     return PIXI.Texture.fromCanvas(canvas);
 }
 
+/* Returns an function that chains together a series of update functions.
+ * This should be used with 'PlayScreen.addUpdate'. A function should return 
+ * false to signal it's completion, at which point the next function in line
+ * will be called. */
+function chainUpdates()
+{
+    var callbacks = Array.prototype.slice.call(arguments);
+    return function(dt) {
+        if (callbacks.length === 0) return false;
+        if (!callbacks[0](dt)) {
+            callbacks.shift();
+            return !!callbacks;
+        }
+        return true;
+    }
+}
+
 /**********/
 /* Screen */
 /**********/
@@ -106,5 +123,6 @@ Fader.prototype.update = function(dt)
 module.exports = {
     makeSolidColourTexture: makeSolidColourTexture,
     getTransparencyMask: getTransparencyMask,
-    Fader: Fader
+    Fader: Fader,
+    chainUpdates: chainUpdates
 };

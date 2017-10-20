@@ -6,11 +6,38 @@
     "layers": [
         {
             "name": "background",
-            "sprites": []
+            "sprites": [
+                {
+                    "name": "shape",
+                    "x": 9,
+                    "y": 11
+                }
+            ]
         },
         {
             "name": "wall",
-            "sprites": []
+            "sprites": [
+                {
+                    "name": "hole1",
+                    "x": 21,
+                    "y": 11
+                },
+                {
+                    "name": "hole2_empty",
+                    "x": 73,
+                    "y": 11
+                },
+                {
+                    "name": "hole2_eyes",
+                    "x": 73,
+                    "y": 11
+                },
+                {
+                    "name": "hole2_blink",
+                    "x": 73,
+                    "y": 11
+                }
+            ]
         },
         {
             "name": "ladder",

@@ -33,5 +33,3 @@ module.exports.resize = function()
 {
     return gameState.handleResize();
 }
-
-

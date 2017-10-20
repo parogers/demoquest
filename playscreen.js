@@ -144,23 +144,25 @@ PlayScreen.prototype.changeScene = function(name, args)
 	this.stage.removeChild(fadeout.sprite);
 	this.pause();
 	fadeout.start(this.stage);
-	this.addUpdate(dt => {
-	    if (!fadeout.update(dt)) 
-	    {
-		this.setScene(name);
-                this.setCameraPos(cameraX, cameraY)
-		fadein.start(this.stage);
-		this.addUpdate(dt => {
-		    if (!fadein.update(dt)) {
-			this.resume();
-			return false;
-		    }
-		    return true;
-		});
-		return false;
-	    }
-	    return true;
-	});
+        this.addUpdate(Utils.chainUpdates(
+            (dt) => {
+	        if (!fadeout.update(dt)) 
+	        {
+		    this.setScene(name);
+                    this.setCameraPos(cameraX, cameraY)
+		    fadein.start(this.stage);
+                    return false;
+                }
+                return true
+            },
+            (dt) => {
+		if (!fadein.update(dt)) {
+		    this.resume();
+		    return false;
+		}
+		return true;
+            }
+	));
     }
 }
 

@@ -5,7 +5,7 @@
                 "h": 7,
                 "w": 10,
                 "x": 1,
-                "y": 144
+                "y": 147
             },
             "rotated": false,
             "sourceSize": {
@@ -25,7 +25,7 @@
                 "h": 8,
                 "w": 8,
                 "x": 1,
-                "y": 152
+                "y": 155
             },
             "rotated": false,
             "sourceSize": {
@@ -45,7 +45,7 @@
                 "h": 6,
                 "w": 7,
                 "x": 1,
-                "y": 137
+                "y": 140
             },
             "rotated": false,
             "sourceSize": {
@@ -65,7 +65,7 @@
                 "h": 32,
                 "w": 91,
                 "x": 1,
-                "y": 104
+                "y": 107
             },
             "rotated": false,
             "sourceSize": {
@@ -80,32 +80,12 @@
             },
             "trimmed": false
         },
-        "door": {
-            "frame": {
-                "h": 3,
-                "w": 3,
-                "x": 1,
-                "y": 100
-            },
-            "rotated": false,
-            "sourceSize": {
-                "h": 3,
-                "w": 3
-            },
-            "spriteSourceSize": {
-                "h": 3,
-                "w": 3,
-                "x": 0,
-                "y": 0
-            },
-            "trimmed": false
-        },
         "foreground": {
             "frame": {
                 "h": 32,
                 "w": 96,
                 "x": 1,
-                "y": 161
+                "y": 164
             },
             "rotated": false,
             "sourceSize": {
@@ -141,6 +121,26 @@
             "trimmed": false
         },
         "house": {
+            "frame": {
+                "h": 6,
+                "w": 11,
+                "x": 1,
+                "y": 100
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 6,
+                "w": 11
+            },
+            "spriteSourceSize": {
+                "h": 6,
+                "w": 11,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "roadway": {
             "frame": {
                 "h": 32,
                 "w": 46,
@@ -188,7 +188,7 @@
         "scale": "1",
         "size": {
             "W": 98,
-            "h": 195
+            "h": 198
         },
         "version": "1"
     }

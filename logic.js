@@ -22,9 +22,12 @@
 class State
 {
     constructor() {
+        this.checkedDoor = false;
         this.hasRedKey = false;
         this.bush1Moved = false;
         this.bush2Moved = false;
+        this.seenHole1 = false;
+        this.seenHole2 = false;
     }
 }
 
@@ -209,7 +212,7 @@ class RoadLogic
 	    if (ctx.state.bush2Moved) {
 		ctx.showMessage("You clear away some brush revealing a cave!")
 	    } else {
-		ctx.showMessage("You clear away some brush. You see something behind it!")
+		ctx.showMessage("You clear away some brush. There's something behind it!")
 	    }
 	    break;
 
@@ -219,7 +222,7 @@ class RoadLogic
 	    if (ctx.state.bush1Moved) {
 		ctx.showMessage("You clear away some brush revealing a cave!")
 	    } else {
-		ctx.showMessage("You clear away some brush. You see something behind it!")
+		ctx.showMessage("You clear away some brush. There's something behind it!")
 	    }
 	    break;
 
@@ -230,6 +233,16 @@ class RoadLogic
 		ctx.screen.changeScene("cave");
 	    }
 	    break;
+
+        case "house":
+            if (ctx.state.hasRedKey) {
+            } else if (ctx.state.checkedDoor) {
+                ctx.showMessage("Maybe I can find a key, or another way in.");
+            } else {
+                ctx.showMessage("There's no answer and the door's locked.");
+                ctx.state.checkedDoor = true;
+            }
+            break;
 	}
     }
 }
@@ -303,7 +316,8 @@ class CaveLogic
 
     initScene(ctx) 
     {
-        //ctx.getThing("key").setVisible(
+        ctx.getThing("hole2").setState("empty");
+        ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
     }
 
     handleClicked(ctx) 
@@ -315,7 +329,19 @@ class CaveLogic
             break;
 
         case "key":
+            ctx.getThing("key").setVisible(false);
+            ctx.state.hasRedKey = true;
+	    ctx.showMessage("A small key. Odd it was left here.");
             break;
+
+        case "hole1":
+            ctx.showMessage("You see only darkness.");
+            break;
+
+        case "hole2":
+            ctx.showMessage("You see only darkness.");
+            break;
+
 	}
     }
 }
