@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Render = require("./render");
 var Logic = require("./logic");
 var Input = require("./input");
 var Loader = require("./loader");
@@ -26,17 +27,8 @@ var PlayScreen = require("./playscreen");
 
 function GameState(div)
 {
-    // Set pixel scaling to be "nearest neighbour" which makes textures 
-    // render nice and blocky.
-    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-    // Disable the ticker sinc we don't use it (rendering happens as needed)
-    PIXI.ticker.shared.autoStart = false;
-    PIXI.ticker.shared.stop();
-
-    this.div = div;
     // The screen currently displayed
     this.screen = null;
-    this.renderer = null;
     this.logic = new Logic.Logic();
     this.state = new Logic.State();
     this.dataList = {};
@@ -52,14 +44,17 @@ function GameState(div)
 	this.handleResize();
     });
     // Call our resize handler to setup the render area at the correct size
-    this.handleResize();
+    //this.handleResize();
+
+    Render.configure(div, 1);
 
     // Setup mouse and/or touch handlers
-    var m = new Input.MouseAdapter(this.div);
+    var m = new Input.MouseAdapter(Render.getRenderer().view);
     this.setupInputHandlers(m);
 
     this.screen = new Loader.LoadingScreen(
-	this.renderer.width, this.renderer.height);
+	Render.getRenderer().width, 
+        Render.getRenderer().height);
 
     this.screen.onDone(() => {
 	this._startGame();
@@ -105,10 +100,11 @@ GameState.prototype.redraw = function()
 }
 
 /* Returns the bounding (client) rectangle of the game rendering area */
+/*
 GameState.prototype.getBoundingClientRect = function()
 {
     return this.renderer.view.getBoundingClientRect();
-}
+}*/
 
 /* Renders the current screen. Should be called from requestAnimationFrame */
 GameState.prototype.renderFrame = function()
@@ -130,7 +126,7 @@ GameState.prototype.renderFrame = function()
     if (!this.screen.stage) {
 	throw Error("screen has no stage defined: " + this.screen.name);
     }
-    this.renderer.render(this.screen.stage);
+    Render.getRenderer().render(this.screen.stage);
 
     if (redraw) 
 	this.redraw();
@@ -140,24 +136,11 @@ GameState.prototype.renderFrame = function()
 
 GameState.prototype.handleResize = function()
 {
-    // Setup the canvas area
-    this.div.focus();
-    this.div.innerHTML = "";
-
-    var pad = 10;
-    var renderSize = Math.min(window.innerWidth-pad, window.innerHeight-pad);
-    this.renderer = PIXI.autoDetectRenderer({
-	width: renderSize, 
-	height: renderSize,
-	// Required to prevent flickering in Chrome on Android (others too?)
-	preserveDrawingBuffer: true
-    });
-    this.div.appendChild(this.renderer.view);
-    this.div.style.width = this.renderer.width;
-    this.div.style.height = this.renderer.height;
-
+    Render.resize();
     if (this.screen && this.screen.handleResize) {
-	this.screen.handleResize(this.renderer.width, this.renderer.height);
+	this.screen.handleResize(
+            Render.getRenderer().width, 
+            Render.getRenderer().height);
     }
     this.redraw();
 }
@@ -168,8 +151,8 @@ GameState.prototype._startGame = function()
     this.screen = new PlayScreen(
 	this.logic, 
 	this.dataList,
-	this.renderer.width, 
-	this.renderer.height);
+	Render.getRenderer().width, 
+	Render.getRenderer().height);
 
     // Attach to various events exposed by the PlayScreen
     this.screen.onGameOver(() => {

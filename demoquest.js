@@ -150,7 +150,7 @@ Dialog.prototype.handleResize = function (width, height) {
 
 module.exports = Dialog;
 
-},{"./events":2,"./utils":10}],2:[function(require,module,exports){
+},{"./events":2,"./utils":11}],2:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -322,6 +322,7 @@ module.exports = {
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Render = require("./render");
 var Logic = require("./logic");
 var Input = require("./input");
 var Loader = require("./loader");
@@ -334,17 +335,8 @@ var PlayScreen = require("./playscreen");
 function GameState(div) {
    var _this = this;
 
-   // Set pixel scaling to be "nearest neighbour" which makes textures 
-   // render nice and blocky.
-   PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-   // Disable the ticker sinc we don't use it (rendering happens as needed)
-   PIXI.ticker.shared.autoStart = false;
-   PIXI.ticker.shared.stop();
-
-   this.div = div;
    // The screen currently displayed
    this.screen = null;
-   this.renderer = null;
    this.logic = new Logic.Logic();
    this.state = new Logic.State();
    this.dataList = {};
@@ -360,13 +352,15 @@ function GameState(div) {
       _this.handleResize();
    });
    // Call our resize handler to setup the render area at the correct size
-   this.handleResize();
+   //this.handleResize();
+
+   Render.configure(div, 1);
 
    // Setup mouse and/or touch handlers
-   var m = new Input.MouseAdapter(this.div);
+   var m = new Input.MouseAdapter(Render.getRenderer().view);
    this.setupInputHandlers(m);
 
-   this.screen = new Loader.LoadingScreen(this.renderer.width, this.renderer.height);
+   this.screen = new Loader.LoadingScreen(Render.getRenderer().width, Render.getRenderer().height);
 
    this.screen.onDone(function () {
       _this._startGame();
@@ -412,9 +406,11 @@ GameState.prototype.redraw = function () {
 };
 
 /* Returns the bounding (client) rectangle of the game rendering area */
-GameState.prototype.getBoundingClientRect = function () {
-   return this.renderer.view.getBoundingClientRect();
-};
+/*
+GameState.prototype.getBoundingClientRect = function()
+{
+    return this.renderer.view.getBoundingClientRect();
+}*/
 
 /* Renders the current screen. Should be called from requestAnimationFrame */
 GameState.prototype.renderFrame = function () {
@@ -434,30 +430,15 @@ GameState.prototype.renderFrame = function () {
    if (!this.screen.stage) {
       throw Error("screen has no stage defined: " + this.screen.name);
    }
-   this.renderer.render(this.screen.stage);
+   Render.getRenderer().render(this.screen.stage);
 
    if (redraw) this.redraw();else this.lastRenderTime = null;
 };
 
 GameState.prototype.handleResize = function () {
-   // Setup the canvas area
-   this.div.focus();
-   this.div.innerHTML = "";
-
-   var pad = 10;
-   var renderSize = Math.min(window.innerWidth - pad, window.innerHeight - pad);
-   this.renderer = PIXI.autoDetectRenderer({
-      width: renderSize,
-      height: renderSize,
-      // Required to prevent flickering in Chrome on Android (others too?)
-      preserveDrawingBuffer: true
-   });
-   this.div.appendChild(this.renderer.view);
-   this.div.style.width = this.renderer.width;
-   this.div.style.height = this.renderer.height;
-
+   Render.resize();
    if (this.screen && this.screen.handleResize) {
-      this.screen.handleResize(this.renderer.width, this.renderer.height);
+      this.screen.handleResize(Render.getRenderer().width, Render.getRenderer().height);
    }
    this.redraw();
 };
@@ -466,7 +447,7 @@ GameState.prototype._startGame = function () {
    var _this3 = this;
 
    this.dataList = this.screen.dataList;
-   this.screen = new PlayScreen(this.logic, this.dataList, this.renderer.width, this.renderer.height);
+   this.screen = new PlayScreen(this.logic, this.dataList, Render.getRenderer().width, Render.getRenderer().height);
 
    // Attach to various events exposed by the PlayScreen
    this.screen.onGameOver(function () {
@@ -486,7 +467,7 @@ GameState.prototype._startGame = function () {
 
 module.exports = GameState;
 
-},{"./input":4,"./loader":5,"./logic":6,"./playscreen":8}],4:[function(require,module,exports){
+},{"./input":4,"./loader":5,"./logic":6,"./playscreen":8,"./render":9}],4:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -579,6 +560,7 @@ function MouseAdapter(src) {
       var rect = _this.src.getBoundingClientRect();
       var x = event.clientX - rect.left;
       var y = event.clientY - rect.top;
+
       // If the mouse didn't move at all, it's a click event. Otherwise we
       // were dragging and should issue a drag stop event. Also note we 
       // make sure the mouse cursor is within the area before issuing
@@ -892,7 +874,7 @@ module.exports = {
     LoadingScreen: LoadingScreen
 };
 
-},{"./events":2,"./scene":9}],6:[function(require,module,exports){
+},{"./events":2,"./scene":10}],6:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1266,45 +1248,17 @@ module.exports = {
 var GameState = require("./gamestate");
 var gameState = null;
 
-function start() {
-    var div = document.getElementById("canvas-area");
+module.exports = {};
+module.exports.configure = function (div) {
     gameState = new GameState(div);
+};
 
-    /*
-        window.addEventListener("touchstart", function(event) {
-    	var touches = event.changedTouches;
-    
-    	for (var touch of touches) {
-    	    var div = document.createElement("div");
-    	    div.className = "marker";
-    	    div.style.left = touch.pageX;
-    	    div.style.top = touch.pageY;
-    	    document.body.appendChild(div);
-    	}
-    
-        }, false);
-    
-        window.addEventListener("touchmove", function(event) {
-        }, false);
-    
-        window.addEventListener("touchcancel", function(event) {
-        }, false);
-    
-        window.addEventListener("touchend", function(event) {
-        }, false);
-    
-        stage = new Stage();
-        stage.handleScreenResize();
-    */
-}
-
-function getState() {
+module.exports.getState = function () {
     return gameState;
-}
+};
 
-module.exports = {
-    start: start,
-    getState: getState
+module.exports.resize = function () {
+    return gameState.handleResize();
 };
 
 },{"./gamestate":3}],8:[function(require,module,exports){
@@ -1725,7 +1679,107 @@ PlayScreen.prototype.resume = function () {
 
 module.exports = PlayScreen;
 
-},{"./dialog":1,"./events":2,"./logic":6,"./scene":9,"./utils":10}],9:[function(require,module,exports){
+},{"./dialog":1,"./events":2,"./logic":6,"./scene":10,"./utils":11}],9:[function(require,module,exports){
+"use strict";
+
+/* APDUNGEON - A dungeon crawler demo written in javascript + pixi.js
+ * Copyright (C) 2017  Peter Rogers (peter.rogers@gmail.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * See LICENSE.txt for the full text of the license.
+ */
+
+// The PIXI renderer
+var renderer = null;
+// The containing element
+var container = null;
+// The preferred aspect ratio for sizing the render view
+var aspectRatio = 1;
+
+module.exports = {};
+
+/* Configures the renderer (via PIXI) and adds the view to the given HTML
+ * element. The renderer width/height will conform to the given aspect 
+ * ratio. */
+module.exports.configure = function (div, aspect) {
+    // Set pixel scaling to be "nearest neighbour" which makes textures 
+    // render nice and blocky.
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+    // Disable the ticker sinc we don't use it (rendering happens as needed)
+    PIXI.ticker.shared.autoStart = false;
+    PIXI.ticker.shared.stop();
+
+    var rect = div.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+        throw Error("Invalid size for renderer: " + rect.width + ", " + rect.height);
+    }
+
+    // Maintain the aspect ratio when sizing the render view
+    var width = Math.round(rect.height * aspect);
+    var height = rect.height;
+
+    if (width > rect.width) {
+        width = rect.width;
+        height = Math.round(rect.height / aspect);
+    }
+
+    renderer = new PIXI.CanvasRenderer({
+        //renderer = PIXI.autoDetectRenderer({
+        width: width,
+        height: height,
+        //antialias: true,
+        // Required to prevent flickering in Chrome on Android (others too?)
+        preserveDrawingBuffer: true
+        //clearBeforeRender: true
+    });
+    renderer.plugins.interaction.destroy();
+
+    //renderer.view.className = "canvas";
+
+    div.innerHTML = "";
+    div.appendChild(renderer.view);
+    container = div;
+    aspectRatio = aspect;
+};
+
+module.exports.getContainer = function () {
+    return container;
+};
+
+module.exports.getRenderer = function () {
+    return renderer;
+};
+
+/* Resize the renderer to fit the parent container */
+module.exports.resize = function () {
+    var rect = container.getBoundingClientRect();
+    // Maintain the aspect ratio when resizing the render view
+    var width = Math.round(rect.height * aspectRatio);
+    var height = rect.height;
+
+    if (width > rect.width) {
+        width = rect.width;
+        height = Math.round(rect.width / aspectRatio);
+    }
+
+    renderer.resize(width, height);
+    //container.innerHTML = "";
+    //container.appendChild(renderer.view);
+};
+
+},{}],10:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -1745,6 +1799,7 @@ module.exports = PlayScreen;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Render = require("./render");
 var Events = require("./events");
 var Utils = require("./utils");
 
@@ -1772,10 +1827,7 @@ Scene.fromData = function (sceneData) {
     scn.name = sceneData.name;
     scn.sceneData = sceneData;
 
-    var renderer = PIXI.autoDetectRenderer({
-        width: 100,
-        height: 100
-    });
+    var renderer = Render.getRenderer();
 
     // Build the layers and contained sprites
     var _iteratorNormalCompletion = true;
@@ -2180,7 +2232,7 @@ module.exports = {
     Thing: Thing
 };
 
-},{"./events":2,"./utils":10}],10:[function(require,module,exports){
+},{"./events":2,"./render":9,"./utils":11}],11:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling

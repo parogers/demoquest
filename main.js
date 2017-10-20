@@ -18,45 +18,20 @@
 var GameState = require("./gamestate");
 var gameState = null;
 
-function start()
+module.exports = {};
+module.exports.configure = function(div)
 {
-    var div = document.getElementById("canvas-area");
     gameState = new GameState(div);
-
-/*
-    window.addEventListener("touchstart", function(event) {
-	var touches = event.changedTouches;
-
-	for (var touch of touches) {
-	    var div = document.createElement("div");
-	    div.className = "marker";
-	    div.style.left = touch.pageX;
-	    div.style.top = touch.pageY;
-	    document.body.appendChild(div);
-	}
-
-    }, false);
-
-    window.addEventListener("touchmove", function(event) {
-    }, false);
-
-    window.addEventListener("touchcancel", function(event) {
-    }, false);
-
-    window.addEventListener("touchend", function(event) {
-    }, false);
-
-    stage = new Stage();
-    stage.handleScreenResize();
-*/
 }
 
-function getState()
+module.exports.getState = function()
 {
     return gameState;
 }
 
-module.exports = {
-    start: start,
-    getState: getState
-};
+module.exports.resize = function()
+{
+    return gameState.handleResize();
+}
+
+

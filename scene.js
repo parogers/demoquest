@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Render = require("./render");
 var Events = require("./events");
 var Utils = require("./utils");
 
@@ -44,10 +45,7 @@ Scene.fromData = function(sceneData)
     scn.name = sceneData.name;
     scn.sceneData = sceneData;
 
-    var renderer = PIXI.autoDetectRenderer({
-	width: 100, 
-	height: 100,
-    });
+    let renderer = Render.getRenderer();
 
     // Build the layers and contained sprites
     for (var layerData of sceneData.layers) 

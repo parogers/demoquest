@@ -1,107 +1,22 @@
-body
+#canvas_area
 {
-    padding: 0;
+    width: 800px;
+    height: 800px;
+}
+
+canvas
+{
     margin: 0;
-}
-
-div#scene img
-{
-    image-rendering:optimizeSpeed;             /* Legal fallback */
-    image-rendering:-moz-crisp-edges;          /* Firefox        */
-    image-rendering:-o-crisp-edges;            /* Opera          */
-    image-rendering:-webkit-optimize-contrast; /* Safari         */
-    image-rendering:optimize-contrast;         /* CSS3 Proposed  */
-    image-rendering:crisp-edges;               /* CSS4 Proposed  */
-    image-rendering:pixelated;                 /* CSS4 Proposed  */
-    -ms-interpolation-mode:nearest-neighbor;   /* IE8+           */
-}
-
-div#scene div
-{
-    position: absolute;
-}
-
-div#scene img.thing
-{
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
-div#scene img.layer
-{
-}
-
-div#scene
-{
-    height: 25em;
-    width: 25em;
-
-    /*display: none;*/
-    position: absolute;
-    top: 0;
-    left: 0;
-    overflow: hidden;
-
-    /* Make the scene area unselectable. This prevents it from getting 
-     * grayed-out when the user is dragging around. */
-    user-select: none;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-}
-
-div#curtain
-{
-    display: none;
-    opacity: 1;
-    position: absolute;
-    top: 0;
-    left: 0;
-
-    background: #000;
-}
-
-#stage
-{
-    display: none;
-    position: absolute;
-    top: 0;
-    left: 0;
-    border: solid 1px;
-}
-
-#message-area
-{
-    font-size: 20px;
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 4em;
-    color: #333;
-    background: #eee;
-}
-
-#messages
-{
-    padding: 0.5em;
-}
-
-.marker
-{
-    background: #0f0;
-    width: 2em;
-    height: 2em;
-    position: absolute;
-    top: 0;
-    left: 0;
-}
-
-#canvas-area
-{
+    padding: 0;
     margin-left: auto;
     margin-right: auto;
+    display: block;
 }
 
+body
+{
+    margin: 0px;
+    background: #222;
+    /* Prevents pinch-zoom under chrome */
+    touch-action: none;
+}

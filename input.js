@@ -88,6 +88,7 @@ function MouseAdapter(src)
 	var rect = this.src.getBoundingClientRect();
 	var x = event.clientX - rect.left;
 	var y = event.clientY - rect.top;
+
 	// If the mouse didn't move at all, it's a click event. Otherwise we
 	// were dragging and should issue a drag stop event. Also note we 
 	// make sure the mouse cursor is within the area before issuing
