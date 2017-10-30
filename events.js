@@ -25,6 +25,16 @@ function EventManager()
     this.callbacks = {};
 }
 
+EventManager.prototype.destroy = function()
+{
+    this.callbacks = null;
+}
+
+EventManager.prototype.hasListeners = function(event)
+{
+    return this.callbacks[event] && this.callbacks[event].length > 0;
+}
+
 /* Add an event callback under the given name */
 EventManager.prototype.addEventListener = function(event, callback)
 {
@@ -32,7 +42,24 @@ EventManager.prototype.addEventListener = function(event, callback)
 	this.callbacks[event] = [];
     }
     this.callbacks[event].push(callback);
-    return this;
+    return {
+        remove: () => {
+            this.removeEventListener(event, callback);
+        },
+        event: event,
+        callback: callback
+    }
+}
+
+EventManager.prototype.removeEventListener = function(event, callback)
+{
+    let lst = this.callbacks[event];
+    if (!lst) return;
+
+    let i = lst.indexOf(callback);
+    if (i !== -1) {
+        this.callbacks[event] = lst.slice(0, i).concat(lst.slice(i+1));
+    }
 }
 
 EventManager.prototype.dispatcher = function(event)
@@ -72,9 +99,13 @@ EventManager.prototype.dispatch = function(event)
  */
 EventManager.prototype.hook = function(event)
 {
-    return (callback => {
+    let func = (callback) => {
 	return this.addEventListener(event, callback);
-    });
+    };
+    /*func.remove = (callback) => {
+        this.removeEventListener(event, callback);
+    };*/
+    return func
 }
 
 /*********/
@@ -92,6 +123,11 @@ function Timer(callback, delay)
     this.paused = true;
     this.timeoutEvent = null;
     this.resume();
+}
+
+Timer.prototype.destroy = function()
+{
+    this.pause();
 }
 
 /* Pause the timer to be resumed later */
@@ -123,7 +159,63 @@ Timer.prototype.resume = function()
     }
 }
 
+/*************/
+/* TimerList */
+/*************/
+
+function TimerList()
+{
+    this.timers = [];
+}
+
+TimerList.prototype.destroy = function()
+{
+    for (var tm of this.timers) {
+	tm.destroy();
+    }
+    this.timers = null;
+}
+
+TimerList.prototype.start = function(callback, delay)
+{
+    var tm = new Timer(() => {
+	let ret = callback();
+	if (!ret) {
+	    // No more callbacks - remove the timer from the list
+	    this.cancel(tm);
+	}
+	return ret;
+    }, delay);
+    this.timers.push(tm);
+    return tm;
+}
+
+TimerList.prototype.cancel = function(tm)
+{
+    let n = this.timers.indexOf(tm)
+    tm.pause();
+    if (n !== -1) {
+	this.timers = this.timers.slice(0, n).concat(this.timers.slice(n+1));
+    }
+}
+
+TimerList.prototype.pause = function()
+{
+    // Pause all timers
+    for (var tm of this.timers) {
+	tm.pause();
+    }
+}
+
+TimerList.prototype.resume = function()
+{
+    for (var tm of this.timers) {
+	tm.resume();
+    }
+}
+
 module.exports = {
     EventManager: EventManager,
-    Timer: Timer
+    Timer: Timer,
+    TimerList: TimerList
 };

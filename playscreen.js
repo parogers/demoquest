@@ -55,12 +55,14 @@ function PlayScreen(logic, dataList, width, height)
     this.updateCallbacks = [];
     // Setup some events for communicating with the main game state
     var mgr = new Events.EventManager();
+    this.onCamera = mgr.hook("camera");
     this.onComplete = mgr.hook("complete");
     this.onGameOver = mgr.hook("gameover");
     this.onRedraw = mgr.hook("redraw");
-    this.onVisible = mgr.hook("thing-visible");
+    //this.onVisible = mgr.hook("thing-visible");
     this.dispatch = mgr.dispatcher();
     this.redraw = mgr.dispatcher("redraw");
+    this.eventManager = mgr;
 
     this.dialogDefaults = {
 	fill: "black",
@@ -126,7 +128,7 @@ PlayScreen.prototype.changeScene = function(name, args)
 	// Slow fade into the starting scene
 	this.setScene(name);
 	this.pause();
-        this.setCameraPos(cameraX, cameraY)
+        this.scene.setCameraPos(cameraX, cameraY)
 	var fader = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 2);
 	fader.start(this.stage);
 	this.addUpdate(dt => {
@@ -149,7 +151,7 @@ PlayScreen.prototype.changeScene = function(name, args)
 	        if (!fadeout.update(dt)) 
 	        {
 		    this.setScene(name);
-                    this.setCameraPos(cameraX, cameraY)
+                    this.scene.setCameraPos(cameraX, cameraY)
 		    fadein.start(this.stage);
                     return false;
                 }
@@ -177,9 +179,12 @@ PlayScreen.prototype.setScene = function(name)
             scene: this.scene
         });
 	this.logic.leaveScene(ctx);
+	this.scene.destroy(); // TODO - cache the scene
+	this.scene = null;
     }
-
     var scene = Scene.Scene.fromData(this.dataList[name]);
+    scene.screen = this;
+    scene.setLogic(this.logic);
     this.scene = scene;
     this.sceneStage.children = [];
     this.sceneStage.addChild(scene.container);
@@ -191,12 +196,19 @@ PlayScreen.prototype.setScene = function(name)
         screen: this, 
         scene: this.scene
     })
-    this.logic.initScene(ctx);
+    this.logic.enterScene(ctx);
 }
 
 PlayScreen.prototype.setCameraPos = function(xpos, ypos)
 {
     this.scene.setCameraPos(xpos, ypos);
+    if (this.eventManager.hasListeners("camera")) {
+	let ctx = this.logic.makeContext({
+            screen: this,
+            scene: this.scene
+        });
+        this.dispatch("camera", ctx);
+    }
 }
 
 PlayScreen.prototype.getDisplayScale = function()
@@ -302,7 +314,7 @@ PlayScreen.prototype.handleDrag = function(evt)
 	// Panning the scene around
 	var pos = this.dragStartX - evt.dx / (window.innerWidth/2);
 	pos = Math.max(Math.min(pos, 1), -1);
-	this.scene.setCameraPos(pos);
+	this.setCameraPos(pos);
 	this.redraw();
 	// Now figure out what's in view and send visibility events
 	// ...
@@ -317,52 +329,16 @@ PlayScreen.prototype.showMessage = function(msg)
     this.dialog.showMessage(msg);
 }
 
-/* Starts an in-game timer for the given callback. This timer can be paused
- * and resumed. (eg when transitionin between scenes and when showing dialog
- * boxes) */
-PlayScreen.prototype.startTimer = function(callback, delay)
-{
-    var tm = new Events.Timer(() => {
-        let ctx = this.logic.makeContext({
-            screen: this,
-            scene: this.scene
-        });
-	let ret = callback(ctx);
-	if (!ret) {
-	    // No more callbacks - remove the timer from the list
-	    this.cancelTimer(tm);
-	}
-	this.redraw();
-	return ret;
-    }, delay);
-    this.timers.push(tm);
-    return tm;
-}
-
-PlayScreen.prototype.cancelTimer = function(tm)
-{
-    let n = this.timers.indexOf(tm)
-    tm.pause();
-    if (n !== -1) {
-	this.timers = this.timers.slice(0, n).concat(this.timers.slice(n+1));
-    }
-}
-
 /* Pause the gameplay. This happens when showing the player a message */
 PlayScreen.prototype.pause = function()
 {
-    // Pause all timers
-    for (var tm of this.timers) {
-	tm.pause();
-    }
+    if (this.scene) this.scene.pause();
 }
 
 /* Resume the gameplay after pausing */
 PlayScreen.prototype.resume = function()
 {
-    for (var tm of this.timers) {
-	tm.resume();
-    }
+    if (this.scene) this.scene.resume();
 }
 
 module.exports = PlayScreen;

@@ -30,66 +30,33 @@ function Scene()
     this.container = new PIXI.Container();
     this.sceneData = null;
     this.cameraX = 0;
+    this.cameraY = 0;
     this.name = null;
     // List of things in this scene, stored by name (eg cupboard)
     this.things = {};
     // The same list of things, but stored by sprite name (eg cupboard_open)
     this.thingsBySpriteName = {};
+    this.logic = null;
+    /*let mgr = new Events.EventManager();
+    this.onCamera = mgr.hook("camera");
+    this.onUpdate = mgr.hook("update");*/
+    this.timers = new Events.TimerList();
 }
 
-/* Builds a new scene given the SceneData instance. This function builds
- * the layers and adds the sprites. */
-Scene.fromData = function(sceneData)
+Scene.prototype.destroy = function()
 {
-    var scn = new Scene();
-    scn.name = sceneData.name;
-    scn.sceneData = sceneData;
+    this.timers.destroy();
+}
 
-    let renderer = Render.getRenderer();
+Scene.prototype.setLogic = function(logic)
+{
+    this.logic = logic;
 
-    // Build the layers and contained sprites
-    for (var layerData of sceneData.layers) 
-    {
-	var texture = scn.sceneData.getTexture(layerData.name);
-	var mask = Utils.getTransparencyMask(renderer, texture);
-	var layer = new Layer(layerData.name, texture, mask);
-	scn.addLayer(layer);
-	for (var spriteData of layerData["sprites"]) 
-	{
-	    var texture = scn.sceneData.getTexture(spriteData["name"]);
-	    var sprite = new PIXI.Sprite(texture);
-	    sprite.name = spriteData["name"];
-	    sprite.anchor.set(0, 0);
-	    sprite.x = spriteData["x"] - layer.getWidth()/2;
-	    sprite.y = spriteData["y"] - layer.getHeight()/2;
-
-	    var mask = Utils.getTransparencyMask(renderer, sprite.texture);
-	    layer.addSprite(sprite, mask);
-
-	    // If the sprite name is of the form "something_blah" then actually
-	    // it belongs to a thing named "something" and visually represents 
-	    // the state "blah". (eg bird_flying) Otherwise the entire sprite
-	    // name is assumed to be the thing name, in the default state.
-	    var n = sprite.name.indexOf("_");
-	    var thingName = sprite.name;
-	    var stateName = "default";
-	    if (n !== -1) {
-		// Parse out the thing and state names
-		thingName = sprite.name.substr(0, n);
-		stateName = sprite.name.substr(n+1);
-	    }
-	    var thing = null;
-	    if (scn.things.hasOwnProperty(thingName)) {
-		thing = scn.things[thingName];
-	    } else {
-		thing = scn.things[thingName] = new Thing(thingName);
-	    }
-	    thing.sprites[stateName] = sprite;
-	    scn.thingsBySpriteName[sprite.name] = thing;
-	}
-    }
-    scn.setCameraPos(sceneData.cameraX, sceneData.cameraY);
-    return scn;
+    let ctx = this.logic.makeContext({
+        screen: this.screen,
+        scene: this
+    });
+    this.logic.initScene(ctx);
 }
 
 /* Returns the width and height of the bottom layer in this scene. This is
@@ -172,6 +139,71 @@ Scene.prototype.getThing = function(name)
 /* Emits a 'visible' message for each thing currently visible on the screen */
 Scene.prototype.updateVisible = function()
 {
+}
+
+Scene.prototype.pause = function()
+{
+    this.timers.pause();
+}
+
+Scene.prototype.resume = function()
+{
+    this.timers.resume();
+}
+
+/* Builds a new scene given the SceneData instance. This function builds
+ * the layers and adds the sprites. */
+Scene.fromData = function(sceneData)
+{
+    var scn = new Scene();
+    scn.name = sceneData.name;
+    scn.sceneData = sceneData;
+
+    let renderer = Render.getRenderer();
+
+    // Build the layers and contained sprites
+    for (var layerData of sceneData.layers) 
+    {
+	var texture = scn.sceneData.getTexture(layerData.name);
+	var mask = Utils.getTransparencyMask(renderer, texture);
+	var layer = new Layer(layerData.name, texture, mask);
+	scn.addLayer(layer);
+	for (var spriteData of layerData["sprites"]) 
+	{
+	    var texture = scn.sceneData.getTexture(spriteData["name"]);
+	    var sprite = new PIXI.Sprite(texture);
+	    sprite.name = spriteData["name"];
+	    sprite.anchor.set(0, 0);
+	    sprite.x = spriteData["x"] - layer.getWidth()/2;
+	    sprite.y = spriteData["y"] - layer.getHeight()/2;
+
+	    var mask = Utils.getTransparencyMask(renderer, sprite.texture);
+	    layer.addSprite(sprite, mask);
+
+	    // If the sprite name is of the form "something_blah" then actually
+	    // it belongs to a thing named "something" and visually represents 
+	    // the state "blah". (eg bird_flying) Otherwise the entire sprite
+	    // name is assumed to be the thing name, in the default state.
+	    var n = sprite.name.indexOf("_");
+	    var thingName = sprite.name;
+	    var stateName = "default";
+	    if (n !== -1) {
+		// Parse out the thing and state names
+		thingName = sprite.name.substr(0, n);
+		stateName = sprite.name.substr(n+1);
+	    }
+	    var thing = null;
+	    if (scn.things.hasOwnProperty(thingName)) {
+		thing = scn.things[thingName];
+	    } else {
+		thing = scn.things[thingName] = new Thing(thingName);
+	    }
+	    thing.sprites[stateName] = sprite;
+	    scn.thingsBySpriteName[sprite.name] = thing;
+	}
+    }
+    scn.setCameraPos(sceneData.cameraX, sceneData.cameraY);
+    return scn;
 }
 
 /*************/
@@ -356,14 +388,16 @@ Thing.prototype.setState = function(state)
 
 Thing.prototype.setVisible = function(b)
 {
-    if (!this.sprites["default"]) {
-	throw Error("thing has no default state");
-    }
     for (var spriteName in this.sprites) {
 	this.sprites[spriteName].visible = false;
     }
     if (b === undefined) b = true;
-    this.sprites["default"].visible = b;
+    if (b) {
+        if (!this.sprites["default"]) {
+	    throw Error("thing has no default state");
+        }
+        this.sprites["default"].visible = true;
+    }
     return this.getSprite();
 }
 

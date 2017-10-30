@@ -65,6 +65,14 @@ function chainUpdates()
     }
 }
 
+function delayUpdate(delay)
+{
+    return function(dt) {
+        delay -= dt;
+        return delay > 0;
+    }
+}
+
 /**********/
 /* Screen */
 /**********/
@@ -124,5 +132,6 @@ module.exports = {
     makeSolidColourTexture: makeSolidColourTexture,
     getTransparencyMask: getTransparencyMask,
     Fader: Fader,
-    chainUpdates: chainUpdates
+    chainUpdates: chainUpdates,
+    delayUpdate: delayUpdate
 };

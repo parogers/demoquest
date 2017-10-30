@@ -15,6 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Utils = require("./utils");
+
 /*********/
 /* State */
 /*********/
@@ -53,18 +55,28 @@ class Logic
     }
 
     initScene(ctx) {
-	var logic = this.sceneLogic[ctx.scene.name];
-	if (logic && logic.initScene) logic.initScene(ctx);
+	this._handleLogicEvent("initScene", ctx);
+    }
+
+    uninitScene(ctx) {
+	this._handleLogicEvent("uninitScene", ctx);
+    }
+
+    enterScene(ctx) {
+	this._handleLogicEvent("enterScene", ctx);
     }
 
     leaveScene(ctx) {
-	var logic = this.sceneLogic[ctx.scene.name];
-	if (logic && logic.leaveScene) logic.leaveScene(ctx);
+	this._handleLogicEvent("leaveScene", ctx);
     }
 
     handleClicked(ctx) {
+	this._handleLogicEvent("handleClicked", ctx);
+    }
+
+    _handleLogicEvent(event, ctx) {
 	var logic = this.sceneLogic[ctx.scene.name];
-	if (logic && logic.handleClicked) logic.handleClicked(ctx);
+	if (logic && logic[event]) logic[event](ctx);
     }
 
     handleDragStart(ctx) {
@@ -113,7 +125,7 @@ LogicContext.prototype.showMessage = function(msg, options)
 
 LogicContext.prototype.startTimer = function(callback, delay)
 {
-    return this.screen.startTimer(callback, delay);
+    return this.scene.timers.start(callback, delay);
 }
 
 LogicContext.prototype.addUpdate = function(callback)
@@ -201,6 +213,26 @@ class RoadLogic
     initScene(ctx) {
 	ctx.getThing("bush1").setVisible(!ctx.state.bush1Moved);
 	ctx.getThing("bush2").setVisible(!ctx.state.bush2Moved);
+
+        this.updateCrow(ctx);
+        this.onCameraCallback = ctx.screen.onCamera(ctx => {
+            this.updateCrow(ctx);
+        });
+    }
+
+    leaveScene(ctx)
+    {
+        this.onCameraCallback.remove();
+    }
+
+    updateCrow(ctx)
+    {
+        if (ctx.scene.cameraX > -0.1) {
+            this.crowFacing = "right";
+        } else if (ctx.scene.cameraX < -0.2) {
+            this.crowFacing = "left";
+        }
+        ctx.getThing("crow").setState(this.crowFacing);
     }
 
     handleClicked(ctx) {
@@ -236,12 +268,17 @@ class RoadLogic
 
         case "house":
             if (ctx.state.hasRedKey) {
+	        ctx.screen.changeScene("building", {cameraX: -1});
             } else if (ctx.state.checkedDoor) {
                 ctx.showMessage("Maybe I can find a key, or another way in.");
             } else {
                 ctx.showMessage("There's no answer and the door's locked.");
                 ctx.state.checkedDoor = true;
             }
+            break;
+
+        case "crow":
+            ctx.showMessage("A crow is watching.");
             break;
 	}
     }
@@ -255,10 +292,6 @@ class ClosetLogic
     initScene(ctx) {
 	this.timer = 0;
 	this.state = "start";
-
-	ctx.getThing("trigger").onVisible(function(ctx) {
-	    console.log("VISIBLE!");
-	});
 
 	ctx.addUpdate(dt => {
 	    if (this.timer > 0) {
@@ -300,6 +333,17 @@ class ClosetLogic
 	    }
 	    return true;
 	});
+
+        this.onCameraCallback = ctx.screen.onCamera(function(ctx) {
+            if (ctx.scene.cameraX > 1.75) {
+                console.log("CAMERA: " + ctx.scene.cameraX);
+            }
+        });
+    }
+
+    leaveScene(ctx)
+    {
+        this.onCameraCallback.remove();
     }
 
     handleClicked(ctx) {
@@ -314,10 +358,15 @@ class CaveLogic
     constructor() {
     }
 
-    initScene(ctx) 
+    initScene(ctx)
     {
+	ctx.startTimer(() => {
+	    console.log("DRIP");
+	    return true;
+	}, 3000);
         ctx.getThing("hole2").setState("empty");
         ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
+        ctx.getThing("shape").getSprite().x = -24;
     }
 
     handleClicked(ctx) 
@@ -335,13 +384,51 @@ class CaveLogic
             break;
 
         case "hole1":
-            ctx.showMessage("You see only darkness.");
+            //ctx.showMessage("You see only darkness.");
+            if (ctx.state.seenHole1) {
+                ctx.showMessage("There is only darkness.");
+                break;
+            }
+            ctx.state.seenHole1 = true;
+            ctx.getThing("hole1").setVisible(false);
+            ctx.addUpdate(dt => {
+                let sprite = ctx.getThing("shape").getSprite();
+                sprite.x += 40*dt;
+                if (sprite.x > 16) {
+                    ctx.getThing("hole1").setVisible(true);
+                    ctx.showMessage("AHHH! What even was that?");
+                    return false;
+                }
+                return true;
+            });
             break;
 
         case "hole2":
-            ctx.showMessage("You see only darkness.");
+            //if (ctx.state.seenHole2) {
+            ctx.showMessage("There is only darkness.");
             break;
-
+            //}
+            //ctx.state.seenHole2 = true;
+            /*
+            ctx.addUpdate(Utils.chainUpdates(
+                Utils.delayUpdate(0.5),
+                (dt) => {
+                    ctx.getThing("hole2").setState("eyes");
+                },
+                Utils.delayUpdate(0.2),
+                (dt) => {
+                    ctx.getThing("hole2").setState("empty");
+                },
+                Utils.delayUpdate(0.5),
+                (dt) => {
+                    ctx.getThing("hole2").setState("eyes");
+                },
+                Utils.delayUpdate(0.5),
+                (dt) => {
+                    ctx.getThing("hole2").setState("empty");
+                }
+            ));*/
+            break;
 	}
     }
 }

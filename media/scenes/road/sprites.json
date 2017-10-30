@@ -80,6 +80,86 @@
             },
             "trimmed": false
         },
+        "crow_blinkleft": {
+            "frame": {
+                "h": 12,
+                "w": 7,
+                "x": 1,
+                "y": 236
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 12,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 12,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "crow_blinkright": {
+            "frame": {
+                "h": 12,
+                "w": 7,
+                "x": 1,
+                "y": 210
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 12,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 12,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "crow_left": {
+            "frame": {
+                "h": 12,
+                "w": 7,
+                "x": 1,
+                "y": 223
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 12,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 12,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "crow_right": {
+            "frame": {
+                "h": 12,
+                "w": 7,
+                "x": 1,
+                "y": 197
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 12,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 12,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
         "foreground": {
             "frame": {
                 "h": 32,
@@ -188,7 +268,7 @@
         "scale": "1",
         "size": {
             "W": 98,
-            "h": 198
+            "h": 250
         },
         "version": "1"
     }

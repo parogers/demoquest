@@ -179,21 +179,47 @@ function EventManager() {
     this.callbacks = {};
 }
 
+EventManager.prototype.destroy = function () {
+    this.callbacks = null;
+};
+
+EventManager.prototype.hasListeners = function (event) {
+    return this.callbacks[event] && this.callbacks[event].length > 0;
+};
+
 /* Add an event callback under the given name */
 EventManager.prototype.addEventListener = function (event, callback) {
+    var _this = this;
+
     if (!this.callbacks[event]) {
         this.callbacks[event] = [];
     }
     this.callbacks[event].push(callback);
-    return this;
+    return {
+        remove: function remove() {
+            _this.removeEventListener(event, callback);
+        },
+        event: event,
+        callback: callback
+    };
+};
+
+EventManager.prototype.removeEventListener = function (event, callback) {
+    var lst = this.callbacks[event];
+    if (!lst) return;
+
+    var i = lst.indexOf(callback);
+    if (i !== -1) {
+        this.callbacks[event] = lst.slice(0, i).concat(lst.slice(i + 1));
+    }
 };
 
 EventManager.prototype.dispatcher = function (event) {
-    var _this = this;
+    var _this2 = this;
 
     if (event) {
         return function () {
-            _this.dispatch(event);
+            _this2.dispatch(event);
         };
     }
     return this.dispatch.bind(this);
@@ -245,11 +271,15 @@ EventManager.prototype.dispatch = function (event) {
  *    });
  */
 EventManager.prototype.hook = function (event) {
-    var _this2 = this;
+    var _this3 = this;
 
-    return function (callback) {
-        return _this2.addEventListener(event, callback);
+    var func = function func(callback) {
+        return _this3.addEventListener(event, callback);
     };
+    /*func.remove = (callback) => {
+        this.removeEventListener(event, callback);
+    };*/
+    return func;
 };
 
 /*********/
@@ -268,6 +298,10 @@ function Timer(callback, delay) {
     this.resume();
 }
 
+Timer.prototype.destroy = function () {
+    this.pause();
+};
+
 /* Pause the timer to be resumed later */
 Timer.prototype.pause = function () {
     if (!this.paused) {
@@ -281,25 +315,141 @@ Timer.prototype.pause = function () {
 
 /* Resume the timer when paused */
 Timer.prototype.resume = function () {
-    var _this3 = this;
+    var _this4 = this;
 
     if (this.paused) {
         this.startTime = new Date().getTime();
         this.paused = false;
         this.timeoutEvent = setTimeout(function () {
-            _this3.timeoutEvent = null;
-            if (_this3.callback()) {
-                _this3.timeLeft = _this3.delay;
-                _this3.paused = true;
-                _this3.resume();
+            _this4.timeoutEvent = null;
+            if (_this4.callback()) {
+                _this4.timeLeft = _this4.delay;
+                _this4.paused = true;
+                _this4.resume();
             }
         }, this.timeLeft);
     }
 };
 
+/*************/
+/* TimerList */
+/*************/
+
+function TimerList() {
+    this.timers = [];
+}
+
+TimerList.prototype.destroy = function () {
+    var _iteratorNormalCompletion2 = true;
+    var _didIteratorError2 = false;
+    var _iteratorError2 = undefined;
+
+    try {
+        for (var _iterator2 = this.timers[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var tm = _step2.value;
+
+            tm.destroy();
+        }
+    } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                _iterator2.return();
+            }
+        } finally {
+            if (_didIteratorError2) {
+                throw _iteratorError2;
+            }
+        }
+    }
+
+    this.timers = null;
+};
+
+TimerList.prototype.start = function (callback, delay) {
+    var _this5 = this;
+
+    var tm = new Timer(function () {
+        var ret = callback();
+        if (!ret) {
+            // No more callbacks - remove the timer from the list
+            _this5.cancel(tm);
+        }
+        return ret;
+    }, delay);
+    this.timers.push(tm);
+    return tm;
+};
+
+TimerList.prototype.cancel = function (tm) {
+    var n = this.timers.indexOf(tm);
+    tm.pause();
+    if (n !== -1) {
+        this.timers = this.timers.slice(0, n).concat(this.timers.slice(n + 1));
+    }
+};
+
+TimerList.prototype.pause = function () {
+    // Pause all timers
+    var _iteratorNormalCompletion3 = true;
+    var _didIteratorError3 = false;
+    var _iteratorError3 = undefined;
+
+    try {
+        for (var _iterator3 = this.timers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            var tm = _step3.value;
+
+            tm.pause();
+        }
+    } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                _iterator3.return();
+            }
+        } finally {
+            if (_didIteratorError3) {
+                throw _iteratorError3;
+            }
+        }
+    }
+};
+
+TimerList.prototype.resume = function () {
+    var _iteratorNormalCompletion4 = true;
+    var _didIteratorError4 = false;
+    var _iteratorError4 = undefined;
+
+    try {
+        for (var _iterator4 = this.timers[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+            var tm = _step4.value;
+
+            tm.resume();
+        }
+    } catch (err) {
+        _didIteratorError4 = true;
+        _iteratorError4 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                _iterator4.return();
+            }
+        } finally {
+            if (_didIteratorError4) {
+                throw _iteratorError4;
+            }
+        }
+    }
+};
+
 module.exports = {
     EventManager: EventManager,
-    Timer: Timer
+    Timer: Timer,
+    TimerList: TimerList
 };
 
 },{}],3:[function(require,module,exports){
@@ -898,19 +1048,21 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Utils = require("./utils");
+
 /*********/
 /* State */
 /*********/
 
 var State = function State() {
-				_classCallCheck(this, State);
+    _classCallCheck(this, State);
 
-				this.checkedDoor = false;
-				this.hasRedKey = false;
-				this.bush1Moved = false;
-				this.bush2Moved = false;
-				this.seenHole1 = false;
-				this.seenHole2 = false;
+    this.checkedDoor = false;
+    this.hasRedKey = false;
+    this.bush1Moved = false;
+    this.bush2Moved = false;
+    this.seenHole1 = false;
+    this.seenHole2 = false;
 };
 
 /*********/
@@ -918,54 +1070,67 @@ var State = function State() {
 /*********/
 
 var Logic = function () {
-				function Logic() {
-								_classCallCheck(this, Logic);
+    function Logic() {
+        _classCallCheck(this, Logic);
 
-								// Scene specific logic stored by name
-								this.state = new State();
-								this.sceneLogic = {
-												"intro": new IntroLogic(),
-												"road": new RoadLogic(),
-												"closet": new ClosetLogic(),
-												"cave": new CaveLogic()
-								};
-				}
+        // Scene specific logic stored by name
+        this.state = new State();
+        this.sceneLogic = {
+            "intro": new IntroLogic(),
+            "road": new RoadLogic(),
+            "closet": new ClosetLogic(),
+            "cave": new CaveLogic()
+        };
+    }
 
-				_createClass(Logic, [{
-								key: "makeContext",
-								value: function makeContext(args) {
-												return new LogicContext(this.state, args);
-								}
-				}, {
-								key: "initScene",
-								value: function initScene(ctx) {
-												var logic = this.sceneLogic[ctx.scene.name];
-												if (logic && logic.initScene) logic.initScene(ctx);
-								}
-				}, {
-								key: "leaveScene",
-								value: function leaveScene(ctx) {
-												var logic = this.sceneLogic[ctx.scene.name];
-												if (logic && logic.leaveScene) logic.leaveScene(ctx);
-								}
-				}, {
-								key: "handleClicked",
-								value: function handleClicked(ctx) {
-												var logic = this.sceneLogic[ctx.scene.name];
-												if (logic && logic.handleClicked) logic.handleClicked(ctx);
-								}
-				}, {
-								key: "handleDragStart",
-								value: function handleDragStart(ctx) {}
-				}, {
-								key: "handleDrag",
-								value: function handleDrag(ctx) {}
-				}, {
-								key: "handleDragStop",
-								value: function handleDragStop(ctx) {}
-				}]);
+    _createClass(Logic, [{
+        key: "makeContext",
+        value: function makeContext(args) {
+            return new LogicContext(this.state, args);
+        }
+    }, {
+        key: "initScene",
+        value: function initScene(ctx) {
+            this._handleLogicEvent("initScene", ctx);
+        }
+    }, {
+        key: "uninitScene",
+        value: function uninitScene(ctx) {
+            this._handleLogicEvent("uninitScene", ctx);
+        }
+    }, {
+        key: "enterScene",
+        value: function enterScene(ctx) {
+            this._handleLogicEvent("enterScene", ctx);
+        }
+    }, {
+        key: "leaveScene",
+        value: function leaveScene(ctx) {
+            this._handleLogicEvent("leaveScene", ctx);
+        }
+    }, {
+        key: "handleClicked",
+        value: function handleClicked(ctx) {
+            this._handleLogicEvent("handleClicked", ctx);
+        }
+    }, {
+        key: "_handleLogicEvent",
+        value: function _handleLogicEvent(event, ctx) {
+            var logic = this.sceneLogic[ctx.scene.name];
+            if (logic && logic[event]) logic[event](ctx);
+        }
+    }, {
+        key: "handleDragStart",
+        value: function handleDragStart(ctx) {}
+    }, {
+        key: "handleDrag",
+        value: function handleDrag(ctx) {}
+    }, {
+        key: "handleDragStop",
+        value: function handleDragStop(ctx) {}
+    }]);
 
-				return Logic;
+    return Logic;
 }();
 
 /****************/
@@ -973,37 +1138,37 @@ var Logic = function () {
 /****************/
 
 function LogicContext(state, args) {
-				this.state = state;
-				this.screen = null;
-				this.scene = null;
-				this.thing = null;
-				this.sprite = null;
-				if (args) {
-								this.screen = args.screen;
-								this.scene = args.scene;
-								this.thing = args.thing;
-								this.sprite = args.sprite;
-				}
+    this.state = state;
+    this.screen = null;
+    this.scene = null;
+    this.thing = null;
+    this.sprite = null;
+    if (args) {
+        this.screen = args.screen;
+        this.scene = args.scene;
+        this.thing = args.thing;
+        this.sprite = args.sprite;
+    }
 }
 
 LogicContext.prototype.getThing = function (name) {
-				var thing = this.scene.getThing(name);
-				if (!thing) {
-								console.log("ERROR: can't find thing: " + name);
-				}
-				return thing;
+    var thing = this.scene.getThing(name);
+    if (!thing) {
+        console.log("ERROR: can't find thing: " + name);
+    }
+    return thing;
 };
 
 LogicContext.prototype.showMessage = function (msg, options) {
-				this.screen.showMessage(msg, options);
+    this.screen.showMessage(msg, options);
 };
 
 LogicContext.prototype.startTimer = function (callback, delay) {
-				return this.screen.startTimer(callback, delay);
+    return this.scene.timers.start(callback, delay);
 };
 
 LogicContext.prototype.addUpdate = function (callback) {
-				return this.screen.addUpdate(callback);
+    return this.screen.addUpdate(callback);
 };
 
 /***************/
@@ -1013,244 +1178,322 @@ LogicContext.prototype.addUpdate = function (callback) {
 /* Logic classes for the various scenes in the game */
 
 var IntroLogic = function () {
-				function IntroLogic() {
-								_classCallCheck(this, IntroLogic);
-				}
+    function IntroLogic() {
+        _classCallCheck(this, IntroLogic);
+    }
 
-				_createClass(IntroLogic, [{
-								key: "initScene",
-								value: function initScene(ctx) {
-												ctx.getThing("door").setState("closed");
-												ctx.getThing("cupboard").setState("closed");
+    _createClass(IntroLogic, [{
+        key: "initScene",
+        value: function initScene(ctx) {
+            ctx.getThing("door").setState("closed");
+            ctx.getThing("cupboard").setState("closed");
 
-												ctx.startTimer(function (ctx) {
-																//ctx.getThing("door").setState("open");
-																//ctx.showMessage("The door opens!");
-																console.log("Tick");
-												}, 3000);
+            ctx.startTimer(function (ctx) {
+                //ctx.getThing("door").setState("open");
+                //ctx.showMessage("The door opens!");
+                console.log("Tick");
+            }, 3000);
 
-												return;
+            return;
 
-												var sprite = ctx.getThing("darkness").setVisible(false);
-												sprite.alpha = 0;
+            var sprite = ctx.getThing("darkness").setVisible(false);
+            sprite.alpha = 0;
 
-												var timer = ctx.startTimer(1000, function (ctx) {
-																sprite.alpha = Math.max(sprite.alpha + 0.05, 1);
-																if (sprite.alpha >= 1) {}
-												});
+            var timer = ctx.startTimer(1000, function (ctx) {
+                sprite.alpha = Math.max(sprite.alpha + 0.05, 1);
+                if (sprite.alpha >= 1) {}
+            });
 
-												timer.cancel();
-												timer.pause();
-												timer.resume();
-								}
-				}, {
-								key: "leaveScene",
-								value: function leaveScene(ctx) {}
-				}, {
-								key: "handleClicked",
-								value: function handleClicked(ctx) {
-												switch (ctx.thing.name) {
-																case "candle":
-																				console.log("CANDLE");
-																				ctx.showMessage("A candle for evening work. I won't need it.");
-																				ctx.showMessage("Or maybe I will!");
-																				break;
+            timer.cancel();
+            timer.pause();
+            timer.resume();
+        }
+    }, {
+        key: "leaveScene",
+        value: function leaveScene(ctx) {}
+    }, {
+        key: "handleClicked",
+        value: function handleClicked(ctx) {
+            switch (ctx.thing.name) {
+                case "candle":
+                    console.log("CANDLE");
+                    ctx.showMessage("A candle for evening work. I won't need it.");
+                    ctx.showMessage("Or maybe I will!");
+                    break;
 
-																case "cupboard":
-																				if (ctx.thing.state === "open") ctx.thing.setState("closed");else ctx.thing.setState("open");
-																				break;
+                case "cupboard":
+                    if (ctx.thing.state === "open") ctx.thing.setState("closed");else ctx.thing.setState("open");
+                    break;
 
-																case "door":
-																				if (ctx.thing.state === "open") {
-																								ctx.thing.setState("closed");
-																				} else {
-																								ctx.thing.setState("open");
-																				}
-																				break;
+                case "door":
+                    if (ctx.thing.state === "open") {
+                        ctx.thing.setState("closed");
+                    } else {
+                        ctx.thing.setState("open");
+                    }
+                    break;
 
-																case "outside":
-																				ctx.screen.changeScene("road");
-																				break;
-												}
-								}
-				}]);
+                case "outside":
+                    ctx.screen.changeScene("road");
+                    break;
+            }
+        }
+    }]);
 
-				return IntroLogic;
+    return IntroLogic;
 }();
 
 var RoadLogic = function () {
-				function RoadLogic() {
-								_classCallCheck(this, RoadLogic);
-				}
+    function RoadLogic() {
+        _classCallCheck(this, RoadLogic);
+    }
 
-				_createClass(RoadLogic, [{
-								key: "initScene",
-								value: function initScene(ctx) {
-												ctx.getThing("bush1").setVisible(!ctx.state.bush1Moved);
-												ctx.getThing("bush2").setVisible(!ctx.state.bush2Moved);
-								}
-				}, {
-								key: "handleClicked",
-								value: function handleClicked(ctx) {
-												switch (ctx.thing.name) {
-																case "bush1":
-																				ctx.state.bush1Moved = true;
-																				ctx.thing.setVisible(false);
-																				if (ctx.state.bush2Moved) {
-																								ctx.showMessage("You clear away some brush revealing a cave!");
-																				} else {
-																								ctx.showMessage("You clear away some brush. There's something behind it!");
-																				}
-																				break;
+    _createClass(RoadLogic, [{
+        key: "initScene",
+        value: function initScene(ctx) {
+            var _this = this;
 
-																case "bush2":
-																				ctx.state.bush2Moved = true;
-																				ctx.thing.setVisible(false);
-																				if (ctx.state.bush1Moved) {
-																								ctx.showMessage("You clear away some brush revealing a cave!");
-																				} else {
-																								ctx.showMessage("You clear away some brush. There's something behind it!");
-																				}
-																				break;
+            ctx.getThing("bush1").setVisible(!ctx.state.bush1Moved);
+            ctx.getThing("bush2").setVisible(!ctx.state.bush2Moved);
 
-																case "cave":
-																				if (!ctx.state.bush1Moved || !ctx.state.bush2Moved) {
-																								ctx.showMessage("I must clear the way first.");
-																				} else {
-																								ctx.screen.changeScene("cave");
-																				}
-																				break;
+            this.updateCrow(ctx);
+            this.onCameraCallback = ctx.screen.onCamera(function (ctx) {
+                _this.updateCrow(ctx);
+            });
+        }
+    }, {
+        key: "leaveScene",
+        value: function leaveScene(ctx) {
+            this.onCameraCallback.remove();
+        }
+    }, {
+        key: "updateCrow",
+        value: function updateCrow(ctx) {
+            if (ctx.scene.cameraX > -0.1) {
+                this.crowFacing = "right";
+            } else if (ctx.scene.cameraX < -0.2) {
+                this.crowFacing = "left";
+            }
+            ctx.getThing("crow").setState(this.crowFacing);
+        }
+    }, {
+        key: "handleClicked",
+        value: function handleClicked(ctx) {
+            switch (ctx.thing.name) {
+                case "bush1":
+                    ctx.state.bush1Moved = true;
+                    ctx.thing.setVisible(false);
+                    if (ctx.state.bush2Moved) {
+                        ctx.showMessage("You clear away some brush revealing a cave!");
+                    } else {
+                        ctx.showMessage("You clear away some brush. There's something behind it!");
+                    }
+                    break;
 
-																case "house":
-																				if (ctx.state.hasRedKey) {} else if (ctx.state.checkedDoor) {
-																								ctx.showMessage("Maybe I can find a key, or another way in.");
-																				} else {
-																								ctx.showMessage("There's no answer and the door's locked.");
-																								ctx.state.checkedDoor = true;
-																				}
-																				break;
-												}
-								}
-				}]);
+                case "bush2":
+                    ctx.state.bush2Moved = true;
+                    ctx.thing.setVisible(false);
+                    if (ctx.state.bush1Moved) {
+                        ctx.showMessage("You clear away some brush revealing a cave!");
+                    } else {
+                        ctx.showMessage("You clear away some brush. There's something behind it!");
+                    }
+                    break;
 
-				return RoadLogic;
+                case "cave":
+                    if (!ctx.state.bush1Moved || !ctx.state.bush2Moved) {
+                        ctx.showMessage("I must clear the way first.");
+                    } else {
+                        ctx.screen.changeScene("cave");
+                    }
+                    break;
+
+                case "house":
+                    if (ctx.state.hasRedKey) {
+                        ctx.screen.changeScene("building", { cameraX: -1 });
+                    } else if (ctx.state.checkedDoor) {
+                        ctx.showMessage("Maybe I can find a key, or another way in.");
+                    } else {
+                        ctx.showMessage("There's no answer and the door's locked.");
+                        ctx.state.checkedDoor = true;
+                    }
+                    break;
+
+                case "crow":
+                    ctx.showMessage("A crow is watching.");
+                    break;
+            }
+        }
+    }]);
+
+    return RoadLogic;
 }();
 
 var ClosetLogic = function () {
-				function ClosetLogic() {
-								_classCallCheck(this, ClosetLogic);
-				}
+    function ClosetLogic() {
+        _classCallCheck(this, ClosetLogic);
+    }
 
-				_createClass(ClosetLogic, [{
-								key: "initScene",
-								value: function initScene(ctx) {
-												var _this = this;
+    _createClass(ClosetLogic, [{
+        key: "initScene",
+        value: function initScene(ctx) {
+            var _this2 = this;
 
-												this.timer = 0;
-												this.state = "start";
+            this.timer = 0;
+            this.state = "start";
 
-												ctx.getThing("trigger").onVisible(function (ctx) {
-																console.log("VISIBLE!");
-												});
+            ctx.addUpdate(function (dt) {
+                if (_this2.timer > 0) {
+                    _this2.timer -= dt;
+                    return true;
+                }
+                switch (_this2.state) {
+                    case "start":
+                        // Wait for the scene to fade in a bit
+                        _this2.state = "opening";
+                        _this2.timer = 1.5;
+                        //this.offset = 0;
+                        break;
+                    case "opening":
+                        // Opening the crack
+                        var sprite = ctx.getThing("crack").getSprite();
+                        var stop = ctx.getThing("darkright").getSprite();
+                        var thing = ctx.getThing("crack");
+                        //this.offset += dt;
+                        //sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
+                        sprite.x += 10 * dt;
+                        if (sprite.x > stop.x) {
+                            sprite.visible = false;
+                            _this2.state = "brighter";
+                            _this2.timer = 2;
+                        }
+                        break;
+                    case "brighter":
+                        var sprite1 = ctx.getThing("darkright").getSprite();
+                        var sprite2 = ctx.getThing("darkleft").getSprite();
+                        sprite1.alpha -= 0.2 * dt;
+                        sprite2.alpha -= 0.2 * dt;
+                        if (sprite1.alpha < 0) {
+                            sprite1.visible = false;
+                            sprite2.visible = false;
+                            return false;
+                        }
+                        break;
+                }
+                return true;
+            });
 
-												ctx.addUpdate(function (dt) {
-																if (_this.timer > 0) {
-																				_this.timer -= dt;
-																				return true;
-																}
-																switch (_this.state) {
-																				case "start":
-																								// Wait for the scene to fade in a bit
-																								_this.state = "opening";
-																								_this.timer = 1.5;
-																								//this.offset = 0;
-																								break;
-																				case "opening":
-																								// Opening the crack
-																								var sprite = ctx.getThing("crack").getSprite();
-																								var stop = ctx.getThing("darkright").getSprite();
-																								var thing = ctx.getThing("crack");
-																								//this.offset += dt;
-																								//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
-																								sprite.x += 10 * dt;
-																								if (sprite.x > stop.x) {
-																												sprite.visible = false;
-																												_this.state = "brighter";
-																												_this.timer = 2;
-																								}
-																								break;
-																				case "brighter":
-																								var sprite1 = ctx.getThing("darkright").getSprite();
-																								var sprite2 = ctx.getThing("darkleft").getSprite();
-																								sprite1.alpha -= 0.2 * dt;
-																								sprite2.alpha -= 0.2 * dt;
-																								if (sprite1.alpha < 0) {
-																												sprite1.visible = false;
-																												sprite2.visible = false;
-																												return false;
-																								}
-																								break;
-																}
-																return true;
-												});
-								}
-				}, {
-								key: "handleClicked",
-								value: function handleClicked(ctx) {
-												switch (ctx.thing.name) {}
-								}
-				}]);
+            this.onCameraCallback = ctx.screen.onCamera(function (ctx) {
+                if (ctx.scene.cameraX > 1.75) {
+                    console.log("CAMERA: " + ctx.scene.cameraX);
+                }
+            });
+        }
+    }, {
+        key: "leaveScene",
+        value: function leaveScene(ctx) {
+            this.onCameraCallback.remove();
+        }
+    }, {
+        key: "handleClicked",
+        value: function handleClicked(ctx) {
+            switch (ctx.thing.name) {}
+        }
+    }]);
 
-				return ClosetLogic;
+    return ClosetLogic;
 }();
 
 var CaveLogic = function () {
-				function CaveLogic() {
-								_classCallCheck(this, CaveLogic);
-				}
+    function CaveLogic() {
+        _classCallCheck(this, CaveLogic);
+    }
 
-				_createClass(CaveLogic, [{
-								key: "initScene",
-								value: function initScene(ctx) {
-												ctx.getThing("hole2").setState("empty");
-												ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
-								}
-				}, {
-								key: "handleClicked",
-								value: function handleClicked(ctx) {
-												switch (ctx.thing.name) {
-																case "ladder":
-																				ctx.screen.changeScene("road", { cameraX: 1 });
-																				break;
+    _createClass(CaveLogic, [{
+        key: "initScene",
+        value: function initScene(ctx) {
+            ctx.startTimer(function () {
+                console.log("DRIP");
+                return true;
+            }, 3000);
+            ctx.getThing("hole2").setState("empty");
+            ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
+            ctx.getThing("shape").getSprite().x = -24;
+        }
+    }, {
+        key: "handleClicked",
+        value: function handleClicked(ctx) {
+            switch (ctx.thing.name) {
+                case "ladder":
+                    ctx.screen.changeScene("road", { cameraX: 1 });
+                    break;
 
-																case "key":
-																				ctx.getThing("key").setVisible(false);
-																				ctx.state.hasRedKey = true;
-																				ctx.showMessage("A small key. Odd it was left here.");
-																				break;
+                case "key":
+                    ctx.getThing("key").setVisible(false);
+                    ctx.state.hasRedKey = true;
+                    ctx.showMessage("A small key. Odd it was left here.");
+                    break;
 
-																case "hole1":
-																				ctx.showMessage("You see only darkness.");
-																				break;
+                case "hole1":
+                    //ctx.showMessage("You see only darkness.");
+                    if (ctx.state.seenHole1) {
+                        ctx.showMessage("There is only darkness.");
+                        break;
+                    }
+                    ctx.state.seenHole1 = true;
+                    ctx.getThing("hole1").setVisible(false);
+                    ctx.addUpdate(function (dt) {
+                        var sprite = ctx.getThing("shape").getSprite();
+                        sprite.x += 40 * dt;
+                        if (sprite.x > 16) {
+                            ctx.getThing("hole1").setVisible(true);
+                            ctx.showMessage("AHHH! What even was that?");
+                            return false;
+                        }
+                        return true;
+                    });
+                    break;
 
-																case "hole2":
-																				ctx.showMessage("You see only darkness.");
-																				break;
+                case "hole2":
+                    //if (ctx.state.seenHole2) {
+                    ctx.showMessage("There is only darkness.");
+                    break;
+                    //}
+                    //ctx.state.seenHole2 = true;
+                    /*
+                    ctx.addUpdate(Utils.chainUpdates(
+                        Utils.delayUpdate(0.5),
+                        (dt) => {
+                            ctx.getThing("hole2").setState("eyes");
+                        },
+                        Utils.delayUpdate(0.2),
+                        (dt) => {
+                            ctx.getThing("hole2").setState("empty");
+                        },
+                        Utils.delayUpdate(0.5),
+                        (dt) => {
+                            ctx.getThing("hole2").setState("eyes");
+                        },
+                        Utils.delayUpdate(0.5),
+                        (dt) => {
+                            ctx.getThing("hole2").setState("empty");
+                        }
+                    ));*/
+                    break;
+            }
+        }
+    }]);
 
-												}
-								}
-				}]);
-
-				return CaveLogic;
+    return CaveLogic;
 }();
 
 module.exports = {
-				Logic: Logic,
-				LogicContext: LogicContext,
-				State: State
+    Logic: Logic,
+    LogicContext: LogicContext,
+    State: State
 };
 
-},{}],7:[function(require,module,exports){
+},{"./utils":11}],7:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -1347,12 +1590,14 @@ function PlayScreen(logic, dataList, width, height) {
     this.updateCallbacks = [];
     // Setup some events for communicating with the main game state
     var mgr = new Events.EventManager();
+    this.onCamera = mgr.hook("camera");
     this.onComplete = mgr.hook("complete");
     this.onGameOver = mgr.hook("gameover");
     this.onRedraw = mgr.hook("redraw");
-    this.onVisible = mgr.hook("thing-visible");
+    //this.onVisible = mgr.hook("thing-visible");
     this.dispatch = mgr.dispatcher();
     this.redraw = mgr.dispatcher("redraw");
+    this.eventManager = mgr;
 
     this.dialogDefaults = {
         fill: "black",
@@ -1437,7 +1682,7 @@ PlayScreen.prototype.changeScene = function (name, args) {
         // Slow fade into the starting scene
         this.setScene(name);
         this.pause();
-        this.setCameraPos(cameraX, cameraY);
+        this.scene.setCameraPos(cameraX, cameraY);
         var fader = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 2);
         fader.start(this.stage);
         this.addUpdate(function (dt) {
@@ -1457,7 +1702,7 @@ PlayScreen.prototype.changeScene = function (name, args) {
         this.addUpdate(Utils.chainUpdates(function (dt) {
             if (!fadeout.update(dt)) {
                 _this2.setScene(name);
-                _this2.setCameraPos(cameraX, cameraY);
+                _this2.scene.setCameraPos(cameraX, cameraY);
                 fadein.start(_this2.stage);
                 return false;
             }
@@ -1482,9 +1727,12 @@ PlayScreen.prototype.setScene = function (name) {
             scene: this.scene
         });
         this.logic.leaveScene(_ctx);
+        this.scene.destroy(); // TODO - cache the scene
+        this.scene = null;
     }
-
     var scene = Scene.Scene.fromData(this.dataList[name]);
+    scene.screen = this;
+    scene.setLogic(this.logic);
     this.scene = scene;
     this.sceneStage.children = [];
     this.sceneStage.addChild(scene.container);
@@ -1496,11 +1744,18 @@ PlayScreen.prototype.setScene = function (name) {
         screen: this,
         scene: this.scene
     });
-    this.logic.initScene(ctx);
+    this.logic.enterScene(ctx);
 };
 
 PlayScreen.prototype.setCameraPos = function (xpos, ypos) {
     this.scene.setCameraPos(xpos, ypos);
+    if (this.eventManager.hasListeners("camera")) {
+        var ctx = this.logic.makeContext({
+            screen: this,
+            scene: this.scene
+        });
+        this.dispatch("camera", ctx);
+    }
 };
 
 PlayScreen.prototype.getDisplayScale = function () {
@@ -1599,7 +1854,7 @@ PlayScreen.prototype.handleDrag = function (evt) {
         // Panning the scene around
         var pos = this.dragStartX - evt.dx / (window.innerWidth / 2);
         pos = Math.max(Math.min(pos, 1), -1);
-        this.scene.setCameraPos(pos);
+        this.setCameraPos(pos);
         this.redraw();
         // Now figure out what's in view and send visibility events
         // ...
@@ -1613,92 +1868,14 @@ PlayScreen.prototype.showMessage = function (msg) {
     this.dialog.showMessage(msg);
 };
 
-/* Starts an in-game timer for the given callback. This timer can be paused
- * and resumed. (eg when transitionin between scenes and when showing dialog
- * boxes) */
-PlayScreen.prototype.startTimer = function (callback, delay) {
-    var _this4 = this;
-
-    var tm = new Events.Timer(function () {
-        var ctx = _this4.logic.makeContext({
-            screen: _this4,
-            scene: _this4.scene
-        });
-        var ret = callback(ctx);
-        if (!ret) {
-            // No more callbacks - remove the timer from the list
-            _this4.cancelTimer(tm);
-        }
-        _this4.redraw();
-        return ret;
-    }, delay);
-    this.timers.push(tm);
-    return tm;
-};
-
-PlayScreen.prototype.cancelTimer = function (tm) {
-    var n = this.timers.indexOf(tm);
-    tm.pause();
-    if (n !== -1) {
-        this.timers = this.timers.slice(0, n).concat(this.timers.slice(n + 1));
-    }
-};
-
 /* Pause the gameplay. This happens when showing the player a message */
 PlayScreen.prototype.pause = function () {
-    // Pause all timers
-    var _iteratorNormalCompletion2 = true;
-    var _didIteratorError2 = false;
-    var _iteratorError2 = undefined;
-
-    try {
-        for (var _iterator2 = this.timers[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-            var tm = _step2.value;
-
-            tm.pause();
-        }
-    } catch (err) {
-        _didIteratorError2 = true;
-        _iteratorError2 = err;
-    } finally {
-        try {
-            if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                _iterator2.return();
-            }
-        } finally {
-            if (_didIteratorError2) {
-                throw _iteratorError2;
-            }
-        }
-    }
+    if (this.scene) this.scene.pause();
 };
 
 /* Resume the gameplay after pausing */
 PlayScreen.prototype.resume = function () {
-    var _iteratorNormalCompletion3 = true;
-    var _didIteratorError3 = false;
-    var _iteratorError3 = undefined;
-
-    try {
-        for (var _iterator3 = this.timers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-            var tm = _step3.value;
-
-            tm.resume();
-        }
-    } catch (err) {
-        _didIteratorError3 = true;
-        _iteratorError3 = err;
-    } finally {
-        try {
-            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                _iterator3.return();
-            }
-        } finally {
-            if (_didIteratorError3) {
-                throw _iteratorError3;
-            }
-        }
-    }
+    if (this.scene) this.scene.resume();
 };
 
 module.exports = PlayScreen;
@@ -1837,12 +2014,157 @@ function Scene() {
     this.container = new PIXI.Container();
     this.sceneData = null;
     this.cameraX = 0;
+    this.cameraY = 0;
     this.name = null;
     // List of things in this scene, stored by name (eg cupboard)
     this.things = {};
     // The same list of things, but stored by sprite name (eg cupboard_open)
     this.thingsBySpriteName = {};
+    this.logic = null;
+    /*let mgr = new Events.EventManager();
+    this.onCamera = mgr.hook("camera");
+    this.onUpdate = mgr.hook("update");*/
+    this.timers = new Events.TimerList();
 }
+
+Scene.prototype.destroy = function () {
+    this.timers.destroy();
+};
+
+Scene.prototype.setLogic = function (logic) {
+    this.logic = logic;
+
+    var ctx = this.logic.makeContext({
+        screen: this.screen,
+        scene: this
+    });
+    this.logic.initScene(ctx);
+};
+
+/* Returns the width and height of the bottom layer in this scene. This is
+ * considered the 'base size' and is used to determine how the scene should
+ * be scaled to fit the viewport */
+Scene.prototype.getBaseSize = function () {
+    return {
+        width: this.layers[0].getWidth(),
+        height: this.layers[0].getHeight()
+    };
+};
+
+Scene.prototype.addLayer = function (layer) {
+    layer.scene = this;
+    this.layers.push(layer);
+    this.container.addChild(layer.container);
+};
+
+/* Set the camera position within the scene. The position is from -1 (furthest
+ * left) to 1 (furthest right) with 0 being the centre of the scene. This 
+ * code moves the layers around to simulate parallax scrolling. */
+Scene.prototype.setCameraPos = function (xpos, ypos) {
+    if (xpos !== this.cameraX || ypos !== this.cameraY) {
+        var backWidth = this.getBaseSize().width;
+        var centreX = 0;
+        var _iteratorNormalCompletion = true;
+        var _didIteratorError = false;
+        var _iteratorError = undefined;
+
+        try {
+            for (var _iterator = this.layers[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+                var layer = _step.value;
+
+                var pos = centreX - xpos * (layer.getWidth() / 2 - backWidth / 2);
+                layer.container.x = pos;
+            }
+        } catch (err) {
+            _didIteratorError = true;
+            _iteratorError = err;
+        } finally {
+            try {
+                if (!_iteratorNormalCompletion && _iterator.return) {
+                    _iterator.return();
+                }
+            } finally {
+                if (_didIteratorError) {
+                    throw _iteratorError;
+                }
+            }
+        }
+
+        this.cameraX = xpos;
+        // TODO - handle ypos...
+        this.updateVisible();
+    }
+};
+
+/* Returns the scene element under the position (given relative to the top
+ * left corner of the unscaled scene viewport) 
+ * This returns {layer: name, thing: name} which names the layer that was 
+ * clicked, and (optionally) the thing within that layer that was clicked. */
+Scene.prototype.checkHit = function (x, y) {
+    // Search through the stage layers in reverse order, so we start with
+    // the "front most" layer and proceed to the ones behind.
+    var xoffset = x - this.getBaseSize().width / 2;
+    var yoffset = y - this.getBaseSize().height / 2;
+    var reversed = this.layers.slice().reverse();
+    var _iteratorNormalCompletion2 = true;
+    var _didIteratorError2 = false;
+    var _iteratorError2 = undefined;
+
+    try {
+        for (var _iterator2 = reversed[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+            var layer = _step2.value;
+
+            var xp = xoffset - layer.container.x;
+            var yp = yoffset;
+
+            // First check if they clicked on a thing in the layer
+            var sprite = layer.checkHitSprite(xp, yp);
+            if (sprite) {
+                var thing = this.thingsBySpriteName[sprite.name];
+                return {
+                    layer: layer,
+                    sprite: sprite,
+                    thing: thing
+                };
+            }
+
+            // Now check if they clicked on this layer itself
+            if (layer.checkHit(xp, yp)) {
+                return { layer: layer, sprite: null, thing: null };
+            }
+        }
+    } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion2 && _iterator2.return) {
+                _iterator2.return();
+            }
+        } finally {
+            if (_didIteratorError2) {
+                throw _iteratorError2;
+            }
+        }
+    }
+
+    return { layer: null, sprite: null, thing: null };
+};
+
+Scene.prototype.getThing = function (name) {
+    return this.things[name];
+};
+
+/* Emits a 'visible' message for each thing currently visible on the screen */
+Scene.prototype.updateVisible = function () {};
+
+Scene.prototype.pause = function () {
+    this.timers.pause();
+};
+
+Scene.prototype.resume = function () {
+    this.timers.resume();
+};
 
 /* Builds a new scene given the SceneData instance. This function builds
  * the layers and adds the sprites. */
@@ -1854,25 +2176,25 @@ Scene.fromData = function (sceneData) {
     var renderer = Render.getRenderer();
 
     // Build the layers and contained sprites
-    var _iteratorNormalCompletion = true;
-    var _didIteratorError = false;
-    var _iteratorError = undefined;
+    var _iteratorNormalCompletion3 = true;
+    var _didIteratorError3 = false;
+    var _iteratorError3 = undefined;
 
     try {
-        for (var _iterator = sceneData.layers[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-            var layerData = _step.value;
+        for (var _iterator3 = sceneData.layers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            var layerData = _step3.value;
 
             var texture = scn.sceneData.getTexture(layerData.name);
             var mask = Utils.getTransparencyMask(renderer, texture);
             var layer = new Layer(layerData.name, texture, mask);
             scn.addLayer(layer);
-            var _iteratorNormalCompletion2 = true;
-            var _didIteratorError2 = false;
-            var _iteratorError2 = undefined;
+            var _iteratorNormalCompletion4 = true;
+            var _didIteratorError4 = false;
+            var _iteratorError4 = undefined;
 
             try {
-                for (var _iterator2 = layerData["sprites"][Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                    var spriteData = _step2.value;
+                for (var _iterator4 = layerData["sprites"][Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+                    var spriteData = _step4.value;
 
                     var texture = scn.sceneData.getTexture(spriteData["name"]);
                     var sprite = new PIXI.Sprite(texture);
@@ -1906,31 +2228,31 @@ Scene.fromData = function (sceneData) {
                     scn.thingsBySpriteName[sprite.name] = thing;
                 }
             } catch (err) {
-                _didIteratorError2 = true;
-                _iteratorError2 = err;
+                _didIteratorError4 = true;
+                _iteratorError4 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion2 && _iterator2.return) {
-                        _iterator2.return();
+                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                        _iterator4.return();
                     }
                 } finally {
-                    if (_didIteratorError2) {
-                        throw _iteratorError2;
+                    if (_didIteratorError4) {
+                        throw _iteratorError4;
                     }
                 }
             }
         }
     } catch (err) {
-        _didIteratorError = true;
-        _iteratorError = err;
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
     } finally {
         try {
-            if (!_iteratorNormalCompletion && _iterator.return) {
-                _iterator.return();
+            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                _iterator3.return();
             }
         } finally {
-            if (_didIteratorError) {
-                throw _iteratorError;
+            if (_didIteratorError3) {
+                throw _iteratorError3;
             }
         }
     }
@@ -1938,123 +2260,6 @@ Scene.fromData = function (sceneData) {
     scn.setCameraPos(sceneData.cameraX, sceneData.cameraY);
     return scn;
 };
-
-/* Returns the width and height of the bottom layer in this scene. This is
- * considered the 'base size' and is used to determine how the scene should
- * be scaled to fit the viewport */
-Scene.prototype.getBaseSize = function () {
-    return {
-        width: this.layers[0].getWidth(),
-        height: this.layers[0].getHeight()
-    };
-};
-
-Scene.prototype.addLayer = function (layer) {
-    layer.scene = this;
-    this.layers.push(layer);
-    this.container.addChild(layer.container);
-};
-
-/* Set the camera position within the scene. The position is from -1 (furthest
- * left) to 1 (furthest right) with 0 being the centre of the scene. This 
- * code moves the layers around to simulate parallax scrolling. */
-Scene.prototype.setCameraPos = function (xpos, ypos) {
-    if (xpos !== this.cameraX || ypos !== this.cameraY) {
-        var backWidth = this.getBaseSize().width;
-        var centreX = 0;
-        var _iteratorNormalCompletion3 = true;
-        var _didIteratorError3 = false;
-        var _iteratorError3 = undefined;
-
-        try {
-            for (var _iterator3 = this.layers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-                var layer = _step3.value;
-
-                var pos = centreX - xpos * (layer.getWidth() / 2 - backWidth / 2);
-                layer.container.x = pos;
-            }
-        } catch (err) {
-            _didIteratorError3 = true;
-            _iteratorError3 = err;
-        } finally {
-            try {
-                if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                    _iterator3.return();
-                }
-            } finally {
-                if (_didIteratorError3) {
-                    throw _iteratorError3;
-                }
-            }
-        }
-
-        this.cameraX = xpos;
-        // TODO - handle ypos...
-        this.updateVisible();
-    }
-};
-
-/* Returns the scene element under the position (given relative to the top
- * left corner of the unscaled scene viewport) 
- * This returns {layer: name, thing: name} which names the layer that was 
- * clicked, and (optionally) the thing within that layer that was clicked. */
-Scene.prototype.checkHit = function (x, y) {
-    // Search through the stage layers in reverse order, so we start with
-    // the "front most" layer and proceed to the ones behind.
-    var xoffset = x - this.getBaseSize().width / 2;
-    var yoffset = y - this.getBaseSize().height / 2;
-    var reversed = this.layers.slice().reverse();
-    var _iteratorNormalCompletion4 = true;
-    var _didIteratorError4 = false;
-    var _iteratorError4 = undefined;
-
-    try {
-        for (var _iterator4 = reversed[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-            var layer = _step4.value;
-
-            var xp = xoffset - layer.container.x;
-            var yp = yoffset;
-
-            // First check if they clicked on a thing in the layer
-            var sprite = layer.checkHitSprite(xp, yp);
-            if (sprite) {
-                var thing = this.thingsBySpriteName[sprite.name];
-                return {
-                    layer: layer,
-                    sprite: sprite,
-                    thing: thing
-                };
-            }
-
-            // Now check if they clicked on this layer itself
-            if (layer.checkHit(xp, yp)) {
-                return { layer: layer, sprite: null, thing: null };
-            }
-        }
-    } catch (err) {
-        _didIteratorError4 = true;
-        _iteratorError4 = err;
-    } finally {
-        try {
-            if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                _iterator4.return();
-            }
-        } finally {
-            if (_didIteratorError4) {
-                throw _iteratorError4;
-            }
-        }
-    }
-
-    return { layer: null, sprite: null, thing: null };
-};
-
-Scene.prototype.getThing = function (name) {
-    return this.things[name];
-};
-
-/* Emits a 'visible' message for each thing currently visible on the screen */
-Scene.prototype.updateVisible = function () {};
 
 /*************/
 /* SceneData */
@@ -2239,14 +2444,16 @@ Thing.prototype.setState = function (state) {
 };
 
 Thing.prototype.setVisible = function (b) {
-    if (!this.sprites["default"]) {
-        throw Error("thing has no default state");
-    }
     for (var spriteName in this.sprites) {
         this.sprites[spriteName].visible = false;
     }
     if (b === undefined) b = true;
-    this.sprites["default"].visible = b;
+    if (b) {
+        if (!this.sprites["default"]) {
+            throw Error("thing has no default state");
+        }
+        this.sprites["default"].visible = true;
+    }
     return this.getSprite();
 };
 
@@ -2323,6 +2530,13 @@ function chainUpdates() {
     };
 }
 
+function delayUpdate(delay) {
+    return function (dt) {
+        delay -= dt;
+        return delay > 0;
+    };
+}
+
 /**********/
 /* Screen */
 /**********/
@@ -2377,7 +2591,8 @@ module.exports = {
     makeSolidColourTexture: makeSolidColourTexture,
     getTransparencyMask: getTransparencyMask,
     Fader: Fader,
-    chainUpdates: chainUpdates
+    chainUpdates: chainUpdates,
+    delayUpdate: delayUpdate
 };
 
 },{}]},{},[7])(7)

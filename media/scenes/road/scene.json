@@ -44,7 +44,28 @@
         },
         {
             "name": "foreground",
-            "sprites": []
+            "sprites": [
+                {
+                    "name": "crow_right",
+                    "x": 39,
+                    "y": 2
+                },
+                {
+                    "name": "crow_blinkright",
+                    "x": 39,
+                    "y": 2
+                },
+                {
+                    "name": "crow_left",
+                    "x": 39,
+                    "y": 2
+                },
+                {
+                    "name": "crow_blinkleft",
+                    "x": 39,
+                    "y": 2
+                }
+            ]
         }
     ]
 }

@@ -9,7 +9,7 @@
             "sprites": [
                 {
                     "name": "shape",
-                    "x": 9,
+                    "x": 0,
                     "y": 11
                 }
             ]
@@ -29,11 +29,6 @@
                 },
                 {
                     "name": "hole2_eyes",
-                    "x": 73,
-                    "y": 11
-                },
-                {
-                    "name": "hole2_blink",
                     "x": 73,
                     "y": 11
                 }
