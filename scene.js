@@ -46,6 +46,7 @@ function Scene()
 Scene.prototype.destroy = function()
 {
     this.timers.destroy();
+    this.timers = null;
 }
 
 Scene.prototype.setLogic = function(logic)

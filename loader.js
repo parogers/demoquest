@@ -17,6 +17,7 @@
 
 var Events = require("./events");
 var Scene = require("./scene");
+var Audio = require("./audio");
 
 /**********/
 /* Loader */
@@ -228,7 +229,27 @@ LoadingScreen.prototype._loadSceneImages = function(dataList)
     });
 
     PIXI.loader.load(() => {
-	this.dispatch("done");
+	this._loadAudio();
+    });
+}
+
+LoadingScreen.prototype._loadAudio = function()
+{
+    let sources = [];
+    for (let name in Audio.Effects) {
+	sources.push(Audio.Effects[name]);
+    }
+
+    Audio.load(sources, {
+	whenLoaded: () => {
+	    this.dispatch("done");
+	},
+	onFailed: () => {
+            console.log("Failed to load audio file: " + source);
+	},
+	onProgress: () => {
+	    // ...
+	}
     });
 }
 

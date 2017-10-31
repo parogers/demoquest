@@ -43,18 +43,18 @@
         "cupboard_open": {
             "frame": {
                 "h": 18,
-                "w": 51,
+                "w": 49,
                 "x": 1,
                 "y": 224
             },
             "rotated": false,
             "sourceSize": {
                 "h": 18,
-                "w": 51
+                "w": 49
             },
             "spriteSourceSize": {
                 "h": 18,
-                "w": 51,
+                "w": 49,
                 "x": 0,
                 "y": 0
             },

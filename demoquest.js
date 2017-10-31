@@ -1,6 +1,97 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.demoquest = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 
+/* APDUNGEON - A dungeon crawler demo written in javascript + pixi.js
+ * Copyright (C) 2017  Peter Rogers (peter.rogers@gmail.com)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * 
+ * See LICENSE.txt for the full text of the license.
+ */
+
+var enabled = true;
+
+module.exports = {};
+
+module.exports.Effects = {
+    Crow: "media/effects/crow.mp3",
+    Drip: "media/effects/water-drop.mp3",
+    ShapeSound: "media/effects/ufo.mp3",
+    DoorOpening: "media/effects/door-opening.mp3",
+    DoorClosing: "media/effects/door-closing.mp3",
+    Crickets: "media/effects/crickets.mp3",
+    Crickets2: "media/effects/crickets2.mp3",
+    Cupboard: "media/effects/hard-click.mp3"
+};
+
+module.exports.play = function (res, vol) {
+    if (enabled) {
+        if (vol !== undefined) sounds[res].volume = vol;
+        sounds[res].play();
+        return sounds[res];
+    }
+    return null;
+};
+
+module.exports.setEnabled = function (b) {
+    enabled = b;
+    var _iteratorNormalCompletion = true;
+    var _didIteratorError = false;
+    var _iteratorError = undefined;
+
+    try {
+        for (var _iterator = sounds[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+            var name = _step.value;
+
+            if (sounds[name].play && sounds[name].pause) {
+                sounds[name].pause();
+            }
+        }
+    } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion && _iterator.return) {
+                _iterator.return();
+            }
+        } finally {
+            if (_didIteratorError) {
+                throw _iteratorError;
+            }
+        }
+    }
+};
+
+module.exports.load = function (sources, opts) {
+    sounds.whenLoaded = opts.whenLoaded || null;
+    sounds.onFailed = opts.onFailed || null;
+    sounds.onProgress = opts.onProgress || null;
+    // Show and update the new progress bar for loading audio
+    /*    progress.setText("LOADING AUDIO...");
+        sounds.onProgress = function(percent) {
+            progress.update(percent/100.0);
+            requestAnimationFrame(function() {
+                Render.getRenderer().render(stage);
+            });
+        };*/
+    sounds.load(sources);
+};
+
+},{}],2:[function(require,module,exports){
+"use strict";
+
 /* demoquest - An adventure game demo with parallax scrolling
  * Copyright (C) 2017  Peter Rogers
  *
@@ -150,7 +241,7 @@ Dialog.prototype.handleResize = function (width, height) {
 
 module.exports = Dialog;
 
-},{"./events":2,"./utils":11}],2:[function(require,module,exports){
+},{"./events":3,"./utils":12}],3:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -452,7 +543,7 @@ module.exports = {
     TimerList: TimerList
 };
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -617,7 +708,7 @@ GameState.prototype._startGame = function () {
 
 module.exports = GameState;
 
-},{"./input":4,"./loader":5,"./logic":6,"./playscreen":8,"./render":9}],4:[function(require,module,exports){
+},{"./input":5,"./loader":6,"./logic":7,"./playscreen":9,"./render":10}],5:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -747,7 +838,7 @@ module.exports = {
    GameEvent: GameEvent
 };
 
-},{"./events":2}],5:[function(require,module,exports){
+},{"./events":3}],6:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -769,6 +860,7 @@ module.exports = {
 
 var Events = require("./events");
 var Scene = require("./scene");
+var Audio = require("./audio");
 
 /**********/
 /* Loader */
@@ -1016,7 +1108,28 @@ LoadingScreen.prototype._loadSceneImages = function (dataList) {
     });
 
     PIXI.loader.load(function () {
-        _this4.dispatch("done");
+        _this4._loadAudio();
+    });
+};
+
+LoadingScreen.prototype._loadAudio = function () {
+    var _this5 = this;
+
+    var sources = [];
+    for (var name in Audio.Effects) {
+        sources.push(Audio.Effects[name]);
+    }
+
+    Audio.load(sources, {
+        whenLoaded: function whenLoaded() {
+            _this5.dispatch("done");
+        },
+        onFailed: function onFailed() {
+            console.log("Failed to load audio file: " + source);
+        },
+        onProgress: function onProgress() {
+            // ...
+        }
     });
 };
 
@@ -1024,7 +1137,7 @@ module.exports = {
     LoadingScreen: LoadingScreen
 };
 
-},{"./events":2,"./scene":10}],6:[function(require,module,exports){
+},{"./audio":1,"./events":3,"./scene":11}],7:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1049,6 +1162,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  */
 
 var Utils = require("./utils");
+var Audio = require("./audio");
 
 /*********/
 /* State */
@@ -1194,6 +1308,11 @@ var IntroLogic = function () {
                 console.log("Tick");
             }, 3000);
 
+            ctx.startTimer(function () {
+                if (Math.random() < 0.4) Audio.play(Audio.Effects.Crickets, 0.1);
+                return true;
+            }, 700);
+
             return;
 
             var sprite = ctx.getThing("darkness").setVisible(false);
@@ -1223,13 +1342,17 @@ var IntroLogic = function () {
 
                 case "cupboard":
                     if (ctx.thing.state === "open") ctx.thing.setState("closed");else ctx.thing.setState("open");
+
+                    Audio.play(Audio.Effects.Cupboard, 0.4);
                     break;
 
                 case "door":
                     if (ctx.thing.state === "open") {
                         ctx.thing.setState("closed");
+                        Audio.play(Audio.Effects.DoorClosing, 0.4);
                     } else {
                         ctx.thing.setState("open");
+                        Audio.play(Audio.Effects.DoorOpening, 0.25);
                     }
                     break;
 
@@ -1413,9 +1536,9 @@ var CaveLogic = function () {
         key: "initScene",
         value: function initScene(ctx) {
             ctx.startTimer(function () {
-                console.log("DRIP");
+                Audio.play(Audio.Effects.Drip, 0.5);
                 return true;
-            }, 3000);
+            }, 5000);
             ctx.getThing("hole2").setState("empty");
             ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
             ctx.getThing("shape").getSprite().x = -24;
@@ -1442,6 +1565,9 @@ var CaveLogic = function () {
                     }
                     ctx.state.seenHole1 = true;
                     ctx.getThing("hole1").setVisible(false);
+                    ctx.startTimer(function () {
+                        Audio.play(Audio.Effects.ShapeSound);
+                    }, 250);
                     ctx.addUpdate(function (dt) {
                         var sprite = ctx.getThing("shape").getSprite();
                         sprite.x += 40 * dt;
@@ -1493,7 +1619,7 @@ module.exports = {
     State: State
 };
 
-},{"./utils":11}],7:[function(require,module,exports){
+},{"./audio":1,"./utils":12}],8:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -1529,7 +1655,7 @@ module.exports.resize = function () {
     return gameState.handleResize();
 };
 
-},{"./gamestate":3}],8:[function(require,module,exports){
+},{"./gamestate":4}],9:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -1880,7 +2006,7 @@ PlayScreen.prototype.resume = function () {
 
 module.exports = PlayScreen;
 
-},{"./dialog":1,"./events":2,"./logic":6,"./scene":10,"./utils":11}],9:[function(require,module,exports){
+},{"./dialog":2,"./events":3,"./logic":7,"./scene":11,"./utils":12}],10:[function(require,module,exports){
 "use strict";
 
 /* APDUNGEON - A dungeon crawler demo written in javascript + pixi.js
@@ -1980,7 +2106,7 @@ module.exports.resize = function () {
     //container.appendChild(renderer.view);
 };
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -2029,6 +2155,7 @@ function Scene() {
 
 Scene.prototype.destroy = function () {
     this.timers.destroy();
+    this.timers = null;
 };
 
 Scene.prototype.setLogic = function (logic) {
@@ -2463,7 +2590,7 @@ module.exports = {
     Thing: Thing
 };
 
-},{"./events":2,"./render":9,"./utils":11}],11:[function(require,module,exports){
+},{"./events":3,"./render":10,"./utils":12}],12:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -2595,5 +2722,5 @@ module.exports = {
     delayUpdate: delayUpdate
 };
 
-},{}]},{},[7])(7)
+},{}]},{},[8])(8)
 });

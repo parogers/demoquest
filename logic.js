@@ -16,6 +16,7 @@
  */
 
 var Utils = require("./utils");
+var Audio = require("./audio");
 
 /*********/
 /* State */
@@ -154,6 +155,12 @@ class IntroLogic
 	    console.log("Tick");
 	}, 3000);
 
+	ctx.startTimer(() => {
+	    if (Math.random() < 0.4)
+		Audio.play(Audio.Effects.Crickets, 0.1);
+	    return true;
+	}, 700);
+
 	return;
 
 	var sprite = ctx.getThing("darkness").setVisible(false);
@@ -188,13 +195,17 @@ class IntroLogic
 		ctx.thing.setState("closed");
 	    else
 		ctx.thing.setState("open");
+
+	    Audio.play(Audio.Effects.Cupboard, 0.4);
 	    break;
 
 	case "door":
 	    if (ctx.thing.state === "open") {
 		ctx.thing.setState("closed");
+		Audio.play(Audio.Effects.DoorClosing, 0.4);
 	    } else {
 		ctx.thing.setState("open");
+		Audio.play(Audio.Effects.DoorOpening, 0.25);
 	    }
 	    break;
 
@@ -361,9 +372,9 @@ class CaveLogic
     initScene(ctx)
     {
 	ctx.startTimer(() => {
-	    console.log("DRIP");
+	    Audio.play(Audio.Effects.Drip, 0.5);
 	    return true;
-	}, 3000);
+	}, 5000);
         ctx.getThing("hole2").setState("empty");
         ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
         ctx.getThing("shape").getSprite().x = -24;
@@ -391,6 +402,9 @@ class CaveLogic
             }
             ctx.state.seenHole1 = true;
             ctx.getThing("hole1").setVisible(false);
+	    ctx.startTimer(() => {
+		Audio.play(Audio.Effects.ShapeSound);
+	    }, 250);
             ctx.addUpdate(dt => {
                 let sprite = ctx.getThing("shape").getSprite();
                 sprite.x += 40*dt;
