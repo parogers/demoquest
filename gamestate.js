@@ -167,6 +167,7 @@ GameState.prototype._startGame = function()
 	this.redraw();
     });
     // Now change to the opening scene
+    //this.screen.changeScene("closet", {cameraX: 0});
     this.screen.changeScene("intro");
 }
 

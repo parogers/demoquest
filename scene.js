@@ -93,7 +93,6 @@ Scene.prototype.setCameraPos = function(xpos, ypos)
 	}
 	this.cameraX = xpos;
 	// TODO - handle ypos...
-	this.updateVisible();
     }
 }
 
@@ -117,11 +116,13 @@ Scene.prototype.checkHit = function(x, y)
 	var sprite = layer.checkHitSprite(xp, yp);
 	if (sprite) {
 	    var thing = this.thingsBySpriteName[sprite.name];
-	    return {
-		layer: layer, 
-		sprite: sprite, 
-		thing: thing
-	    };
+	    if (!thing.invisibleToClicks) {
+		return {
+		    layer: layer, 
+		    sprite: sprite, 
+		    thing: thing
+		};
+	    }
 	}
 
 	// Now check if they clicked on this layer itself
@@ -137,9 +138,12 @@ Scene.prototype.getThing = function(name)
     return this.things[name];
 }
 
-/* Emits a 'visible' message for each thing currently visible on the screen */
-Scene.prototype.updateVisible = function()
+Scene.prototype.getLayer = function(name)
 {
+    for (let layer of this.layers) {
+	if (layer.name === name) return layer;
+    }
+    return null;
 }
 
 Scene.prototype.pause = function()
@@ -347,6 +351,11 @@ Layer.prototype.addSprite = function(sprite, mask)
     this.container.addChild(sprite);
 }
 
+Layer.prototype.setVisible = function(b)
+{
+    this.container.visible = !!b;
+}
+
 /*********/
 /* Thing */
 /*********/
@@ -360,6 +369,7 @@ function Thing(name)
     this.sprites = {};
     this.name = name;
     this.state = "default";
+    this.invisibleToClicks = false;
 
     var mgr = new Events.EventManager();
     this.onVisible = mgr.hook("visible");

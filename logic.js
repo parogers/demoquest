@@ -47,7 +47,9 @@ class Logic
 	    "intro" : new IntroLogic(),
 	    "road" : new RoadLogic(),
 	    "closet" : new ClosetLogic(),
-	    "cave" : new CaveLogic()
+	    "building" : new BuildingLogic(),
+	    "cave" : new CaveLogic(),
+	    "darkroad" : new DarkRoadLogic()
 	};
     }
 
@@ -108,6 +110,15 @@ function LogicContext(state, args)
         this.thing = args.thing;
         this.sprite = args.sprite;
     }
+}
+
+LogicContext.prototype.getLayer = function(name)
+{
+    var layer = this.scene.getLayer(name);
+    if (!layer) {
+	console.log("ERROR: can't find layer: " + name);
+    }
+    return layer;
 }
 
 LogicContext.prototype.getThing = function(name)
@@ -253,9 +264,9 @@ class RoadLogic
 	    ctx.state.bush1Moved = true;
 	    ctx.thing.setVisible(false);
 	    if (ctx.state.bush2Moved) {
-		ctx.showMessage("You clear away some brush revealing a cave!")
+		ctx.showMessage("There's a cave behind these bushes!")
 	    } else {
-		ctx.showMessage("You clear away some brush. There's something behind it!")
+		ctx.showMessage("I've cleared away some brush. There's something behind it!")
 	    }
 	    break;
 
@@ -263,9 +274,9 @@ class RoadLogic
 	    ctx.state.bush2Moved = true;
 	    ctx.thing.setVisible(false);
 	    if (ctx.state.bush1Moved) {
-		ctx.showMessage("You clear away some brush revealing a cave!")
+		ctx.showMessage("There's a cave behind these bushes!")
 	    } else {
-		ctx.showMessage("You clear away some brush. There's something behind it!")
+		ctx.showMessage("I've cleared away some brush. There's something behind it!")
 	    }
 	    break;
 
@@ -300,23 +311,12 @@ class ClosetLogic
     constructor() {
     }
 
-    initScene(ctx) {
-	this.timer = 0;
-	this.state = "start";
-
-	ctx.addUpdate(dt => {
-	    if (this.timer > 0) {
-		this.timer -= dt;
-		return true;
-	    }
-	    switch(this.state) {
-	    case "start":
-		// Wait for the scene to fade in a bit
-		this.state = "opening";
-		this.timer = 1.5;
-		//this.offset = 0;
-		break;
-	    case "opening":
+    initScene(ctx)
+    {
+	ctx.screen.cutScene = true;
+	ctx.addUpdate(Utils.chainUpdates(
+	    Utils.delayUpdate(1.5),
+	    dt => {
 		// Opening the crack
 		var sprite = ctx.getThing("crack").getSprite();
 		var stop = ctx.getThing("darkright").getSprite();
@@ -326,27 +326,28 @@ class ClosetLogic
 		sprite.x += 10*dt;
 		if (sprite.x > stop.x) {
 		    sprite.visible = false;
-		    this.state = "brighter";
-		    this.timer = 2;
+		    return false;
 		}
-		break;
-	    case "brighter":
+		return true;
+	    },
+	    dt => {
 		var sprite1 = ctx.getThing("darkright").getSprite();
 		var sprite2 = ctx.getThing("darkleft").getSprite();
-		sprite1.alpha -= 0.2*dt;
-		sprite2.alpha -= 0.2*dt;
+		sprite1.alpha -= 0.25*dt;
+		sprite2.alpha -= 0.25*dt;
 		if (sprite1.alpha < 0) {
 		    sprite1.visible = false;
 		    sprite2.visible = false;
+		    ctx.showMessage("Am I safe here???");
+		    ctx.screen.cutScene = false;
 		    return false;
 		}
-		break;
+		return true;
 	    }
-	    return true;
-	});
+	));
 
-        this.onCameraCallback = ctx.screen.onCamera(function(ctx) {
-            if (ctx.scene.cameraX > 1.75) {
+        ctx.screen.onCamera(ctx => {
+            if (ctx.scene.cameraX > 0.75) {
                 console.log("CAMERA: " + ctx.scene.cameraX);
             }
         });
@@ -360,6 +361,24 @@ class ClosetLogic
     handleClicked(ctx) {
 	switch(ctx.thing.name) 
 	{
+	}
+    }
+}
+
+class DarkRoadLogic
+{
+    initScene(ctx) {
+    }
+
+    enterScene(ctx) {
+	ctx.showMessage("Sunset. How long was I down there?");
+    }
+
+    handleClicked(ctx) {
+	switch(ctx.thing.name) {
+	case "cave":
+	    ctx.showMessage("No. I don't want to go back down there.");
+	    break;
 	}
     }
 }
@@ -385,7 +404,11 @@ class CaveLogic
 	switch(ctx.thing.name) 
 	{
         case "ladder":
-	    ctx.screen.changeScene("road", {cameraX: 1});
+	    if (ctx.state.hasRedKey) {
+		ctx.screen.changeScene("darkroad", {cameraX: 1});
+	    } else {
+		ctx.screen.changeScene("road", {cameraX: 1});
+	    }
             break;
 
         case "key":
@@ -395,7 +418,6 @@ class CaveLogic
             break;
 
         case "hole1":
-            //ctx.showMessage("You see only darkness.");
             if (ctx.state.seenHole1) {
                 ctx.showMessage("There is only darkness.");
                 break;
@@ -443,6 +465,58 @@ class CaveLogic
                 }
             ));*/
             break;
+	}
+    }
+}
+
+class BuildingLogic
+{
+    constructor() {
+    }
+
+    initScene(ctx)
+    {
+        ctx.getThing("door").setState("open");
+        ctx.getThing("light").setState("off");
+	ctx.getThing("candle").invisibleToClicks = true;
+	ctx.getThing("darkness").invisibleToClicks = true;
+    }
+
+    handleClicked(ctx) 
+    {
+	switch(ctx.thing.name) 
+	{
+	case "door":
+	    if (ctx.thing.state === "open") {
+		ctx.thing.setState("closed");
+		Audio.play(Audio.Effects.DoorClosing, 0.4);
+	    } else {
+		ctx.thing.setState("open");
+		Audio.play(Audio.Effects.DoorOpening, 0.25);
+	    }
+	    break;
+
+	case "light":
+	    if (ctx.thing.state === "off") {
+		ctx.thing.setState("on");
+		ctx.getThing("darkness").setVisible(false);
+
+		ctx.addUpdate(Utils.chainUpdates(
+                    Utils.delayUpdate(0.4),
+		    (dt) => {
+			let sprite = ctx.getThing("candle").getSprite();
+			sprite.y += 20*dt;
+			if (sprite.y > 0) {
+			    ctx.getThing("candle").setVisible(false);
+			    return false;
+			}
+			return true;
+		    }
+		));
+	    } else {
+		ctx.showMessage("...I'd prefer the lights stay on.");
+	    }
+	    break;
 	}
     }
 }

@@ -145,6 +145,7 @@ PlayScreen.prototype.changeScene = function(name, args)
 	var fadein = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 1);
 	this.stage.removeChild(fadeout.sprite);
 	this.pause();
+	this.cutScene = true;
 	fadeout.start(this.stage);
         this.addUpdate(Utils.chainUpdates(
             (dt) => {
@@ -160,6 +161,7 @@ PlayScreen.prototype.changeScene = function(name, args)
             (dt) => {
 		if (!fadein.update(dt)) {
 		    this.resume();
+		    this.cutScene = false;
 		    return false;
 		}
 		return true;

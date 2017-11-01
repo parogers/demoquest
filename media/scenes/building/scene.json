@@ -16,6 +16,16 @@
             "name": "wall",
             "sprites": [
                 {
+                    "name": "light_on",
+                    "x": 25,
+                    "y": 15
+                },
+                {
+                    "name": "light_off",
+                    "x": 25,
+                    "y": 15
+                },
+                {
                     "name": "bookshelf",
                     "x": 0,
                     "y": 0
@@ -31,6 +41,11 @@
                     "y": 24
                 },
                 {
+                    "name": "door_closed",
+                    "x": 5,
+                    "y": 5
+                },
+                {
                     "name": "door_open",
                     "x": 20,
                     "y": 5
@@ -44,6 +59,21 @@
                     "name": "closet_closed",
                     "x": 137,
                     "y": 5
+                }
+            ]
+        },
+        {
+            "name": "candlelayer",
+            "sprites": [
+                {
+                    "name": "candle",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "darkness",
+                    "x": 0,
+                    "y": 0
                 }
             ]
         }

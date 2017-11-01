@@ -25,7 +25,7 @@
                 "h": 32,
                 "w": 164,
                 "x": 1,
-                "y": 100
+                "y": 110
             },
             "rotated": false,
             "sourceSize": {
@@ -45,7 +45,7 @@
                 "h": 32,
                 "w": 164,
                 "x": 1,
-                "y": 133
+                "y": 143
             },
             "rotated": false,
             "sourceSize": {
@@ -60,12 +60,52 @@
             },
             "trimmed": false
         },
+        "candle": {
+            "frame": {
+                "h": 32,
+                "w": 32,
+                "x": 1,
+                "y": 330
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 32
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 32,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "candlelayer": {
+            "frame": {
+                "h": 32,
+                "w": 32,
+                "x": 1,
+                "y": 297
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 32
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 32,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
         "closet_closed": {
             "frame": {
                 "h": 27,
                 "w": 22,
                 "x": 1,
-                "y": 231
+                "y": 269
             },
             "rotated": false,
             "sourceSize": {
@@ -85,7 +125,7 @@
                 "h": 27,
                 "w": 22,
                 "x": 1,
-                "y": 203
+                "y": 241
             },
             "rotated": false,
             "sourceSize": {
@@ -105,7 +145,7 @@
                 "h": 8,
                 "w": 30,
                 "x": 1,
-                "y": 166
+                "y": 176
             },
             "rotated": false,
             "sourceSize": {
@@ -120,12 +160,52 @@
             },
             "trimmed": false
         },
+        "darkness": {
+            "frame": {
+                "h": 32,
+                "w": 32,
+                "x": 1,
+                "y": 363
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 32
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 32,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "door_closed": {
+            "frame": {
+                "h": 27,
+                "w": 15,
+                "x": 1,
+                "y": 185
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 27,
+                "w": 15
+            },
+            "spriteSourceSize": {
+                "h": 27,
+                "w": 15,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
         "door_open": {
             "frame": {
                 "h": 27,
                 "w": 14,
                 "x": 1,
-                "y": 175
+                "y": 213
             },
             "rotated": false,
             "sourceSize": {
@@ -160,6 +240,46 @@
             },
             "trimmed": false
         },
+        "light_off": {
+            "frame": {
+                "h": 4,
+                "w": 3,
+                "x": 1,
+                "y": 105
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 4,
+                "w": 3
+            },
+            "spriteSourceSize": {
+                "h": 4,
+                "w": 3,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "light_on": {
+            "frame": {
+                "h": 4,
+                "w": 3,
+                "x": 1,
+                "y": 100
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 4,
+                "w": 3
+            },
+            "spriteSourceSize": {
+                "h": 4,
+                "w": 3,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
         "wall": {
             "frame": {
                 "h": 32,
@@ -188,7 +308,7 @@
         "scale": "1",
         "size": {
             "W": 166,
-            "h": 260
+            "h": 397
         },
         "version": "1"
     }

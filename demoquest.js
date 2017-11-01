@@ -703,7 +703,8 @@ GameState.prototype._startGame = function () {
       _this3.redraw();
    });
    // Now change to the opening scene
-   this.screen.changeScene("intro");
+   //this.screen.changeScene("closet", {cameraX: 0});
+   this.screen.changeScene("cave");
 };
 
 module.exports = GameState;
@@ -1131,6 +1132,7 @@ LoadingScreen.prototype._loadAudio = function () {
             // ...
         }
     });
+    this._showMessage("Loading audio");
 };
 
 module.exports = {
@@ -1193,7 +1195,9 @@ var Logic = function () {
             "intro": new IntroLogic(),
             "road": new RoadLogic(),
             "closet": new ClosetLogic(),
-            "cave": new CaveLogic()
+            "building": new BuildingLogic(),
+            "cave": new CaveLogic(),
+            "darkroad": new DarkRoadLogic()
         };
     }
 
@@ -1264,6 +1268,14 @@ function LogicContext(state, args) {
         this.sprite = args.sprite;
     }
 }
+
+LogicContext.prototype.getLayer = function (name) {
+    var layer = this.scene.getLayer(name);
+    if (!layer) {
+        console.log("ERROR: can't find layer: " + name);
+    }
+    return layer;
+};
 
 LogicContext.prototype.getThing = function (name) {
     var thing = this.scene.getThing(name);
@@ -1407,9 +1419,9 @@ var RoadLogic = function () {
                     ctx.state.bush1Moved = true;
                     ctx.thing.setVisible(false);
                     if (ctx.state.bush2Moved) {
-                        ctx.showMessage("You clear away some brush revealing a cave!");
+                        ctx.showMessage("There's a cave behind these bushes!");
                     } else {
-                        ctx.showMessage("You clear away some brush. There's something behind it!");
+                        ctx.showMessage("I've cleared away some brush. There's something behind it!");
                     }
                     break;
 
@@ -1417,9 +1429,9 @@ var RoadLogic = function () {
                     ctx.state.bush2Moved = true;
                     ctx.thing.setVisible(false);
                     if (ctx.state.bush1Moved) {
-                        ctx.showMessage("You clear away some brush revealing a cave!");
+                        ctx.showMessage("There's a cave behind these bushes!");
                     } else {
-                        ctx.showMessage("You clear away some brush. There's something behind it!");
+                        ctx.showMessage("I've cleared away some brush. There's something behind it!");
                     }
                     break;
 
@@ -1460,54 +1472,37 @@ var ClosetLogic = function () {
     _createClass(ClosetLogic, [{
         key: "initScene",
         value: function initScene(ctx) {
-            var _this2 = this;
-
-            this.timer = 0;
-            this.state = "start";
-
-            ctx.addUpdate(function (dt) {
-                if (_this2.timer > 0) {
-                    _this2.timer -= dt;
-                    return true;
-                }
-                switch (_this2.state) {
-                    case "start":
-                        // Wait for the scene to fade in a bit
-                        _this2.state = "opening";
-                        _this2.timer = 1.5;
-                        //this.offset = 0;
-                        break;
-                    case "opening":
-                        // Opening the crack
-                        var sprite = ctx.getThing("crack").getSprite();
-                        var stop = ctx.getThing("darkright").getSprite();
-                        var thing = ctx.getThing("crack");
-                        //this.offset += dt;
-                        //sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
-                        sprite.x += 10 * dt;
-                        if (sprite.x > stop.x) {
-                            sprite.visible = false;
-                            _this2.state = "brighter";
-                            _this2.timer = 2;
-                        }
-                        break;
-                    case "brighter":
-                        var sprite1 = ctx.getThing("darkright").getSprite();
-                        var sprite2 = ctx.getThing("darkleft").getSprite();
-                        sprite1.alpha -= 0.2 * dt;
-                        sprite2.alpha -= 0.2 * dt;
-                        if (sprite1.alpha < 0) {
-                            sprite1.visible = false;
-                            sprite2.visible = false;
-                            return false;
-                        }
-                        break;
+            ctx.screen.cutScene = true;
+            ctx.addUpdate(Utils.chainUpdates(Utils.delayUpdate(1.5), function (dt) {
+                // Opening the crack
+                var sprite = ctx.getThing("crack").getSprite();
+                var stop = ctx.getThing("darkright").getSprite();
+                var thing = ctx.getThing("crack");
+                //this.offset += dt;
+                //sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
+                sprite.x += 10 * dt;
+                if (sprite.x > stop.x) {
+                    sprite.visible = false;
+                    return false;
                 }
                 return true;
-            });
+            }, function (dt) {
+                var sprite1 = ctx.getThing("darkright").getSprite();
+                var sprite2 = ctx.getThing("darkleft").getSprite();
+                sprite1.alpha -= 0.25 * dt;
+                sprite2.alpha -= 0.25 * dt;
+                if (sprite1.alpha < 0) {
+                    sprite1.visible = false;
+                    sprite2.visible = false;
+                    ctx.showMessage("Am I safe here???");
+                    ctx.screen.cutScene = false;
+                    return false;
+                }
+                return true;
+            }));
 
-            this.onCameraCallback = ctx.screen.onCamera(function (ctx) {
-                if (ctx.scene.cameraX > 1.75) {
+            ctx.screen.onCamera(function (ctx) {
+                if (ctx.scene.cameraX > 0.75) {
                     console.log("CAMERA: " + ctx.scene.cameraX);
                 }
             });
@@ -1525,6 +1520,33 @@ var ClosetLogic = function () {
     }]);
 
     return ClosetLogic;
+}();
+
+var DarkRoadLogic = function () {
+    function DarkRoadLogic() {
+        _classCallCheck(this, DarkRoadLogic);
+    }
+
+    _createClass(DarkRoadLogic, [{
+        key: "initScene",
+        value: function initScene(ctx) {}
+    }, {
+        key: "enterScene",
+        value: function enterScene(ctx) {
+            ctx.showMessage("Sunset. How long was I down there?");
+        }
+    }, {
+        key: "handleClicked",
+        value: function handleClicked(ctx) {
+            switch (ctx.thing.name) {
+                case "cave":
+                    ctx.showMessage("No. I don't want to go back down there.");
+                    break;
+            }
+        }
+    }]);
+
+    return DarkRoadLogic;
 }();
 
 var CaveLogic = function () {
@@ -1548,7 +1570,11 @@ var CaveLogic = function () {
         value: function handleClicked(ctx) {
             switch (ctx.thing.name) {
                 case "ladder":
-                    ctx.screen.changeScene("road", { cameraX: 1 });
+                    if (ctx.state.hasRedKey) {
+                        ctx.screen.changeScene("darkroad", { cameraX: 1 });
+                    } else {
+                        ctx.screen.changeScene("road", { cameraX: 1 });
+                    }
                     break;
 
                 case "key":
@@ -1558,7 +1584,6 @@ var CaveLogic = function () {
                     break;
 
                 case "hole1":
-                    //ctx.showMessage("You see only darkness.");
                     if (ctx.state.seenHole1) {
                         ctx.showMessage("There is only darkness.");
                         break;
@@ -1611,6 +1636,58 @@ var CaveLogic = function () {
     }]);
 
     return CaveLogic;
+}();
+
+var BuildingLogic = function () {
+    function BuildingLogic() {
+        _classCallCheck(this, BuildingLogic);
+    }
+
+    _createClass(BuildingLogic, [{
+        key: "initScene",
+        value: function initScene(ctx) {
+            ctx.getThing("door").setState("open");
+            ctx.getThing("light").setState("off");
+            ctx.getThing("candle").invisibleToClicks = true;
+            ctx.getThing("darkness").invisibleToClicks = true;
+        }
+    }, {
+        key: "handleClicked",
+        value: function handleClicked(ctx) {
+            switch (ctx.thing.name) {
+                case "door":
+                    if (ctx.thing.state === "open") {
+                        ctx.thing.setState("closed");
+                        Audio.play(Audio.Effects.DoorClosing, 0.4);
+                    } else {
+                        ctx.thing.setState("open");
+                        Audio.play(Audio.Effects.DoorOpening, 0.25);
+                    }
+                    break;
+
+                case "light":
+                    if (ctx.thing.state === "off") {
+                        ctx.thing.setState("on");
+                        ctx.getThing("darkness").setVisible(false);
+
+                        ctx.addUpdate(Utils.chainUpdates(Utils.delayUpdate(0.4), function (dt) {
+                            var sprite = ctx.getThing("candle").getSprite();
+                            sprite.y += 20 * dt;
+                            if (sprite.y > 0) {
+                                ctx.getThing("candle").setVisible(false);
+                                return false;
+                            }
+                            return true;
+                        }));
+                    } else {
+                        ctx.showMessage("...I'd prefer the lights stay on.");
+                    }
+                    break;
+            }
+        }
+    }]);
+
+    return BuildingLogic;
 }();
 
 module.exports = {
@@ -1824,6 +1901,7 @@ PlayScreen.prototype.changeScene = function (name, args) {
         var fadein = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 1);
         this.stage.removeChild(fadeout.sprite);
         this.pause();
+        this.cutScene = true;
         fadeout.start(this.stage);
         this.addUpdate(Utils.chainUpdates(function (dt) {
             if (!fadeout.update(dt)) {
@@ -1836,6 +1914,7 @@ PlayScreen.prototype.changeScene = function (name, args) {
         }, function (dt) {
             if (!fadein.update(dt)) {
                 _this2.resume();
+                _this2.cutScene = false;
                 return false;
             }
             return true;
@@ -2062,8 +2141,8 @@ module.exports.configure = function (div, aspect) {
         height = Math.round(rect.height / aspect);
     }
 
-    renderer = new PIXI.CanvasRenderer({
-        //renderer = PIXI.autoDetectRenderer({
+    //renderer = new PIXI.CanvasRenderer({
+    renderer = PIXI.autoDetectRenderer({
         width: width,
         height: height,
         //antialias: true,
@@ -2219,7 +2298,6 @@ Scene.prototype.setCameraPos = function (xpos, ypos) {
 
         this.cameraX = xpos;
         // TODO - handle ypos...
-        this.updateVisible();
     }
 };
 
@@ -2248,11 +2326,13 @@ Scene.prototype.checkHit = function (x, y) {
             var sprite = layer.checkHitSprite(xp, yp);
             if (sprite) {
                 var thing = this.thingsBySpriteName[sprite.name];
-                return {
-                    layer: layer,
-                    sprite: sprite,
-                    thing: thing
-                };
+                if (!thing.invisibleToClicks) {
+                    return {
+                        layer: layer,
+                        sprite: sprite,
+                        thing: thing
+                    };
+                }
             }
 
             // Now check if they clicked on this layer itself
@@ -2282,8 +2362,34 @@ Scene.prototype.getThing = function (name) {
     return this.things[name];
 };
 
-/* Emits a 'visible' message for each thing currently visible on the screen */
-Scene.prototype.updateVisible = function () {};
+Scene.prototype.getLayer = function (name) {
+    var _iteratorNormalCompletion3 = true;
+    var _didIteratorError3 = false;
+    var _iteratorError3 = undefined;
+
+    try {
+        for (var _iterator3 = this.layers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+            var layer = _step3.value;
+
+            if (layer.name === name) return layer;
+        }
+    } catch (err) {
+        _didIteratorError3 = true;
+        _iteratorError3 = err;
+    } finally {
+        try {
+            if (!_iteratorNormalCompletion3 && _iterator3.return) {
+                _iterator3.return();
+            }
+        } finally {
+            if (_didIteratorError3) {
+                throw _iteratorError3;
+            }
+        }
+    }
+
+    return null;
+};
 
 Scene.prototype.pause = function () {
     this.timers.pause();
@@ -2303,25 +2409,25 @@ Scene.fromData = function (sceneData) {
     var renderer = Render.getRenderer();
 
     // Build the layers and contained sprites
-    var _iteratorNormalCompletion3 = true;
-    var _didIteratorError3 = false;
-    var _iteratorError3 = undefined;
+    var _iteratorNormalCompletion4 = true;
+    var _didIteratorError4 = false;
+    var _iteratorError4 = undefined;
 
     try {
-        for (var _iterator3 = sceneData.layers[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-            var layerData = _step3.value;
+        for (var _iterator4 = sceneData.layers[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+            var layerData = _step4.value;
 
             var texture = scn.sceneData.getTexture(layerData.name);
             var mask = Utils.getTransparencyMask(renderer, texture);
             var layer = new Layer(layerData.name, texture, mask);
             scn.addLayer(layer);
-            var _iteratorNormalCompletion4 = true;
-            var _didIteratorError4 = false;
-            var _iteratorError4 = undefined;
+            var _iteratorNormalCompletion5 = true;
+            var _didIteratorError5 = false;
+            var _iteratorError5 = undefined;
 
             try {
-                for (var _iterator4 = layerData["sprites"][Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-                    var spriteData = _step4.value;
+                for (var _iterator5 = layerData["sprites"][Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+                    var spriteData = _step5.value;
 
                     var texture = scn.sceneData.getTexture(spriteData["name"]);
                     var sprite = new PIXI.Sprite(texture);
@@ -2355,31 +2461,31 @@ Scene.fromData = function (sceneData) {
                     scn.thingsBySpriteName[sprite.name] = thing;
                 }
             } catch (err) {
-                _didIteratorError4 = true;
-                _iteratorError4 = err;
+                _didIteratorError5 = true;
+                _iteratorError5 = err;
             } finally {
                 try {
-                    if (!_iteratorNormalCompletion4 && _iterator4.return) {
-                        _iterator4.return();
+                    if (!_iteratorNormalCompletion5 && _iterator5.return) {
+                        _iterator5.return();
                     }
                 } finally {
-                    if (_didIteratorError4) {
-                        throw _iteratorError4;
+                    if (_didIteratorError5) {
+                        throw _iteratorError5;
                     }
                 }
             }
         }
     } catch (err) {
-        _didIteratorError3 = true;
-        _iteratorError3 = err;
+        _didIteratorError4 = true;
+        _iteratorError4 = err;
     } finally {
         try {
-            if (!_iteratorNormalCompletion3 && _iterator3.return) {
-                _iterator3.return();
+            if (!_iteratorNormalCompletion4 && _iterator4.return) {
+                _iterator4.return();
             }
         } finally {
-            if (_didIteratorError3) {
-                throw _iteratorError3;
+            if (_didIteratorError4) {
+                throw _iteratorError4;
             }
         }
     }
@@ -2494,13 +2600,13 @@ Layer.prototype.checkHit = function (x, y) {
  * instance in this layer. If so, this returns the sprite. */
 Layer.prototype.checkHitSprite = function (x, y) {
     var reversed = this.container.children.slice().reverse();
-    var _iteratorNormalCompletion5 = true;
-    var _didIteratorError5 = false;
-    var _iteratorError5 = undefined;
+    var _iteratorNormalCompletion6 = true;
+    var _didIteratorError6 = false;
+    var _iteratorError6 = undefined;
 
     try {
-        for (var _iterator5 = reversed[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-            var sprite = _step5.value;
+        for (var _iterator6 = reversed[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+            var sprite = _step6.value;
 
             if (sprite.name && sprite.visible && x >= sprite.x && y >= sprite.y && x < sprite.x + sprite.width && y < sprite.y + sprite.height) {
                 var xp = x - sprite.x | 0;
@@ -2509,16 +2615,16 @@ Layer.prototype.checkHitSprite = function (x, y) {
             }
         }
     } catch (err) {
-        _didIteratorError5 = true;
-        _iteratorError5 = err;
+        _didIteratorError6 = true;
+        _iteratorError6 = err;
     } finally {
         try {
-            if (!_iteratorNormalCompletion5 && _iterator5.return) {
-                _iterator5.return();
+            if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                _iterator6.return();
             }
         } finally {
-            if (_didIteratorError5) {
-                throw _iteratorError5;
+            if (_didIteratorError6) {
+                throw _iteratorError6;
             }
         }
     }
@@ -2533,6 +2639,10 @@ Layer.prototype.addSprite = function (sprite, mask) {
     this.container.addChild(sprite);
 };
 
+Layer.prototype.setVisible = function (b) {
+    this.container.visible = !!b;
+};
+
 /*********/
 /* Thing */
 /*********/
@@ -2545,6 +2655,7 @@ function Thing(name) {
     this.sprites = {};
     this.name = name;
     this.state = "default";
+    this.invisibleToClicks = false;
 
     var mgr = new Events.EventManager();
     this.onVisible = mgr.hook("visible");

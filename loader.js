@@ -251,6 +251,7 @@ LoadingScreen.prototype._loadAudio = function()
 	    // ...
 	}
     });
+    this._showMessage("Loading audio");
 }
 
 module.exports = {
