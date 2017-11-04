@@ -9,6 +9,10 @@
             "sprites": []
         },
         {
+            "name": "outside",
+            "sprites": []
+        },
+        {
             "name": "incloset",
             "sprites": []
         },

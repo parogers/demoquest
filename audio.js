@@ -29,7 +29,8 @@ module.exports.Effects = {
     DoorClosing: "media/effects/door-closing.mp3",
     Crickets: "media/effects/crickets.mp3",
     Crickets2: "media/effects/crickets2.mp3",
-    Cupboard: "media/effects/hard-click.mp3"
+    Cupboard: "media/effects/soft-click.mp3",
+    Switch: "media/effects/soft-click.mp3"
 };
 
 module.exports.play = function(res, vol)

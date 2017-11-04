@@ -103,8 +103,22 @@ PlayScreen.prototype.update = function(dt)
     return (this.updateCallbacks.length > 0);
 }
 
-PlayScreen.prototype.addUpdate = function(callback)
+PlayScreen.prototype.addUpdate = function()
 {
+    let callbacks = Array.prototype.slice.call(arguments);
+    // Assemble the callback functions into a single chained function. If
+    // a function returns true it is called again on the next update. 
+    // When it returns false it's removed from the chain, and the next
+    // function in sequence is called on the next update.
+    let callback = function(dt) 
+    {
+        if (callbacks.length === 0) return false;
+        if (!callbacks[0](dt)) {
+            callbacks.shift();
+            return !!callbacks;
+        }
+        return true;
+    }
     this.updateCallbacks.push(callback);
     if (this.updateCallbacks.length === 1) this.redraw();
 }
@@ -147,7 +161,7 @@ PlayScreen.prototype.changeScene = function(name, args)
 	this.pause();
 	this.cutScene = true;
 	fadeout.start(this.stage);
-        this.addUpdate(Utils.chainUpdates(
+        this.addUpdate(
             (dt) => {
 	        if (!fadeout.update(dt)) 
 	        {
@@ -166,7 +180,7 @@ PlayScreen.prototype.changeScene = function(name, args)
 		}
 		return true;
             }
-	));
+	);
     }
 }
 

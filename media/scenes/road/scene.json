@@ -23,8 +23,13 @@
             ]
         },
         {
-            "name": "character",
+            "name": "foreground2",
             "sprites": [
+                {
+                    "name": "player",
+                    "x": 1,
+                    "y": 6
+                },
                 {
                     "name": "cave",
                     "x": 82,

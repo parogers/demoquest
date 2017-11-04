@@ -32,7 +32,8 @@ module.exports.Effects = {
     DoorClosing: "media/effects/door-closing.mp3",
     Crickets: "media/effects/crickets.mp3",
     Crickets2: "media/effects/crickets2.mp3",
-    Cupboard: "media/effects/hard-click.mp3"
+    Cupboard: "media/effects/soft-click.mp3",
+    Switch: "media/effects/soft-click.mp3"
 };
 
 module.exports.play = function (res, vol) {
@@ -704,7 +705,7 @@ GameState.prototype._startGame = function () {
    });
    // Now change to the opening scene
    //this.screen.changeScene("closet", {cameraX: 0});
-   this.screen.changeScene("cave");
+   this.screen.changeScene("intro");
 };
 
 module.exports = GameState;
@@ -1293,8 +1294,8 @@ LogicContext.prototype.startTimer = function (callback, delay) {
     return this.scene.timers.start(callback, delay);
 };
 
-LogicContext.prototype.addUpdate = function (callback) {
-    return this.screen.addUpdate(callback);
+LogicContext.prototype.addUpdate = function () {
+    return this.screen.addUpdate.apply(this.screen, arguments);
 };
 
 /***************/
@@ -1415,6 +1416,10 @@ var RoadLogic = function () {
         key: "handleClicked",
         value: function handleClicked(ctx) {
             switch (ctx.thing.name) {
+                case "player":
+                    ctx.showMessage("It's been a long road here.");
+                    break;
+
                 case "bush1":
                     ctx.state.bush1Moved = true;
                     ctx.thing.setVisible(false);
@@ -1444,9 +1449,7 @@ var RoadLogic = function () {
                     break;
 
                 case "house":
-                    if (ctx.state.hasRedKey) {
-                        ctx.screen.changeScene("building", { cameraX: -1 });
-                    } else if (ctx.state.checkedDoor) {
+                    if (ctx.state.checkedDoor) {
                         ctx.showMessage("Maybe I can find a key, or another way in.");
                     } else {
                         ctx.showMessage("There's no answer and the door's locked.");
@@ -1473,7 +1476,7 @@ var ClosetLogic = function () {
         key: "initScene",
         value: function initScene(ctx) {
             ctx.screen.cutScene = true;
-            ctx.addUpdate(Utils.chainUpdates(Utils.delayUpdate(1.5), function (dt) {
+            ctx.addUpdate(Utils.delayUpdate(1.5), function (dt) {
                 // Opening the crack
                 var sprite = ctx.getThing("crack").getSprite();
                 var stop = ctx.getThing("darkright").getSprite();
@@ -1499,7 +1502,7 @@ var ClosetLogic = function () {
                     return false;
                 }
                 return true;
-            }));
+            });
 
             ctx.screen.onCamera(function (ctx) {
                 if (ctx.scene.cameraX > 0.75) {
@@ -1539,8 +1542,16 @@ var DarkRoadLogic = function () {
         key: "handleClicked",
         value: function handleClicked(ctx) {
             switch (ctx.thing.name) {
+                case "player":
+                    ctx.showMessage("I'm glad I brought a light.");
+                    break;
+
                 case "cave":
                     ctx.showMessage("No. I don't want to go back down there.");
+                    break;
+
+                case "house":
+                    ctx.screen.changeScene("building", { cameraX: -1 });
                     break;
             }
         }
@@ -1612,7 +1623,7 @@ var CaveLogic = function () {
                     //}
                     //ctx.state.seenHole2 = true;
                     /*
-                    ctx.addUpdate(Utils.chainUpdates(
+                    ctx.addUpdate(
                         Utils.delayUpdate(0.5),
                         (dt) => {
                             ctx.getThing("hole2").setState("eyes");
@@ -1629,7 +1640,7 @@ var CaveLogic = function () {
                         (dt) => {
                             ctx.getThing("hole2").setState("empty");
                         }
-                    ));*/
+                    );*/
                     break;
             }
         }
@@ -1665,12 +1676,19 @@ var BuildingLogic = function () {
                     }
                     break;
 
+                case "bookshelf":
+                    ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
+                    break;
+
+                case "clothes":
+                    ctx.showMessage("Dirty sheets... this place is a mess.");
+                    break;
+
                 case "light":
                     if (ctx.thing.state === "off") {
                         ctx.thing.setState("on");
                         ctx.getThing("darkness").setVisible(false);
-
-                        ctx.addUpdate(Utils.chainUpdates(Utils.delayUpdate(0.4), function (dt) {
+                        ctx.addUpdate(Utils.delayUpdate(0.4), function (dt) {
                             var sprite = ctx.getThing("candle").getSprite();
                             sprite.y += 20 * dt;
                             if (sprite.y > 0) {
@@ -1678,7 +1696,7 @@ var BuildingLogic = function () {
                                 return false;
                             }
                             return true;
-                        }));
+                        });
                     } else {
                         ctx.showMessage("...I'd prefer the lights stay on.");
                     }
@@ -1860,7 +1878,20 @@ PlayScreen.prototype.update = function (dt) {
     return this.updateCallbacks.length > 0;
 };
 
-PlayScreen.prototype.addUpdate = function (callback) {
+PlayScreen.prototype.addUpdate = function () {
+    var callbacks = Array.prototype.slice.call(arguments);
+    // Assemble the callback functions into a single chained function. If
+    // a function returns true it is called again on the next update. 
+    // When it returns false it's removed from the chain, and the next
+    // function in sequence is called on the next update.
+    var callback = function callback(dt) {
+        if (callbacks.length === 0) return false;
+        if (!callbacks[0](dt)) {
+            callbacks.shift();
+            return !!callbacks;
+        }
+        return true;
+    };
     this.updateCallbacks.push(callback);
     if (this.updateCallbacks.length === 1) this.redraw();
 };
@@ -1903,7 +1934,7 @@ PlayScreen.prototype.changeScene = function (name, args) {
         this.pause();
         this.cutScene = true;
         fadeout.start(this.stage);
-        this.addUpdate(Utils.chainUpdates(function (dt) {
+        this.addUpdate(function (dt) {
             if (!fadeout.update(dt)) {
                 _this2.setScene(name);
                 _this2.scene.setCameraPos(cameraX, cameraY);
@@ -1918,7 +1949,7 @@ PlayScreen.prototype.changeScene = function (name, args) {
                 return false;
             }
             return true;
-        }));
+        });
     }
 };
 
@@ -2752,22 +2783,6 @@ function makeSolidColourTexture(colour, width, height) {
     return PIXI.Texture.fromCanvas(canvas);
 }
 
-/* Returns an function that chains together a series of update functions.
- * This should be used with 'PlayScreen.addUpdate'. A function should return 
- * false to signal it's completion, at which point the next function in line
- * will be called. */
-function chainUpdates() {
-    var callbacks = Array.prototype.slice.call(arguments);
-    return function (dt) {
-        if (callbacks.length === 0) return false;
-        if (!callbacks[0](dt)) {
-            callbacks.shift();
-            return !!callbacks;
-        }
-        return true;
-    };
-}
-
 function delayUpdate(delay) {
     return function (dt) {
         delay -= dt;
@@ -2829,7 +2844,6 @@ module.exports = {
     makeSolidColourTexture: makeSolidColourTexture,
     getTransparencyMask: getTransparencyMask,
     Fader: Fader,
-    chainUpdates: chainUpdates,
     delayUpdate: delayUpdate
 };
 
