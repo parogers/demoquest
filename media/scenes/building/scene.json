@@ -9,12 +9,39 @@
             "sprites": []
         },
         {
-            "name": "outside",
-            "sprites": []
+            "name": "terrain",
+            "sprites": [
+                {
+                    "name": "monster_0",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "monster_1",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "outside",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
         },
         {
             "name": "incloset",
-            "sprites": []
+            "sprites": [
+                {
+                    "name": "closet_light",
+                    "x": 132,
+                    "y": 0
+                },
+                {
+                    "name": "closet_dark",
+                    "x": 132,
+                    "y": 0
+                }
+            ]
         },
         {
             "name": "wall",
@@ -31,14 +58,14 @@
                 },
                 {
                     "name": "bookshelf",
-                    "x": 0,
-                    "y": 0
-                }
-            ]
-        },
-        {
-            "name": "boxes",
-            "sprites": [
+                    "x": 45,
+                    "y": 9
+                },
+                {
+                    "name": "clock",
+                    "x": 68,
+                    "y": 4
+                },
                 {
                     "name": "clothes",
                     "x": 86,
@@ -55,12 +82,12 @@
                     "y": 5
                 },
                 {
-                    "name": "closet_open",
+                    "name": "cdoor_open",
                     "x": 137,
                     "y": 5
                 },
                 {
-                    "name": "closet_closed",
+                    "name": "cdoor_closed",
                     "x": 137,
                     "y": 5
                 }
@@ -70,12 +97,12 @@
             "name": "candlelayer",
             "sprites": [
                 {
-                    "name": "candle",
+                    "name": "darkness",
                     "x": 0,
                     "y": 0
                 },
                 {
-                    "name": "darkness",
+                    "name": "candle",
                     "x": 0,
                     "y": 0
                 }

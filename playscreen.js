@@ -94,41 +94,48 @@ function PlayScreen(logic, dataList, width, height)
  * after this one, or false otherwise. */
 PlayScreen.prototype.update = function(dt)
 {
-    var lst = [];
+    let lst = [];
+    let redraw = false;
     for (var callback of this.updateCallbacks) {
-	if (callback(dt)) lst.push(callback);
+	let ret = callback(dt);
+	if (ret === true) redraw = true;
+	if (ret !== false) {
+	    lst.push(callback);
+	}
     }
     this.updateCallbacks = lst;
     // Request more redraws while there is stuff to animate (via callbacks)
-    return (this.updateCallbacks.length > 0);
+    //this.redraw()
+    //return redraw;
+    return this.updateCallbacks.length > 0;
 }
 
+/* Register an function to be called for every frame of animation. The handler
+ * can return a code to indicate what it needs:
+ * 
+ * true => request a redraw of the screen
+ * false => unregister the update handler
+ * undefined => keep calling the handler, but a redraw is not requested
+ * 
+ */
 PlayScreen.prototype.addUpdate = function()
 {
     let callbacks = Array.prototype.slice.call(arguments);
-    // Assemble the callback functions into a single chained function. If
-    // a function returns true it is called again on the next update. 
-    // When it returns false it's removed from the chain, and the next
-    // function in sequence is called on the next update.
     let callback = function(dt) 
     {
         if (callbacks.length === 0) return false;
-        if (!callbacks[0](dt)) {
+        let ret = callbacks[0](dt);
+	if (ret === false) {
             callbacks.shift();
-            return !!callbacks;
-        }
-        return true;
+	}
+	return callbacks.length > 0;
     }
     this.updateCallbacks.push(callback);
-    if (this.updateCallbacks.length === 1) this.redraw();
+    this.redraw();
 }
 
-PlayScreen.prototype.changeScene = function(name, args)
+PlayScreen.prototype.setScene = function(name, args)
 {
-    if (!this.dataList.hasOwnProperty(name)) {
-	throw Error("No such scene: " + name);
-    }
-
     // Default camera position for a new scene
     let cameraX = -1;
     let cameraY = 0;
@@ -138,54 +145,6 @@ PlayScreen.prototype.changeScene = function(name, args)
         if (args.cameraY !== undefined) cameraY = args.cameraY;
     }
 
-    if (this.scene === null) {
-	// Slow fade into the starting scene
-	this.setScene(name);
-	this.pause();
-        this.scene.setCameraPos(cameraX, cameraY)
-	var fader = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 2);
-	fader.start(this.stage);
-	this.addUpdate(dt => {
-	    if (!fader.update(dt)) {
-		this.resume();
-		return false;
-	    }
-	    return true;
-	});
-	
-    } else {
-	// Fade out, switch scenes, then fade back in
-	var fadeout = new Utils.Fader(this.viewWidth, this.viewHeight, 1, 1);
-	var fadein = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 1);
-	this.stage.removeChild(fadeout.sprite);
-	this.pause();
-	this.cutScene = true;
-	fadeout.start(this.stage);
-        this.addUpdate(
-            (dt) => {
-	        if (!fadeout.update(dt)) 
-	        {
-		    this.setScene(name);
-                    this.scene.setCameraPos(cameraX, cameraY)
-		    fadein.start(this.stage);
-                    return false;
-                }
-                return true
-            },
-            (dt) => {
-		if (!fadein.update(dt)) {
-		    this.resume();
-		    this.cutScene = false;
-		    return false;
-		}
-		return true;
-            }
-	);
-    }
-}
-
-PlayScreen.prototype.setScene = function(name)
-{
     if (!this.dataList[name]) {
 	throw Error("No such scene: " + name);
     }
@@ -207,12 +166,12 @@ PlayScreen.prototype.setScene = function(name)
     this.sceneStage.scale.set(this.getDisplayScale());
     this.sceneStage.x = this.viewWidth/2;
     this.sceneStage.y = this.viewHeight/2;
-
     let ctx = this.logic.makeContext({
         screen: this, 
         scene: this.scene
     })
     this.logic.enterScene(ctx);
+    this.scene.setCameraPos(cameraX, cameraY)
 }
 
 PlayScreen.prototype.setCameraPos = function(xpos, ypos)

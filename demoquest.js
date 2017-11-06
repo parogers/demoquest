@@ -644,6 +644,8 @@ GameState.prototype.setupInputHandlers = function (m) {
 
 /* Schedule a redraw of the game screen */
 GameState.prototype.redraw = function () {
+   this.manualRedraw = true;
+   this.lastRenderTime = null;
    requestAnimationFrame(this.staticRenderFrame);
 };
 
@@ -672,9 +674,13 @@ GameState.prototype.renderFrame = function () {
    if (!this.screen.stage) {
       throw Error("screen has no stage defined: " + this.screen.name);
    }
-   Render.getRenderer().render(this.screen.stage);
-
-   if (redraw) this.redraw();else this.lastRenderTime = null;
+   if (redraw || this.manualRedraw) {
+      Render.getRenderer().render(this.screen.stage);
+   }
+   if (redraw) {
+      requestAnimationFrame(this.staticRenderFrame);
+   }
+   this.manualRedraw = false;
 };
 
 GameState.prototype.handleResize = function () {
@@ -705,7 +711,9 @@ GameState.prototype._startGame = function () {
    });
    // Now change to the opening scene
    //this.screen.changeScene("closet", {cameraX: 0});
-   this.screen.changeScene("intro");
+   this.logic.startGame(this.logic.makeContext({
+      screen: this.screen
+   }));
 };
 
 module.exports = GameState;
@@ -1172,14 +1180,14 @@ var Audio = require("./audio");
 /*********/
 
 var State = function State() {
-    _classCallCheck(this, State);
+				_classCallCheck(this, State);
 
-    this.checkedDoor = false;
-    this.hasRedKey = false;
-    this.bush1Moved = false;
-    this.bush2Moved = false;
-    this.seenHole1 = false;
-    this.seenHole2 = false;
+				this.checkedDoor = false;
+				this.hasRedKey = false;
+				this.bush1Moved = false;
+				this.bush2Moved = false;
+				this.seenHole1 = false;
+				this.seenHole2 = false;
 };
 
 /*********/
@@ -1187,69 +1195,75 @@ var State = function State() {
 /*********/
 
 var Logic = function () {
-    function Logic() {
-        _classCallCheck(this, Logic);
+				function Logic() {
+								_classCallCheck(this, Logic);
 
-        // Scene specific logic stored by name
-        this.state = new State();
-        this.sceneLogic = {
-            "intro": new IntroLogic(),
-            "road": new RoadLogic(),
-            "closet": new ClosetLogic(),
-            "building": new BuildingLogic(),
-            "cave": new CaveLogic(),
-            "darkroad": new DarkRoadLogic()
-        };
-    }
+								// Scene specific logic stored by name
+								this.state = new State();
+								this.sceneLogic = {
+												"intro": new IntroLogic(),
+												"road": new RoadLogic(),
+												"closet": new ClosetLogic(),
+												"building": new BuildingLogic(),
+												"cave": new CaveLogic(),
+												"darkroad": new DarkRoadLogic()
+								};
+				}
 
-    _createClass(Logic, [{
-        key: "makeContext",
-        value: function makeContext(args) {
-            return new LogicContext(this.state, args);
-        }
-    }, {
-        key: "initScene",
-        value: function initScene(ctx) {
-            this._handleLogicEvent("initScene", ctx);
-        }
-    }, {
-        key: "uninitScene",
-        value: function uninitScene(ctx) {
-            this._handleLogicEvent("uninitScene", ctx);
-        }
-    }, {
-        key: "enterScene",
-        value: function enterScene(ctx) {
-            this._handleLogicEvent("enterScene", ctx);
-        }
-    }, {
-        key: "leaveScene",
-        value: function leaveScene(ctx) {
-            this._handleLogicEvent("leaveScene", ctx);
-        }
-    }, {
-        key: "handleClicked",
-        value: function handleClicked(ctx) {
-            this._handleLogicEvent("handleClicked", ctx);
-        }
-    }, {
-        key: "_handleLogicEvent",
-        value: function _handleLogicEvent(event, ctx) {
-            var logic = this.sceneLogic[ctx.scene.name];
-            if (logic && logic[event]) logic[event](ctx);
-        }
-    }, {
-        key: "handleDragStart",
-        value: function handleDragStart(ctx) {}
-    }, {
-        key: "handleDrag",
-        value: function handleDrag(ctx) {}
-    }, {
-        key: "handleDragStop",
-        value: function handleDragStop(ctx) {}
-    }]);
+				_createClass(Logic, [{
+								key: "startGame",
+								value: function startGame(ctx) {
+												ctx.changeScene("intro");
+												//ctx.screen.redraw();
+								}
+				}, {
+								key: "makeContext",
+								value: function makeContext(args) {
+												return new LogicContext(this.state, args);
+								}
+				}, {
+								key: "initScene",
+								value: function initScene(ctx) {
+												this._handleLogicEvent("initScene", ctx);
+								}
+				}, {
+								key: "uninitScene",
+								value: function uninitScene(ctx) {
+												this._handleLogicEvent("uninitScene", ctx);
+								}
+				}, {
+								key: "enterScene",
+								value: function enterScene(ctx) {
+												this._handleLogicEvent("enterScene", ctx);
+								}
+				}, {
+								key: "leaveScene",
+								value: function leaveScene(ctx) {
+												this._handleLogicEvent("leaveScene", ctx);
+								}
+				}, {
+								key: "handleClicked",
+								value: function handleClicked(ctx) {
+												this._handleLogicEvent("handleClicked", ctx);
+								}
+				}, {
+								key: "_handleLogicEvent",
+								value: function _handleLogicEvent(event, ctx) {
+												var logic = this.sceneLogic[ctx.scene.name];
+												if (logic && logic[event]) logic[event](ctx);
+								}
+				}, {
+								key: "handleDragStart",
+								value: function handleDragStart(ctx) {}
+				}, {
+								key: "handleDrag",
+								value: function handleDrag(ctx) {}
+				}, {
+								key: "handleDragStop",
+								value: function handleDragStop(ctx) {}
+				}]);
 
-    return Logic;
+				return Logic;
 }();
 
 /****************/
@@ -1257,45 +1271,87 @@ var Logic = function () {
 /****************/
 
 function LogicContext(state, args) {
-    this.state = state;
-    this.screen = null;
-    this.scene = null;
-    this.thing = null;
-    this.sprite = null;
-    if (args) {
-        this.screen = args.screen;
-        this.scene = args.scene;
-        this.thing = args.thing;
-        this.sprite = args.sprite;
-    }
+				this.state = state;
+				this.screen = null;
+				this.scene = null;
+				this.thing = null;
+				this.sprite = null;
+				if (args) {
+								this.screen = args.screen;
+								this.scene = args.scene;
+								this.thing = args.thing;
+								this.sprite = args.sprite;
+				}
 }
 
 LogicContext.prototype.getLayer = function (name) {
-    var layer = this.scene.getLayer(name);
-    if (!layer) {
-        console.log("ERROR: can't find layer: " + name);
-    }
-    return layer;
+				var layer = this.scene.getLayer(name);
+				if (!layer) {
+								console.log("ERROR: can't find layer: " + name);
+				}
+				return layer;
 };
 
 LogicContext.prototype.getThing = function (name) {
-    var thing = this.scene.getThing(name);
-    if (!thing) {
-        console.log("ERROR: can't find thing: " + name);
-    }
-    return thing;
+				var thing = this.scene.getThing(name);
+				if (!thing) {
+								console.log("ERROR: can't find thing: " + name);
+				}
+				return thing;
 };
 
 LogicContext.prototype.showMessage = function (msg, options) {
-    this.screen.showMessage(msg, options);
+				this.screen.showMessage(msg, options);
 };
 
 LogicContext.prototype.startTimer = function (callback, delay) {
-    return this.scene.timers.start(callback, delay);
+				return this.scene.timers.start(callback, delay);
 };
 
 LogicContext.prototype.addUpdate = function () {
-    return this.screen.addUpdate.apply(this.screen, arguments);
+				return this.screen.addUpdate.apply(this.screen, arguments);
+};
+
+LogicContext.prototype.changeScene = function (name, args) {
+				var _this = this;
+
+				if (this.scene === null) {
+								// Slow fade into the starting scene
+								this.screen.setScene(name, args);
+								this.screen.pause();
+								var fader = new Utils.Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 2 });
+								fader.start(this.screen.stage);
+								this.addUpdate(function (dt) {
+												if (!fader.update(dt)) {
+																_this.screen.resume();
+																return false;
+												}
+												return true;
+								});
+				} else {
+								// Fade out, switch scenes, then fade back in
+								var fadeout = new Utils.Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: 1, duration: 1 });
+								var fadein = new Utils.Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 1 });
+								this.screen.stage.removeChild(fadeout.sprite);
+								this.screen.pause();
+								this.screen.cutScene = true;
+								fadeout.start(this.screen.stage);
+								this.addUpdate(function (dt) {
+												if (!fadeout.update(dt)) {
+																_this.screen.setScene(name, args);
+																fadein.start(_this.screen.stage);
+																return false;
+												}
+												return true;
+								}, function (dt) {
+												if (!fadein.update(dt)) {
+																_this.screen.resume();
+																_this.screen.cutScene = false;
+																return false;
+												}
+												return true;
+								});
+				}
 };
 
 /***************/
@@ -1305,324 +1361,324 @@ LogicContext.prototype.addUpdate = function () {
 /* Logic classes for the various scenes in the game */
 
 var IntroLogic = function () {
-    function IntroLogic() {
-        _classCallCheck(this, IntroLogic);
-    }
+				function IntroLogic() {
+								_classCallCheck(this, IntroLogic);
+				}
 
-    _createClass(IntroLogic, [{
-        key: "initScene",
-        value: function initScene(ctx) {
-            ctx.getThing("door").setState("closed");
-            ctx.getThing("cupboard").setState("closed");
+				_createClass(IntroLogic, [{
+								key: "initScene",
+								value: function initScene(ctx) {
+												ctx.getThing("door").setState("closed");
+												ctx.getThing("cupboard").setState("closed");
 
-            ctx.startTimer(function (ctx) {
-                //ctx.getThing("door").setState("open");
-                //ctx.showMessage("The door opens!");
-                console.log("Tick");
-            }, 3000);
+												ctx.startTimer(function (ctx) {
+																//ctx.getThing("door").setState("open");
+																//ctx.showMessage("The door opens!");
+																console.log("Tick");
+												}, 3000);
 
-            ctx.startTimer(function () {
-                if (Math.random() < 0.4) Audio.play(Audio.Effects.Crickets, 0.1);
-                return true;
-            }, 700);
+												ctx.startTimer(function () {
+																if (Math.random() < 0.4) Audio.play(Audio.Effects.Crickets, 0.1);
+																return true;
+												}, 700);
 
-            return;
+												return;
 
-            var sprite = ctx.getThing("darkness").setVisible(false);
-            sprite.alpha = 0;
+												var sprite = ctx.getThing("darkness").setVisible(false);
+												sprite.alpha = 0;
 
-            var timer = ctx.startTimer(1000, function (ctx) {
-                sprite.alpha = Math.max(sprite.alpha + 0.05, 1);
-                if (sprite.alpha >= 1) {}
-            });
+												var timer = ctx.startTimer(1000, function (ctx) {
+																sprite.alpha = Math.max(sprite.alpha + 0.05, 1);
+																if (sprite.alpha >= 1) {}
+												});
 
-            timer.cancel();
-            timer.pause();
-            timer.resume();
-        }
-    }, {
-        key: "leaveScene",
-        value: function leaveScene(ctx) {}
-    }, {
-        key: "handleClicked",
-        value: function handleClicked(ctx) {
-            switch (ctx.thing.name) {
-                case "candle":
-                    console.log("CANDLE");
-                    ctx.showMessage("A candle for evening work. I won't need it.");
-                    ctx.showMessage("Or maybe I will!");
-                    break;
+												timer.cancel();
+												timer.pause();
+												timer.resume();
+								}
+				}, {
+								key: "leaveScene",
+								value: function leaveScene(ctx) {}
+				}, {
+								key: "handleClicked",
+								value: function handleClicked(ctx) {
+												switch (ctx.thing.name) {
+																case "candle":
+																				console.log("CANDLE");
+																				ctx.showMessage("A candle for evening work. I won't need it.");
+																				ctx.showMessage("Or maybe I will!");
+																				break;
 
-                case "cupboard":
-                    if (ctx.thing.state === "open") ctx.thing.setState("closed");else ctx.thing.setState("open");
+																case "cupboard":
+																				if (ctx.thing.state === "open") ctx.thing.setState("closed");else ctx.thing.setState("open");
 
-                    Audio.play(Audio.Effects.Cupboard, 0.4);
-                    break;
+																				Audio.play(Audio.Effects.Cupboard, 0.4);
+																				break;
 
-                case "door":
-                    if (ctx.thing.state === "open") {
-                        ctx.thing.setState("closed");
-                        Audio.play(Audio.Effects.DoorClosing, 0.4);
-                    } else {
-                        ctx.thing.setState("open");
-                        Audio.play(Audio.Effects.DoorOpening, 0.25);
-                    }
-                    break;
+																case "door":
+																				if (ctx.thing.state === "open") {
+																								ctx.thing.setState("closed");
+																								Audio.play(Audio.Effects.DoorClosing, 0.4);
+																				} else {
+																								ctx.thing.setState("open");
+																								Audio.play(Audio.Effects.DoorOpening, 0.25);
+																				}
+																				break;
 
-                case "outside":
-                    ctx.screen.changeScene("road");
-                    break;
-            }
-        }
-    }]);
+																case "outside":
+																				ctx.changeScene("road");
+																				break;
+												}
+								}
+				}]);
 
-    return IntroLogic;
+				return IntroLogic;
 }();
 
 var RoadLogic = function () {
-    function RoadLogic() {
-        _classCallCheck(this, RoadLogic);
-    }
+				function RoadLogic() {
+								_classCallCheck(this, RoadLogic);
+				}
 
-    _createClass(RoadLogic, [{
-        key: "initScene",
-        value: function initScene(ctx) {
-            var _this = this;
+				_createClass(RoadLogic, [{
+								key: "initScene",
+								value: function initScene(ctx) {
+												var _this2 = this;
 
-            ctx.getThing("bush1").setVisible(!ctx.state.bush1Moved);
-            ctx.getThing("bush2").setVisible(!ctx.state.bush2Moved);
+												ctx.getThing("bush1").setVisible(!ctx.state.bush1Moved);
+												ctx.getThing("bush2").setVisible(!ctx.state.bush2Moved);
 
-            this.updateCrow(ctx);
-            this.onCameraCallback = ctx.screen.onCamera(function (ctx) {
-                _this.updateCrow(ctx);
-            });
-        }
-    }, {
-        key: "leaveScene",
-        value: function leaveScene(ctx) {
-            this.onCameraCallback.remove();
-        }
-    }, {
-        key: "updateCrow",
-        value: function updateCrow(ctx) {
-            if (ctx.scene.cameraX > -0.1) {
-                this.crowFacing = "right";
-            } else if (ctx.scene.cameraX < -0.2) {
-                this.crowFacing = "left";
-            }
-            ctx.getThing("crow").setState(this.crowFacing);
-        }
-    }, {
-        key: "handleClicked",
-        value: function handleClicked(ctx) {
-            switch (ctx.thing.name) {
-                case "player":
-                    ctx.showMessage("It's been a long road here.");
-                    break;
+												this.updateCrow(ctx);
+												this.onCameraCallback = ctx.screen.onCamera(function (ctx) {
+																_this2.updateCrow(ctx);
+												});
+								}
+				}, {
+								key: "leaveScene",
+								value: function leaveScene(ctx) {
+												this.onCameraCallback.remove();
+								}
+				}, {
+								key: "updateCrow",
+								value: function updateCrow(ctx) {
+												if (ctx.scene.cameraX > -0.1) {
+																this.crowFacing = "right";
+												} else if (ctx.scene.cameraX < -0.2) {
+																this.crowFacing = "left";
+												}
+												ctx.getThing("crow").setState(this.crowFacing);
+								}
+				}, {
+								key: "handleClicked",
+								value: function handleClicked(ctx) {
+												switch (ctx.thing.name) {
+																case "player":
+																				ctx.showMessage("It's been a long road here.");
+																				break;
 
-                case "bush1":
-                    ctx.state.bush1Moved = true;
-                    ctx.thing.setVisible(false);
-                    if (ctx.state.bush2Moved) {
-                        ctx.showMessage("There's a cave behind these bushes!");
-                    } else {
-                        ctx.showMessage("I've cleared away some brush. There's something behind it!");
-                    }
-                    break;
+																case "bush1":
+																				ctx.state.bush1Moved = true;
+																				ctx.thing.setVisible(false);
+																				if (ctx.state.bush2Moved) {
+																								ctx.showMessage("There's a cave behind these bushes!");
+																				} else {
+																								ctx.showMessage("I've cleared away some brush. There's something behind it!");
+																				}
+																				break;
 
-                case "bush2":
-                    ctx.state.bush2Moved = true;
-                    ctx.thing.setVisible(false);
-                    if (ctx.state.bush1Moved) {
-                        ctx.showMessage("There's a cave behind these bushes!");
-                    } else {
-                        ctx.showMessage("I've cleared away some brush. There's something behind it!");
-                    }
-                    break;
+																case "bush2":
+																				ctx.state.bush2Moved = true;
+																				ctx.thing.setVisible(false);
+																				if (ctx.state.bush1Moved) {
+																								ctx.showMessage("There's a cave behind these bushes!");
+																				} else {
+																								ctx.showMessage("I've cleared away some brush. There's something behind it!");
+																				}
+																				break;
 
-                case "cave":
-                    if (!ctx.state.bush1Moved || !ctx.state.bush2Moved) {
-                        ctx.showMessage("I must clear the way first.");
-                    } else {
-                        ctx.screen.changeScene("cave");
-                    }
-                    break;
+																case "cave":
+																				if (!ctx.state.bush1Moved || !ctx.state.bush2Moved) {
+																								ctx.showMessage("I must clear the way first.");
+																				} else {
+																								ctx.changeScene("cave");
+																				}
+																				break;
 
-                case "house":
-                    if (ctx.state.checkedDoor) {
-                        ctx.showMessage("Maybe I can find a key, or another way in.");
-                    } else {
-                        ctx.showMessage("There's no answer and the door's locked.");
-                        ctx.state.checkedDoor = true;
-                    }
-                    break;
+																case "house":
+																				if (ctx.state.checkedDoor) {
+																								ctx.showMessage("Maybe I can find a key, or another way in.");
+																				} else {
+																								ctx.showMessage("There's no answer and the door's locked.");
+																								ctx.state.checkedDoor = true;
+																				}
+																				break;
 
-                case "crow":
-                    ctx.showMessage("A crow is watching.");
-                    break;
-            }
-        }
-    }]);
+																case "crow":
+																				ctx.showMessage("A crow is watching.");
+																				break;
+												}
+								}
+				}]);
 
-    return RoadLogic;
+				return RoadLogic;
 }();
 
 var ClosetLogic = function () {
-    function ClosetLogic() {
-        _classCallCheck(this, ClosetLogic);
-    }
+				function ClosetLogic() {
+								_classCallCheck(this, ClosetLogic);
+				}
 
-    _createClass(ClosetLogic, [{
-        key: "initScene",
-        value: function initScene(ctx) {
-            ctx.screen.cutScene = true;
-            ctx.addUpdate(Utils.delayUpdate(1.5), function (dt) {
-                // Opening the crack
-                var sprite = ctx.getThing("crack").getSprite();
-                var stop = ctx.getThing("darkright").getSprite();
-                var thing = ctx.getThing("crack");
-                //this.offset += dt;
-                //sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
-                sprite.x += 10 * dt;
-                if (sprite.x > stop.x) {
-                    sprite.visible = false;
-                    return false;
-                }
-                return true;
-            }, function (dt) {
-                var sprite1 = ctx.getThing("darkright").getSprite();
-                var sprite2 = ctx.getThing("darkleft").getSprite();
-                sprite1.alpha -= 0.25 * dt;
-                sprite2.alpha -= 0.25 * dt;
-                if (sprite1.alpha < 0) {
-                    sprite1.visible = false;
-                    sprite2.visible = false;
-                    ctx.showMessage("Am I safe here???");
-                    ctx.screen.cutScene = false;
-                    return false;
-                }
-                return true;
-            });
+				_createClass(ClosetLogic, [{
+								key: "initScene",
+								value: function initScene(ctx) {
+												ctx.screen.cutScene = true;
+												ctx.addUpdate(Utils.delayUpdate(1.5), function (dt) {
+																// Opening the crack
+																var sprite = ctx.getThing("crack").getSprite();
+																var stop = ctx.getThing("darkright").getSprite();
+																var thing = ctx.getThing("crack");
+																//this.offset += dt;
+																//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
+																sprite.x += 10 * dt;
+																if (sprite.x > stop.x) {
+																				sprite.visible = false;
+																				return false;
+																}
+																return true;
+												}, function (dt) {
+																var sprite1 = ctx.getThing("darkright").getSprite();
+																var sprite2 = ctx.getThing("darkleft").getSprite();
+																sprite1.alpha -= 0.25 * dt;
+																sprite2.alpha -= 0.25 * dt;
+																if (sprite1.alpha < 0) {
+																				sprite1.visible = false;
+																				sprite2.visible = false;
+																				ctx.showMessage("Am I safe here???");
+																				ctx.screen.cutScene = false;
+																				return false;
+																}
+																return true;
+												});
 
-            ctx.screen.onCamera(function (ctx) {
-                if (ctx.scene.cameraX > 0.75) {
-                    console.log("CAMERA: " + ctx.scene.cameraX);
-                }
-            });
-        }
-    }, {
-        key: "leaveScene",
-        value: function leaveScene(ctx) {
-            this.onCameraCallback.remove();
-        }
-    }, {
-        key: "handleClicked",
-        value: function handleClicked(ctx) {
-            switch (ctx.thing.name) {}
-        }
-    }]);
+												ctx.screen.onCamera(function (ctx) {
+																if (ctx.scene.cameraX > 0.75) {
+																				console.log("CAMERA: " + ctx.scene.cameraX);
+																}
+												});
+								}
+				}, {
+								key: "leaveScene",
+								value: function leaveScene(ctx) {
+												this.onCameraCallback.remove();
+								}
+				}, {
+								key: "handleClicked",
+								value: function handleClicked(ctx) {
+												switch (ctx.thing.name) {}
+								}
+				}]);
 
-    return ClosetLogic;
+				return ClosetLogic;
 }();
 
 var DarkRoadLogic = function () {
-    function DarkRoadLogic() {
-        _classCallCheck(this, DarkRoadLogic);
-    }
+				function DarkRoadLogic() {
+								_classCallCheck(this, DarkRoadLogic);
+				}
 
-    _createClass(DarkRoadLogic, [{
-        key: "initScene",
-        value: function initScene(ctx) {}
-    }, {
-        key: "enterScene",
-        value: function enterScene(ctx) {
-            ctx.showMessage("Sunset. How long was I down there?");
-        }
-    }, {
-        key: "handleClicked",
-        value: function handleClicked(ctx) {
-            switch (ctx.thing.name) {
-                case "player":
-                    ctx.showMessage("I'm glad I brought a light.");
-                    break;
+				_createClass(DarkRoadLogic, [{
+								key: "initScene",
+								value: function initScene(ctx) {}
+				}, {
+								key: "enterScene",
+								value: function enterScene(ctx) {
+												ctx.showMessage("Sunset. How long was I down there?");
+								}
+				}, {
+								key: "handleClicked",
+								value: function handleClicked(ctx) {
+												switch (ctx.thing.name) {
+																case "player":
+																				ctx.showMessage("I'm glad I brought a light.");
+																				break;
 
-                case "cave":
-                    ctx.showMessage("No. I don't want to go back down there.");
-                    break;
+																case "cave":
+																				ctx.showMessage("No. I don't want to go back down there.");
+																				break;
 
-                case "house":
-                    ctx.screen.changeScene("building", { cameraX: -1 });
-                    break;
-            }
-        }
-    }]);
+																case "house":
+																				ctx.changeScene("building", { cameraX: -1 });
+																				break;
+												}
+								}
+				}]);
 
-    return DarkRoadLogic;
+				return DarkRoadLogic;
 }();
 
 var CaveLogic = function () {
-    function CaveLogic() {
-        _classCallCheck(this, CaveLogic);
-    }
+				function CaveLogic() {
+								_classCallCheck(this, CaveLogic);
+				}
 
-    _createClass(CaveLogic, [{
-        key: "initScene",
-        value: function initScene(ctx) {
-            ctx.startTimer(function () {
-                Audio.play(Audio.Effects.Drip, 0.5);
-                return true;
-            }, 5000);
-            ctx.getThing("hole2").setState("empty");
-            ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
-            ctx.getThing("shape").getSprite().x = -24;
-        }
-    }, {
-        key: "handleClicked",
-        value: function handleClicked(ctx) {
-            switch (ctx.thing.name) {
-                case "ladder":
-                    if (ctx.state.hasRedKey) {
-                        ctx.screen.changeScene("darkroad", { cameraX: 1 });
-                    } else {
-                        ctx.screen.changeScene("road", { cameraX: 1 });
-                    }
-                    break;
+				_createClass(CaveLogic, [{
+								key: "initScene",
+								value: function initScene(ctx) {
+												ctx.startTimer(function () {
+																Audio.play(Audio.Effects.Drip, 0.5);
+																return true;
+												}, 5000);
+												ctx.getThing("hole2").setState("empty");
+												ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
+												ctx.getThing("shape").getSprite().x = -24;
+								}
+				}, {
+								key: "handleClicked",
+								value: function handleClicked(ctx) {
+												switch (ctx.thing.name) {
+																case "ladder":
+																				if (ctx.state.hasRedKey) {
+																								ctx.changeScene("darkroad", { cameraX: 1 });
+																				} else {
+																								ctx.changeScene("road", { cameraX: 1 });
+																				}
+																				break;
 
-                case "key":
-                    ctx.getThing("key").setVisible(false);
-                    ctx.state.hasRedKey = true;
-                    ctx.showMessage("A small key. Odd it was left here.");
-                    break;
+																case "key":
+																				ctx.getThing("key").setVisible(false);
+																				ctx.state.hasRedKey = true;
+																				ctx.showMessage("A small key. Odd it was left here.");
+																				break;
 
-                case "hole1":
-                    if (ctx.state.seenHole1) {
-                        ctx.showMessage("There is only darkness.");
-                        break;
-                    }
-                    ctx.state.seenHole1 = true;
-                    ctx.getThing("hole1").setVisible(false);
-                    ctx.startTimer(function () {
-                        Audio.play(Audio.Effects.ShapeSound);
-                    }, 250);
-                    ctx.addUpdate(function (dt) {
-                        var sprite = ctx.getThing("shape").getSprite();
-                        sprite.x += 40 * dt;
-                        if (sprite.x > 16) {
-                            ctx.getThing("hole1").setVisible(true);
-                            ctx.showMessage("AHHH! What even was that?");
-                            return false;
-                        }
-                        return true;
-                    });
-                    break;
+																case "hole1":
+																				if (ctx.state.seenHole1) {
+																								ctx.showMessage("There is only darkness.");
+																								break;
+																				}
+																				ctx.state.seenHole1 = true;
+																				ctx.getThing("hole1").setVisible(false);
+																				ctx.startTimer(function () {
+																								Audio.play(Audio.Effects.ShapeSound);
+																				}, 250);
+																				ctx.addUpdate(function (dt) {
+																								var sprite = ctx.getThing("shape").getSprite();
+																								sprite.x += 40 * dt;
+																								if (sprite.x > 16) {
+																												ctx.getThing("hole1").setVisible(true);
+																												ctx.showMessage("AHHH! What even was that?");
+																												return false;
+																								}
+																								return true;
+																				});
+																				break;
 
-                case "hole2":
-                    //if (ctx.state.seenHole2) {
-                    ctx.showMessage("There is only darkness.");
-                    break;
-                    //}
-                    //ctx.state.seenHole2 = true;
-                    /*
+																case "hole2":
+																				//if (ctx.state.seenHole2) {
+																				ctx.showMessage("There is only darkness.");
+																				break;
+																				//}
+																				//ctx.state.seenHole2 = true;
+																				/*
                     ctx.addUpdate(
                         Utils.delayUpdate(0.5),
                         (dt) => {
@@ -1641,77 +1697,126 @@ var CaveLogic = function () {
                             ctx.getThing("hole2").setState("empty");
                         }
                     );*/
-                    break;
-            }
-        }
-    }]);
+																				break;
+												}
+								}
+				}]);
 
-    return CaveLogic;
+				return CaveLogic;
 }();
 
 var BuildingLogic = function () {
-    function BuildingLogic() {
-        _classCallCheck(this, BuildingLogic);
-    }
+				function BuildingLogic() {
+								_classCallCheck(this, BuildingLogic);
+				}
 
-    _createClass(BuildingLogic, [{
-        key: "initScene",
-        value: function initScene(ctx) {
-            ctx.getThing("door").setState("open");
-            ctx.getThing("light").setState("off");
-            ctx.getThing("candle").invisibleToClicks = true;
-            ctx.getThing("darkness").invisibleToClicks = true;
-        }
-    }, {
-        key: "handleClicked",
-        value: function handleClicked(ctx) {
-            switch (ctx.thing.name) {
-                case "door":
-                    if (ctx.thing.state === "open") {
-                        ctx.thing.setState("closed");
-                        Audio.play(Audio.Effects.DoorClosing, 0.4);
-                    } else {
-                        ctx.thing.setState("open");
-                        Audio.play(Audio.Effects.DoorOpening, 0.25);
-                    }
-                    break;
+				_createClass(BuildingLogic, [{
+								key: "initScene",
+								value: function initScene(ctx) {
+												ctx.getThing("door").setState("open");
+												ctx.getThing("cdoor").setState("closed");
+												ctx.getThing("light").setState("off");
+												ctx.getThing("candle").invisibleToClicks = true;
+												ctx.getThing("darkness").invisibleToClicks = true;
+												ctx.getThing("closet").setState("dark");
+												ctx.getThing("monster").setState("0");
+								}
+				}, {
+								key: "enterScene",
+								value: function enterScene(ctx) {
+												var fps = 5;
+												var timer = 0;
+												var frame = 0;
+												ctx.addUpdate(function (dt) {
+																timer += dt;
+																//console.log("TIMER " + timer);
+																if (timer > 1.0 / fps) {
+																				frame = (frame + 1) % 2;
+																				timer = 0;
+																				ctx.getThing("monster").setState("" + frame);
+																				return true;
+																}
+																return undefined;
+												});
+								}
+				}, {
+								key: "handleClicked",
+								value: function handleClicked(ctx) {
+												switch (ctx.thing.name) {
+																case "door":
+																				if (ctx.thing.state === "open") {
+																								ctx.thing.setState("closed");
+																								Audio.play(Audio.Effects.DoorClosing, 0.4);
+																				} else {
+																								ctx.thing.setState("open");
+																								Audio.play(Audio.Effects.DoorOpening, 0.25);
+																				}
+																				break;
 
-                case "bookshelf":
-                    ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
-                    break;
+																case "cdoor":
+																				if (ctx.thing.state === "open") {
+																								ctx.thing.setState("closed");
+																								//Audio.play(Audio.Effects.DoorClosing, 0.4);
+																				} else {
+																								ctx.thing.setState("open");
+																								//Audio.play(Audio.Effects.DoorOpening, 0.25);
+																				}
+																				break;
 
-                case "clothes":
-                    ctx.showMessage("Dirty sheets... this place is a mess.");
-                    break;
+																case "closet":
+																				if (ctx.thing.state === "dark") {
+																								ctx.showMessage("Even with the lamp it's too dark to see anything in there.");
+																								ctx.showMessage("The blood... I need to find a light.");
+																				} else {
+																								ctx.showMessage("It's filled with clothing and junk. That's it. It's just a closet. Why the blood?");
+																				}
+																				break;
 
-                case "light":
-                    if (ctx.thing.state === "off") {
-                        ctx.thing.setState("on");
-                        ctx.getThing("darkness").setVisible(false);
-                        ctx.addUpdate(Utils.delayUpdate(0.4), function (dt) {
-                            var sprite = ctx.getThing("candle").getSprite();
-                            sprite.y += 20 * dt;
-                            if (sprite.y > 0) {
-                                ctx.getThing("candle").setVisible(false);
-                                return false;
-                            }
-                            return true;
-                        });
-                    } else {
-                        ctx.showMessage("...I'd prefer the lights stay on.");
-                    }
-                    break;
-            }
-        }
-    }]);
+																case "clock":
+																				ctx.showMessage("It probably stopped years ago.");
+																				break;
 
-    return BuildingLogic;
+																case "outside":
+																				ctx.showMessage("I should look around first.");
+																				break;
+
+																case "bookshelf":
+																				ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
+																				break;
+
+																case "clothes":
+																				ctx.showMessage("Dirty sheets... this place is a mess.");
+																				break;
+
+																case "light":
+																				if (ctx.thing.state === "off") {
+																								ctx.thing.setState("on");
+																								ctx.getThing("darkness").setVisible(false);
+																								ctx.getThing("closet").setState("light");
+																								ctx.addUpdate(Utils.delayUpdate(0.4), function (dt) {
+																												var sprite = ctx.getThing("candle").getSprite();
+																												sprite.y += 20 * dt;
+																												if (sprite.y > 0) {
+																																ctx.getThing("candle").setVisible(false);
+																																return false;
+																												}
+																												return true;
+																								});
+																				} else {
+																								ctx.showMessage("...I'd prefer the lights stay on.");
+																				}
+																				break;
+												}
+								}
+				}]);
+
+				return BuildingLogic;
 }();
 
 module.exports = {
-    Logic: Logic,
-    LogicContext: LogicContext,
-    State: State
+				Logic: Logic,
+				LogicContext: LogicContext,
+				State: State
 };
 
 },{"./audio":1,"./utils":12}],8:[function(require,module,exports){
@@ -1848,6 +1953,7 @@ function PlayScreen(logic, dataList, width, height) {
  * after this one, or false otherwise. */
 PlayScreen.prototype.update = function (dt) {
     var lst = [];
+    var redraw = false;
     var _iteratorNormalCompletion = true;
     var _didIteratorError = false;
     var _iteratorError = undefined;
@@ -1856,7 +1962,11 @@ PlayScreen.prototype.update = function (dt) {
         for (var _iterator = this.updateCallbacks[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
             var callback = _step.value;
 
-            if (callback(dt)) lst.push(callback);
+            var ret = callback(dt);
+            if (ret === true) redraw = true;
+            if (ret !== false) {
+                lst.push(callback);
+            }
         }
     } catch (err) {
         _didIteratorError = true;
@@ -1875,34 +1985,34 @@ PlayScreen.prototype.update = function (dt) {
 
     this.updateCallbacks = lst;
     // Request more redraws while there is stuff to animate (via callbacks)
+    //this.redraw()
+    //return redraw;
     return this.updateCallbacks.length > 0;
 };
 
+/* Register an function to be called for every frame of animation. The handler
+ * can return a code to indicate what it needs:
+ * 
+ * true => request a redraw of the screen
+ * false => unregister the update handler
+ * undefined => keep calling the handler, but a redraw is not requested
+ * 
+ */
 PlayScreen.prototype.addUpdate = function () {
     var callbacks = Array.prototype.slice.call(arguments);
-    // Assemble the callback functions into a single chained function. If
-    // a function returns true it is called again on the next update. 
-    // When it returns false it's removed from the chain, and the next
-    // function in sequence is called on the next update.
     var callback = function callback(dt) {
         if (callbacks.length === 0) return false;
-        if (!callbacks[0](dt)) {
+        var ret = callbacks[0](dt);
+        if (ret === false) {
             callbacks.shift();
-            return !!callbacks;
         }
-        return true;
+        return callbacks.length > 0;
     };
     this.updateCallbacks.push(callback);
-    if (this.updateCallbacks.length === 1) this.redraw();
+    this.redraw();
 };
 
-PlayScreen.prototype.changeScene = function (name, args) {
-    var _this2 = this;
-
-    if (!this.dataList.hasOwnProperty(name)) {
-        throw Error("No such scene: " + name);
-    }
-
+PlayScreen.prototype.setScene = function (name, args) {
     // Default camera position for a new scene
     var cameraX = -1;
     var cameraY = 0;
@@ -1912,48 +2022,6 @@ PlayScreen.prototype.changeScene = function (name, args) {
         if (args.cameraY !== undefined) cameraY = args.cameraY;
     }
 
-    if (this.scene === null) {
-        // Slow fade into the starting scene
-        this.setScene(name);
-        this.pause();
-        this.scene.setCameraPos(cameraX, cameraY);
-        var fader = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 2);
-        fader.start(this.stage);
-        this.addUpdate(function (dt) {
-            if (!fader.update(dt)) {
-                _this2.resume();
-                return false;
-            }
-            return true;
-        });
-    } else {
-        // Fade out, switch scenes, then fade back in
-        var fadeout = new Utils.Fader(this.viewWidth, this.viewHeight, 1, 1);
-        var fadein = new Utils.Fader(this.viewWidth, this.viewHeight, -1, 1);
-        this.stage.removeChild(fadeout.sprite);
-        this.pause();
-        this.cutScene = true;
-        fadeout.start(this.stage);
-        this.addUpdate(function (dt) {
-            if (!fadeout.update(dt)) {
-                _this2.setScene(name);
-                _this2.scene.setCameraPos(cameraX, cameraY);
-                fadein.start(_this2.stage);
-                return false;
-            }
-            return true;
-        }, function (dt) {
-            if (!fadein.update(dt)) {
-                _this2.resume();
-                _this2.cutScene = false;
-                return false;
-            }
-            return true;
-        });
-    }
-};
-
-PlayScreen.prototype.setScene = function (name) {
     if (!this.dataList[name]) {
         throw Error("No such scene: " + name);
     }
@@ -1975,12 +2043,12 @@ PlayScreen.prototype.setScene = function (name) {
     this.sceneStage.scale.set(this.getDisplayScale());
     this.sceneStage.x = this.viewWidth / 2;
     this.sceneStage.y = this.viewHeight / 2;
-
     var ctx = this.logic.makeContext({
         screen: this,
         scene: this.scene
     });
     this.logic.enterScene(ctx);
+    this.scene.setCameraPos(cameraX, cameraY);
 };
 
 PlayScreen.prototype.setCameraPos = function (xpos, ypos) {
@@ -2037,11 +2105,11 @@ PlayScreen.prototype.handleClick = function (evt) {
 };
 
 PlayScreen.prototype.handleDragStart = function (evt) {
-    var _this3 = this;
+    var _this2 = this;
 
     if (this.dialog.isShown()) {
         setTimeout(function () {
-            _this3.dialog.hide();
+            _this2.dialog.hide();
         }, 1000);
     }
     if (!this.scene) return;
@@ -2786,7 +2854,8 @@ function makeSolidColourTexture(colour, width, height) {
 function delayUpdate(delay) {
     return function (dt) {
         delay -= dt;
-        return delay > 0;
+        if (delay <= 0) return false;
+        return undefined;
     };
 }
 
@@ -2814,11 +2883,12 @@ Screen.prototype.configure = function (renderer) {
 /* Fader */
 /*********/
 
-function Fader(width, height, dir, duration) {
+function Fader(width, height, args) {
+    var dir = args.dir !== undefined ? args.dir : 1;
     var txt = makeSolidColourTexture("black", width, height);
     this.sprite = new PIXI.Sprite(txt);
-    this.sprite.alpha = dir === 1 ? 0 : 1;
-    this.duration = duration;
+    this.sprite.alpha = 1 - dir;
+    this.duration = args.duration !== undefined ? args.duration : 1;
     this.dir = dir;
 }
 

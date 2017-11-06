@@ -1,0 +1,45 @@
+{
+    "title": "Road",
+    "name": "darkroad",
+    "description": "The road ends in a small building.",
+    "camera": "-1",
+    "layers": [
+        {
+            "name": "sky",
+            "sprites": []
+        },
+        {
+            "name": "forest",
+            "sprites": []
+        },
+        {
+            "name": "roadway",
+            "sprites": [
+                {
+                    "name": "house",
+                    "x": 17,
+                    "y": 14
+                }
+            ]
+        },
+        {
+            "name": "foreground2",
+            "sprites": [
+                {
+                    "name": "cave",
+                    "x": 82,
+                    "y": 26
+                },
+                {
+                    "name": "player",
+                    "x": 72,
+                    "y": 6
+                }
+            ]
+        },
+        {
+            "name": "foreground",
+            "sprites": []
+        }
+    ]
+}

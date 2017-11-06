@@ -52,7 +52,8 @@ function delayUpdate(delay)
 {
     return function(dt) {
         delay -= dt;
-        return delay > 0;
+        if (delay <= 0) return false;
+	return undefined;
     }
 }
 
@@ -82,12 +83,13 @@ Screen.prototype.configure = function(renderer)
 /* Fader */
 /*********/
 
-function Fader(width, height, dir, duration)
+function Fader(width, height, args)
 {
-    var txt = makeSolidColourTexture("black", width, height);
+    let dir = args.dir !== undefined ? args.dir : 1;
+    let txt = makeSolidColourTexture("black", width, height);
     this.sprite = new PIXI.Sprite(txt);
-    this.sprite.alpha = (dir === 1 ? 0 : 1);
-    this.duration = duration;
+    this.sprite.alpha = 1-dir;
+    this.duration = args.duration !== undefined ? args.duration : 1;
     this.dir = dir;
 }
 

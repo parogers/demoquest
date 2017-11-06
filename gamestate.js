@@ -96,6 +96,8 @@ GameState.prototype.setupInputHandlers = function(m)
 /* Schedule a redraw of the game screen */
 GameState.prototype.redraw = function()
 {
+    this.manualRedraw = true;
+    this.lastRenderTime = null;
     requestAnimationFrame(this.staticRenderFrame);
 }
 
@@ -126,12 +128,13 @@ GameState.prototype.renderFrame = function()
     if (!this.screen.stage) {
 	throw Error("screen has no stage defined: " + this.screen.name);
     }
-    Render.getRenderer().render(this.screen.stage);
-
-    if (redraw) 
-	this.redraw();
-    else
-	this.lastRenderTime = null;
+    if (redraw || this.manualRedraw) {
+	Render.getRenderer().render(this.screen.stage);
+    }
+    if (redraw) {
+	requestAnimationFrame(this.staticRenderFrame);
+    }
+    this.manualRedraw = false;
 }
 
 GameState.prototype.handleResize = function()
@@ -168,7 +171,9 @@ GameState.prototype._startGame = function()
     });
     // Now change to the opening scene
     //this.screen.changeScene("closet", {cameraX: 0});
-    this.screen.changeScene("intro");
+    this.logic.startGame(this.logic.makeContext({
+	screen: this.screen
+    }));
 }
 
 module.exports = GameState;
