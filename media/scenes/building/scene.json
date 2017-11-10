@@ -47,6 +47,11 @@
             "name": "wall",
             "sprites": [
                 {
+                    "name": "bloodarea",
+                    "x": 120,
+                    "y": 0
+                },
+                {
                     "name": "light_on",
                     "x": 25,
                     "y": 15

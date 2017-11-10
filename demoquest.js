@@ -126,7 +126,9 @@ function Dialog(width, height, stage, options) {
     this.stage = stage;
 
     var mgr = new Events.EventManager();
+    this.onOpened = mgr.hook("opened");
     this.onClosed = mgr.hook("closed");
+    this.onClosing = mgr.hook("closing");
     this.onRedraw = mgr.hook("redraw");
     this.onUpdate = mgr.hook("update");
     this.dispatch = mgr.dispatcher();
@@ -200,14 +202,16 @@ Dialog.prototype.show = function () {
             _this.delay -= dt;
             return true;
         }
-        _this.container.y -= _this.viewHeight * dt;
+        _this.container.y -= 0.9 * _this.viewHeight * dt;
         if (_this.container.y < _this.desty) {
             _this.container.y = _this.desty;
             _this.state = "shown";
+            _this.dispatch("redraw");
             return false;
         }
         return true;
     });
+    this.dispatch("opened");
 };
 
 Dialog.prototype.hide = function (delay) {
@@ -217,8 +221,14 @@ Dialog.prototype.hide = function (delay) {
     this.state = "hiding";
 
     // Have the dialog box slide off screen
+    this.dispatch("closing");
     this.dispatch("update", function (dt) {
-        _this2.container.y += 1.2 * _this2.viewHeight * dt;
+        if (delay > 0) {
+            delay -= dt;
+            return true;
+        }
+
+        _this2.container.y += 0.75 * _this2.viewHeight * dt;
         if (_this2.container.y > _this2.viewHeight) {
             _this2.container.parent.removeChild(_this2.container);
             _this2.state = "idle";
@@ -228,6 +238,7 @@ Dialog.prototype.hide = function (delay) {
             } else {
                 _this2.dispatch("closed");
             }
+            _this2.dispatch("redraw");
             return false;
         }
         return true;
@@ -644,9 +655,10 @@ GameState.prototype.setupInputHandlers = function (m) {
 
 /* Schedule a redraw of the game screen */
 GameState.prototype.redraw = function () {
-   this.manualRedraw = true;
-   this.lastRenderTime = null;
-   requestAnimationFrame(this.staticRenderFrame);
+   if (!this.manualRedraw) {
+      this.manualRedraw = true;
+      requestAnimationFrame(this.staticRenderFrame);
+   }
 };
 
 /* Returns the bounding (client) rectangle of the game rendering area */
@@ -679,6 +691,8 @@ GameState.prototype.renderFrame = function () {
    }
    if (redraw) {
       requestAnimationFrame(this.staticRenderFrame);
+   } else {
+      this.lastRenderTime = null;
    }
    this.manualRedraw = false;
 };
@@ -1315,7 +1329,7 @@ LogicContext.prototype.addUpdate = function () {
 LogicContext.prototype.changeScene = function (name, args) {
 				var _this = this;
 
-				if (this.scene === null) {
+				if (this.screen.scene === null) {
 								// Slow fade into the starting scene
 								this.screen.setScene(name, args);
 								this.screen.pause();
@@ -1332,9 +1346,9 @@ LogicContext.prototype.changeScene = function (name, args) {
 								// Fade out, switch scenes, then fade back in
 								var fadeout = new Utils.Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: 1, duration: 1 });
 								var fadein = new Utils.Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 1 });
-								this.screen.stage.removeChild(fadeout.sprite);
+								//this.screen.stage.removeChild(fadeout.sprite);
 								this.screen.pause();
-								this.screen.cutScene = true;
+								this.screen.enterCutscene();
 								fadeout.start(this.screen.stage);
 								this.addUpdate(function (dt) {
 												if (!fadeout.update(dt)) {
@@ -1346,7 +1360,7 @@ LogicContext.prototype.changeScene = function (name, args) {
 								}, function (dt) {
 												if (!fadein.update(dt)) {
 																_this.screen.resume();
-																_this.screen.cutScene = false;
+																_this.screen.leaveCutscene();
 																return false;
 												}
 												return true;
@@ -1531,7 +1545,7 @@ var ClosetLogic = function () {
 				_createClass(ClosetLogic, [{
 								key: "initScene",
 								value: function initScene(ctx) {
-												ctx.screen.cutScene = true;
+												ctx.screen.enterCutscene();
 												ctx.addUpdate(Utils.delayUpdate(1.5), function (dt) {
 																// Opening the crack
 																var sprite = ctx.getThing("crack").getSprite();
@@ -1554,7 +1568,7 @@ var ClosetLogic = function () {
 																				sprite1.visible = false;
 																				sprite2.visible = false;
 																				ctx.showMessage("Am I safe here???");
-																				ctx.screen.cutScene = false;
+																				ctx.screen.leaveCutscene();
 																				return false;
 																}
 																return true;
@@ -1708,6 +1722,17 @@ var CaveLogic = function () {
 var BuildingLogic = function () {
 				function BuildingLogic() {
 								_classCallCheck(this, BuildingLogic);
+
+								this.States = {
+												// Default state
+												None: 0,
+												// Monster waiting behind door. Triggered by checking closet
+												MonsterWaiting: 1,
+												// Front door is closed, player must retreat to closet
+												PlayerMustHide: 2
+								};
+
+								this.monsterState = this.States.None;
 				}
 
 				_createClass(BuildingLogic, [{
@@ -1719,14 +1744,15 @@ var BuildingLogic = function () {
 												ctx.getThing("candle").invisibleToClicks = true;
 												ctx.getThing("darkness").invisibleToClicks = true;
 												ctx.getThing("closet").setState("dark");
-												ctx.getThing("monster").setState("0");
+												ctx.getThing("monster").setVisible(false);
 								}
 				}, {
-								key: "enterScene",
-								value: function enterScene(ctx) {
+								key: "startMonstering",
+								value: function startMonstering(ctx) {
 												var fps = 5;
 												var timer = 0;
 												var frame = 0;
+												ctx.getThing("monster").setState("0");
 												ctx.addUpdate(function (dt) {
 																timer += dt;
 																//console.log("TIMER " + timer);
@@ -1736,6 +1762,9 @@ var BuildingLogic = function () {
 																				ctx.getThing("monster").setState("" + frame);
 																				return true;
 																}
+																/*if (ctx.getThing("door").state === "closed") {
+                return false;
+                }*/
 																return undefined;
 												});
 								}
@@ -1744,7 +1773,11 @@ var BuildingLogic = function () {
 								value: function handleClicked(ctx) {
 												switch (ctx.thing.name) {
 																case "door":
-																				if (ctx.thing.state === "open") {
+																				if (this.monsterState === this.States.MonsterWaiting) {
+																								// ...
+																				} else if (this.monsterState === this.States.PlayerMustHide) {
+																								ctx.showMessage("No! I've got to hide!");
+																				} else if (ctx.thing.state === "open") {
 																								ctx.thing.setState("closed");
 																								Audio.play(Audio.Effects.DoorClosing, 0.4);
 																				} else {
@@ -1764,28 +1797,54 @@ var BuildingLogic = function () {
 																				break;
 
 																case "closet":
-																				if (ctx.thing.state === "dark") {
+																				if (this.monsterState === this.States.PlayerMustHide) {
+																								ctx.changeScene("closet", { cameraX: 0 });
+																				} else if (ctx.thing.state === "dark") {
 																								ctx.showMessage("Even with the lamp it's too dark to see anything in there.");
-																								ctx.showMessage("The blood... I need to find a light.");
+																								ctx.showMessage("...the blood... I need to find a light.");
 																				} else {
-																								ctx.showMessage("It's filled with clothing and junk. That's it. It's just a closet. Why the blood?");
+																								ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Why the blood?");
 																				}
 																				break;
 
 																case "clock":
-																				ctx.showMessage("It probably stopped years ago.");
+																				if (this.monsterState === this.States.PlayerMustHide) {
+																								ctx.showMessage("I need to find a place to hide!");
+																				} else {
+																								ctx.showMessage("It stopped years ago.");
+																				}
 																				break;
 
 																case "outside":
-																				ctx.showMessage("I should look around first.");
+																				if (this.monsterState === this.States.PlayerMustHide) {
+																								ctx.showMessage("I need to find a place to hide!");
+																				} else {
+																								ctx.showMessage("I should look around first.");
+																				}
 																				break;
 
 																case "bookshelf":
-																				ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
+																				if (this.monsterState === this.States.PlayerMustHide) {
+																								ctx.showMessage("I need to find a place to hide!");
+																				} else {
+																								ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
+																				}
 																				break;
 
 																case "clothes":
-																				ctx.showMessage("Dirty sheets... this place is a mess.");
+																				if (this.monsterState === this.States.PlayerMustHide) {
+																								ctx.showMessage("I need to find a place to hide!");
+																				} else {
+																								ctx.showMessage("Dirty sheets... this place is a mess.");
+																				}
+																				break;
+
+																case "bloodarea":
+																				if (this.monsterState === this.States.PlayerMustHide) {
+																								ctx.showMessage("I need to find a place to hide!");
+																				} else {
+																								ctx.showMessage("Blood... what happened here?");
+																				}
 																				break;
 
 																case "light":
@@ -1802,6 +1861,8 @@ var BuildingLogic = function () {
 																												}
 																												return true;
 																								});
+																				} else if (this.monsterState === this.States.PlayerMustHide) {
+																								ctx.showMessage("I need to find a place to hide!");
 																				} else {
 																								ctx.showMessage("...I'd prefer the lights stay on.");
 																				}
@@ -1903,7 +1964,8 @@ function PlayScreen(logic, dataList, width, height) {
     // The size of the viewing area
     this.viewWidth = width;
     this.viewHeight = height;
-    this.cutScene = false;
+    this.isScenePaused = false;
+    this.isCutscene = false;
     // The thing being dragged around, or null if no dragging is happening
     // or the player is panning around instead.
     this.dragging = null;
@@ -1920,31 +1982,39 @@ function PlayScreen(logic, dataList, width, height) {
     this.onComplete = mgr.hook("complete");
     this.onGameOver = mgr.hook("gameover");
     this.onRedraw = mgr.hook("redraw");
+    this.onResize = mgr.hook("resize");
+    this.onClick = mgr.hook("click");
+    this.onDragStart = mgr.hook("dragStart");
+    this.onDragStop = mgr.hook("dragStop");
+    this.onDrag = mgr.hook("drag");
     //this.onVisible = mgr.hook("thing-visible");
     this.dispatch = mgr.dispatcher();
     this.redraw = mgr.dispatcher("redraw");
     this.eventManager = mgr;
 
-    this.dialogDefaults = {
+    // Setup the dialog/message area and attach some event handlers
+    this.dialog = new Dialog(this.viewWidth, this.viewHeight, this.stage, {
         fill: "black",
         background: "white",
         lightbox: "black"
-    };
-
-    // Setup the dialog/message area and attach some event handlers
-    this.dialog = new Dialog(this.viewWidth, this.viewHeight, this.stage, this.dialogDefaults);
+    });
 
     this.dialog.onUpdate(function (cb) {
         _this.addUpdate(cb);
     });
 
-    this.dialog.onRedraw(function (cb) {
-        _this.redraw();
+    this.dialog.onRedraw(this.redraw.bind());
+
+    this.dialog.onOpened(function (cb) {
+        // Pause game play and show the message (will be resumed when the 
+        // dialog box is closed)
+        _this.pause();
+        _this.enterCutscene();
     });
 
-    this.dialog.onClosed(function (cb) {
-        _this.redraw();
+    this.dialog.onClosing(function (cb) {
         _this.resume();
+        _this.leaveCutscene();
     });
 }
 
@@ -2076,62 +2146,70 @@ PlayScreen.prototype.handleResize = function (width, height) {
         this.sceneStage.y = height / 2;
         this.sceneStage.scale.set(this.getDisplayScale());
         this.dialog.handleResize(width, height);
+        this.dispatch("resize", width, height);
     }
 };
 
 PlayScreen.prototype.handleClick = function (evt) {
+    if (!this.scene) return;
+
+    var xp = evt.x / this.getDisplayScale();
+    var yp = evt.y / this.getDisplayScale();
+
+    if (!this.isCutscene) {
+        var args = this.scene.checkHit(xp, yp);
+        if (args.thing) {
+            var ctx = this.logic.makeContext({
+                screen: this,
+                scene: this.scene,
+                thing: args.thing,
+                sprite: args.sprite
+            });
+            this.logic.handleClicked(ctx);
+            this.redraw();
+        }
+    }
+
     // A direct click will dismiss the dialog box
     if (this.dialog.isShown()) {
         this.dialog.hide();
         return;
     }
-
-    if (!this.scene) return;
-    if (this.cutScene) return;
-
-    var xp = evt.x / this.getDisplayScale();
-    var yp = evt.y / this.getDisplayScale();
-    var args = this.scene.checkHit(xp, yp);
-    if (args.thing) {
-        var ctx = this.logic.makeContext({
-            screen: this,
-            scene: this.scene,
-            thing: args.thing,
-            sprite: args.sprite
-        });
-        this.logic.handleClicked(ctx);
-        this.redraw();
-    }
+    this.dispatch("click", xp, yp);
 };
 
 PlayScreen.prototype.handleDragStart = function (evt) {
-    var _this2 = this;
+    if (!this.scene) return;
 
     if (this.dialog.isShown()) {
-        setTimeout(function () {
-            _this2.dialog.hide();
-        }, 1000);
+        this.dialog.hide(0.75);
+        /*setTimeout(() => {
+            this.dialog.hide();
+        }, 1000);*/
     }
-    if (!this.scene) return;
-    if (this.cutScene) return;
+
+    this.dispatch("dragStart", xp, yp);
 
     var xp = evt.x / this.getDisplayScale();
     var yp = evt.y / this.getDisplayScale();
-    var args = this.scene.checkHit(xp, yp);
-    if (false) {
-        //args.thing) {
-        // Dragging an object
-        this.dragging = this.scene.getThing(args.layer, args.thing);
-        this.dragStartX = this.dragging.x;
-        this.dragStartY = this.dragging.y;
-        /*var rect = thing.getBoundingClientRect();
-        this.dragging = args;
-        this.dragStartX = parseInt(thing.style.left);
-        this.dragStartY = parseInt(thing.style.top);*/
-    } else {
-        // Panning the scene
-        this.dragging = null;
-        this.dragStartX = this.scene.cameraX;
+
+    if (!this.isCutscene) {
+        var args = this.scene.checkHit(xp, yp);
+        if (false) {
+            //args.thing) {
+            // Dragging an object
+            this.dragging = this.scene.getThing(args.layer, args.thing);
+            this.dragStartX = this.dragging.x;
+            this.dragStartY = this.dragging.y;
+            /*var rect = thing.getBoundingClientRect();
+              this.dragging = args;
+              this.dragStartX = parseInt(thing.style.left);
+              this.dragStartY = parseInt(thing.style.top);*/
+        } else {
+            // Panning the scene
+            this.dragging = null;
+            this.dragStartX = this.scene.cameraX;
+        }
     }
 };
 
@@ -2143,43 +2221,57 @@ PlayScreen.prototype.handleDragStop = function (evt) {
         this.handleClick(evt);
     }
     this.dragging = null;
+
+    this.dispatch("dragStop");
 };
 
 PlayScreen.prototype.handleDrag = function (evt) {
     if (!this.scene) return;
-    if (this.cutScene) return;
 
-    if (this.dragging) {
-        // Dragging a thing
-        this.dragging.x = this.dragStartX + evt.dx / this.getDisplayScale();
-        this.dragging.y = this.dragStartY + evt.dy / this.getDisplayScale();
-        this.redraw();
-    } else {
-        // Panning the scene around
-        var pos = this.dragStartX - evt.dx / (window.innerWidth / 2);
-        pos = Math.max(Math.min(pos, 1), -1);
-        this.setCameraPos(pos);
-        this.redraw();
-        // Now figure out what's in view and send visibility events
-        // ...
+    if (!this.isCutscene) {
+        if (this.dragging) {
+            // Dragging a thing
+            this.dragging.x = this.dragStartX + evt.dx / this.getDisplayScale();
+            this.dragging.y = this.dragStartY + evt.dy / this.getDisplayScale();
+            this.redraw();
+        } else {
+            // Panning the scene around
+            var pos = this.dragStartX - evt.dx / (window.innerWidth / 2);
+            pos = Math.max(Math.min(pos, 1), -1);
+            this.setCameraPos(pos);
+            this.redraw();
+            // Now figure out what's in view and send visibility events
+            // ...
+        }
     }
 };
 
 PlayScreen.prototype.showMessage = function (msg) {
-    // Pause game play and show the message (will be resumed when the 
-    // dialog box is closed)
-    this.pause();
     this.dialog.showMessage(msg);
 };
 
 /* Pause the gameplay. This happens when showing the player a message */
 PlayScreen.prototype.pause = function () {
-    if (this.scene) this.scene.pause();
+    if (!this.isScenePaused) {
+        this.isScenePaused = true;
+        if (this.scene) this.scene.pause();
+    }
 };
 
 /* Resume the gameplay after pausing */
 PlayScreen.prototype.resume = function () {
-    if (this.scene) this.scene.resume();
+    if (this.isScenePaused) {
+        this.isScenePaused = false;
+        if (this.scene) this.scene.resume();
+    }
+};
+
+PlayScreen.prototype.enterCutscene = function () {
+    this.isCutscene = true;
+};
+
+PlayScreen.prototype.leaveCutscene = function () {
+    this.isCutscene = false;
 };
 
 module.exports = PlayScreen;

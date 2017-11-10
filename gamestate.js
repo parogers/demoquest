@@ -96,9 +96,10 @@ GameState.prototype.setupInputHandlers = function(m)
 /* Schedule a redraw of the game screen */
 GameState.prototype.redraw = function()
 {
-    this.manualRedraw = true;
-    this.lastRenderTime = null;
-    requestAnimationFrame(this.staticRenderFrame);
+    if (!this.manualRedraw) {
+	this.manualRedraw = true;
+	requestAnimationFrame(this.staticRenderFrame);
+    }
 }
 
 /* Returns the bounding (client) rectangle of the game rendering area */
@@ -133,6 +134,8 @@ GameState.prototype.renderFrame = function()
     }
     if (redraw) {
 	requestAnimationFrame(this.staticRenderFrame);
+    } else {
+	this.lastRenderTime = null;
     }
     this.manualRedraw = false;
 }

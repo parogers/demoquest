@@ -151,7 +151,7 @@ LogicContext.prototype.addUpdate = function()
 
 LogicContext.prototype.changeScene = function(name, args)
 {
-    if (this.scene === null) {
+    if (this.screen.scene === null) {
 	// Slow fade into the starting scene
 	this.screen.setScene(name, args);
 	this.screen.pause();
@@ -178,9 +178,9 @@ LogicContext.prototype.changeScene = function(name, args)
 	    this.screen.viewWidth, 
 	    this.screen.viewHeight,
 	    {dir: -1, duration: 1});
-	this.screen.stage.removeChild(fadeout.sprite);
+	//this.screen.stage.removeChild(fadeout.sprite);
 	this.screen.pause();
-	this.screen.cutScene = true;
+	this.screen.enterCutscene();
 	fadeout.start(this.screen.stage);
         this.addUpdate(
             dt => {
@@ -195,7 +195,7 @@ LogicContext.prototype.changeScene = function(name, args)
             dt => {
 		if (!fadein.update(dt)) {
 		    this.screen.resume();
-		    this.screen.cutScene = false;
+		    this.screen.leaveCutscene();
 		    return false;
 		}
 		return true;
@@ -375,7 +375,7 @@ class ClosetLogic
 
     initScene(ctx)
     {
-	ctx.screen.cutScene = true;
+	ctx.screen.enterCutscene();
 	ctx.addUpdate(
 	    Utils.delayUpdate(1.5),
 	    dt => {
@@ -401,7 +401,7 @@ class ClosetLogic
 		    sprite1.visible = false;
 		    sprite2.visible = false;
 		    ctx.showMessage("Am I safe here???");
-		    ctx.screen.cutScene = false;
+		    ctx.screen.leaveCutscene();
 		    return false;
 		}
 		return true;
@@ -542,6 +542,16 @@ class CaveLogic
 class BuildingLogic
 {
     constructor() {
+	this.States = {
+	    // Default state
+	    None: 0,
+	    // Monster waiting behind door. Triggered by checking closet
+	    MonsterWaiting: 1,
+	    // Front door is closed, player must retreat to closet
+	    PlayerMustHide: 2
+	};
+
+	this.monsterState = this.States.None;
     }
 
     initScene(ctx)
@@ -552,14 +562,15 @@ class BuildingLogic
 	ctx.getThing("candle").invisibleToClicks = true;
 	ctx.getThing("darkness").invisibleToClicks = true;
 	ctx.getThing("closet").setState("dark");
-	ctx.getThing("monster").setState("0");
+	ctx.getThing("monster").setVisible(false);
     }
 
-    enterScene(ctx)
+    startMonstering(ctx)
     {
 	let fps = 5;
 	let timer = 0;
 	let frame = 0;
+	ctx.getThing("monster").setState("0");
 	ctx.addUpdate(dt => {
 	    timer += dt;
 	    //console.log("TIMER " + timer);
@@ -569,6 +580,9 @@ class BuildingLogic
 		ctx.getThing("monster").setState("" + frame);
 		return true;
 	    }
+	    /*if (ctx.getThing("door").state === "closed") {
+		return false;
+	    }*/
 	    return undefined;
 	});
     }
@@ -578,7 +592,11 @@ class BuildingLogic
 	switch(ctx.thing.name) 
 	{
 	case "door":
-	    if (ctx.thing.state === "open") {
+	    if (this.monsterState === this.States.MonsterWaiting) {
+		// ...
+	    } else if (this.monsterState === this.States.PlayerMustHide) {
+		ctx.showMessage("No! I've got to hide!");
+	    } else if (ctx.thing.state === "open") {
 		ctx.thing.setState("closed");
 		Audio.play(Audio.Effects.DoorClosing, 0.4);
 	    } else {
@@ -598,28 +616,54 @@ class BuildingLogic
 	    break;
 
 	case "closet":
-	    if (ctx.thing.state === "dark") {
+	    if (this.monsterState === this.States.PlayerMustHide) {
+		ctx.changeScene("closet", {cameraX: 0});
+	    } else if (ctx.thing.state === "dark") {
 		ctx.showMessage("Even with the lamp it's too dark to see anything in there.");
-		ctx.showMessage("The blood... I need to find a light.");
+		ctx.showMessage("...the blood... I need to find a light.");
 	    } else {
-		ctx.showMessage("It's filled with clothing and junk. That's it. It's just a closet. Why the blood?");
+		ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Why the blood?");
 	    }
 	    break;
 
 	case "clock":
-	    ctx.showMessage("It probably stopped years ago.");
+	    if (this.monsterState === this.States.PlayerMustHide) {
+		ctx.showMessage("I need to find a place to hide!");
+	    } else {
+		ctx.showMessage("It stopped years ago.");
+	    }
 	    break;
 
 	case "outside":
-	    ctx.showMessage("I should look around first.");
+	    if (this.monsterState === this.States.PlayerMustHide) {
+		ctx.showMessage("I need to find a place to hide!");
+	    } else {
+		ctx.showMessage("I should look around first.");
+	    }
 	    break;
 
 	case "bookshelf":
-	    ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
+	    if (this.monsterState === this.States.PlayerMustHide) {
+		ctx.showMessage("I need to find a place to hide!");
+	    } else {
+		ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
+	    }
 	    break;
 
 	case "clothes":
-	    ctx.showMessage("Dirty sheets... this place is a mess.")
+	    if (this.monsterState === this.States.PlayerMustHide) {
+		ctx.showMessage("I need to find a place to hide!");
+	    } else {
+		ctx.showMessage("Dirty sheets... this place is a mess.")
+	    }
+	    break;
+
+	case "bloodarea":
+	    if (this.monsterState === this.States.PlayerMustHide) {
+		ctx.showMessage("I need to find a place to hide!");
+	    } else {
+		ctx.showMessage("Blood... what happened here?");
+	    }
 	    break;
 
 	case "light":
@@ -639,6 +683,8 @@ class BuildingLogic
 			return true;
 		    }
 		);
+	    } else if (this.monsterState === this.States.PlayerMustHide) {
+		ctx.showMessage("I need to find a place to hide!");
 	    } else {
 		ctx.showMessage("...I'd prefer the lights stay on.");
 	    }

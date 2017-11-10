@@ -32,7 +32,9 @@ function Dialog(width, height, stage, options)
     this.stage = stage;
 
     var mgr = new Events.EventManager();
+    this.onOpened = mgr.hook("opened");
     this.onClosed = mgr.hook("closed");
+    this.onClosing = mgr.hook("closing");
     this.onRedraw = mgr.hook("redraw");
     this.onUpdate = mgr.hook("update");
     this.dispatch = mgr.dispatcher();
@@ -109,15 +111,17 @@ Dialog.prototype.show = function()
 	    this.delay -= dt;
 	    return true;
 	}
-	this.container.y -= this.viewHeight*dt;
+	this.container.y -= 0.9*this.viewHeight*dt;
 	if (this.container.y < this.desty) 
 	{
 	    this.container.y = this.desty;
 	    this.state = "shown";
+	    this.dispatch("redraw");
 	    return false;
 	}
 	return true;
     });
+    this.dispatch("opened");
 }
 
 Dialog.prototype.hide = function(delay)
@@ -126,8 +130,14 @@ Dialog.prototype.hide = function(delay)
     this.state = "hiding";
 
     // Have the dialog box slide off screen
+    this.dispatch("closing");
     this.dispatch("update", dt => {
-	this.container.y += (1.2*this.viewHeight)*dt;
+	if (delay > 0) {
+	    delay -= dt;
+	    return true;
+	}
+
+	this.container.y += (0.75*this.viewHeight)*dt;
 	if (this.container.y > this.viewHeight) 
 	{
 	    this.container.parent.removeChild(this.container);
@@ -138,6 +148,7 @@ Dialog.prototype.hide = function(delay)
 	    } else {
 		this.dispatch("closed");
 	    }
+	    this.dispatch("redraw");
 	    return false;
 	}
 	return true;
