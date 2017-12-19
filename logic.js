@@ -45,6 +45,7 @@ class Logic
         this.state = new State();
 	this.sceneLogic = {
 	    "intro" : new IntroLogic(),
+	    "ride" : new RideLogic(),
 	    "road" : new RoadLogic(),
 	    "closet" : new ClosetLogic(),
 	    "building" : new BuildingLogic(),
@@ -54,7 +55,7 @@ class Logic
     }
 
     startGame(ctx) {
-	ctx.changeScene("intro");
+	ctx.changeScene("closet", {cameraX: 0});
 	//ctx.screen.redraw();
     }
 
@@ -136,7 +137,7 @@ LogicContext.prototype.getThing = function(name)
 
 LogicContext.prototype.showMessage = function(msg, options)
 {
-    this.screen.showMessage(msg, options);
+    return this.screen.showMessage(msg, options);
 }
 
 LogicContext.prototype.startTimer = function(callback, delay)
@@ -146,7 +147,13 @@ LogicContext.prototype.startTimer = function(callback, delay)
 
 LogicContext.prototype.addUpdate = function()
 {
+    console.log("ADDUPDATE: " + arguments);
     return this.screen.addUpdate.apply(this.screen, arguments);
+}
+
+LogicContext.prototype.redraw = function()
+{
+    this.screen.redraw();
 }
 
 LogicContext.prototype.changeScene = function(name, args)
@@ -227,8 +234,9 @@ class IntroLogic
 	}, 3000);
 
 	ctx.startTimer(() => {
-	    if (Math.random() < 0.4)
+	    if (Math.random() < 0.4) {
 		Audio.play(Audio.Effects.Crickets, 0.1);
+	    }
 	    return true;
 	}, 700);
 
@@ -284,6 +292,23 @@ class IntroLogic
 	    ctx.changeScene("road");
 	    break;
 	}
+    }
+}
+
+class RideLogic
+{
+    constructor() {
+    }
+
+    initScene(ctx) {
+	let frame = 0;
+	let fps = 10;
+	ctx.startTimer(() => {
+	    frame = (frame+1) % 4;
+	    ctx.getThing("horse").setState("" + frame);
+	    ctx.redraw();
+	    return true;
+	}, 1000/fps);
     }
 }
 
@@ -371,46 +396,46 @@ class RoadLogic
 class ClosetLogic
 {
     constructor() {
+	this.States = {
+	    // Player enters scene
+	    None: 0,
+	    // Monster visible outside
+	    MonsterVisible: 1,
+	    // Moving the camera to centre on the monster
+	    CentreCamera: 2,
+	    // Left tentacle visible
+	    LeftTentacle: 3,
+	    // Right tentacle visible
+	    RightTentacle: 4,
+	    // Closet doors fully open
+	    DoorsOpen: 5
+	};
+	this.state = this.States.None;
     }
 
     initScene(ctx)
     {
+	ctx.getThing("monster").setVisible(false);
+	ctx.getThing("tent1").setVisible(false);
+	ctx.getThing("tent2").setVisible(false);
+
 	ctx.screen.enterCutscene();
-	ctx.addUpdate(
-	    Utils.delayUpdate(1.5),
-	    dt => {
-		// Opening the crack
-		var sprite = ctx.getThing("crack").getSprite();
-		var stop = ctx.getThing("darkright").getSprite();
-		var thing = ctx.getThing("crack");
-		//this.offset += dt;
-		//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
-		sprite.x += 10*dt;
-		if (sprite.x > stop.x) {
-		    sprite.visible = false;
-		    return false;
-		}
-		return true;
-	    },
-	    dt => {
-		var sprite1 = ctx.getThing("darkright").getSprite();
-		var sprite2 = ctx.getThing("darkleft").getSprite();
-		sprite1.alpha -= 0.25*dt;
-		sprite2.alpha -= 0.25*dt;
-		if (sprite1.alpha < 0) {
-		    sprite1.visible = false;
-		    sprite2.visible = false;
-		    ctx.showMessage("Am I safe here???");
-		    ctx.screen.leaveCutscene();
-		    return false;
-		}
-		return true;
-	    }
-	);
+	let dialog = ctx.showMessage("Am I safe in here???");
+	let closedCB = dialog.onClosed(() => {
+	    closedCB.remove();
+	    this.fadeInScene(ctx);
+	});
 
         ctx.screen.onCamera(ctx => {
-            if (ctx.scene.cameraX > 0.75) {
-                console.log("CAMERA: " + ctx.scene.cameraX);
+	    if (this.state === this.States.MonsterVisible &&
+		ctx.scene.cameraX > -0.35 && ctx.scene.cameraX < 0.35)
+	    {
+		this.changeState(ctx, this.States.CentreCamera);
+	    }
+	    if (this.state === this.States.None && 
+		(ctx.scene.cameraX > 0.75 || ctx.scene.cameraX < -0.75))
+	    {
+		this.changeState(ctx, this.States.MonsterVisible);
             }
         });
     }
@@ -421,8 +446,113 @@ class ClosetLogic
     }
 
     handleClicked(ctx) {
-	switch(ctx.thing.name) 
-	{
+    }
+
+    fadeInScene(ctx)
+    {
+	ctx.addUpdate(
+	    Utils.delayUpdate(1.5),
+	    dt => {
+		// Opening the crack
+		var sprite = ctx.getThing("crack").getSprite();
+		var stop = ctx.getThing("darkright").getSprite();
+		var thing = ctx.getThing("crack");
+
+		//this.offset += dt;
+		//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
+		sprite.x += 8*dt;
+		if (sprite.x > stop.x) {
+		    sprite.visible = false;
+		    ctx.screen.leaveCutscene();
+		    return false;
+		}
+		return true;
+	    },
+	    dt => {
+		var sprite1 = ctx.getThing("darkright").getSprite();
+		var sprite2 = ctx.getThing("darkleft").getSprite();
+		sprite1.alpha -= 0.30*dt;
+		sprite2.alpha -= 0.30*dt;
+		if (sprite1.alpha < 0) {
+		    sprite1.visible = false;
+		    sprite2.visible = false;
+		    return false;
+		}
+		return true;
+	    }
+	);
+    }
+
+    changeState(ctx, state)
+    {
+	console.log("STATE: " + state);
+	this.state = state;
+	switch(state) {
+	case this.States.MonsterVisible:
+	    // Show the monster now
+	    let monster = ctx.getThing("monster");
+	    if (!monster.isVisible()) 
+	    {
+		let frame = 0;
+		ctx.startTimer(() => {
+		    frame = (frame+1) % 2;
+		    monster.setState("" + frame);
+		    ctx.redraw();
+		    return true;
+		}, 1000/5.0);
+	    }
+	    break;
+
+	case this.States.CentreCamera:
+	    // Slowly pan the camera to X=0
+	    ctx.screen.enterCutscene();
+	    ctx.addUpdate(dt => {
+		let speed = 0.6;
+		let newX = ctx.scene.cameraX;
+		newX -= Math.sign(ctx.scene.cameraX)*speed*dt;
+		if (newX * ctx.scene.cameraX <= 0) {
+		    // Done panning
+		    ctx.scene.setCameraPos(0);
+		    this.changeState(ctx, this.States.LeftTentacle);
+		    return false;
+		}
+		ctx.scene.setCameraPos(newX);
+		return true;
+	    });
+	    break;
+
+	case this.States.LeftTentacle:
+	    ctx.startTimer(() => {
+		ctx.getThing("tent1").setVisible(true);
+		this.changeState(ctx, this.States.RightTentacle);
+		return false;
+	    }, 750);
+	    break;
+
+	case this.States.RightTentacle:
+	    ctx.startTimer(() => {
+		ctx.getThing("tent2").setVisible(true);
+		this.changeState(ctx, this.States.DoorsOpen);
+		return false;
+	    }, 750);
+	    break;
+
+	case this.States.DoorsOpen:
+	    ctx.startTimer(() => {
+		let counter = 0;
+		ctx.addUpdate(dt => {
+		    let speed = 20;
+		    ctx.getThing("doorleft").getSprite().x -= speed*dt;
+		    ctx.getThing("doorright").getSprite().x += speed*dt;
+		    ctx.getThing("tent1").getSprite().x -= speed*dt;
+		    ctx.getThing("tent2").getSprite().x += speed*dt;
+		    counter += speed*dt;
+		    if (counter > 5) return false;		    
+		});
+		return false;
+	    }, 750);
+	    break;
+
 	}
     }
 }
@@ -563,28 +693,8 @@ class BuildingLogic
 	ctx.getThing("darkness").invisibleToClicks = true;
 	ctx.getThing("closet").setState("dark");
 	ctx.getThing("monster").setVisible(false);
-    }
-
-    startMonstering(ctx)
-    {
-	let fps = 5;
-	let timer = 0;
-	let frame = 0;
-	ctx.getThing("monster").setState("0");
-	ctx.addUpdate(dt => {
-	    timer += dt;
-	    //console.log("TIMER " + timer);
-	    if (timer > 1.0/fps) {
-		frame = (frame+1) % 2;
-		timer = 0;
-		ctx.getThing("monster").setState("" + frame);
-		return true;
-	    }
-	    /*if (ctx.getThing("door").state === "closed") {
-		return false;
-	    }*/
-	    return undefined;
-	});
+	this.monsterState = this.States.MonsterWaiting;
+        ctx.getThing("door").setState("closed");
     }
 
     handleClicked(ctx) 
@@ -593,12 +703,33 @@ class BuildingLogic
 	{
 	case "door":
 	    if (this.monsterState === this.States.MonsterWaiting) {
-		// ...
+		let fps = 5;
+		let frame = 0;
+		ctx.getThing("door").setState("open");
+		ctx.getThing("monster").setState("0");
+		ctx.startTimer(() => {
+		    if (this.monsterState === this.States.PlayerMustHide) {
+			return false;
+		    }
+		    frame = (frame+1) % 2;
+		    ctx.getThing("monster").setState("" + frame);
+		    ctx.redraw();
+		    return true;
+		}, 1000.0/fps);
+
+		ctx.startTimer(() => {
+		    this.monsterState = this.States.PlayerMustHide;
+		    ctx.getThing("door").setState("closed");
+		    ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
+		}, 1000);
+
 	    } else if (this.monsterState === this.States.PlayerMustHide) {
 		ctx.showMessage("No! I've got to hide!");
+
 	    } else if (ctx.thing.state === "open") {
 		ctx.thing.setState("closed");
 		Audio.play(Audio.Effects.DoorClosing, 0.4);
+
 	    } else {
 		ctx.thing.setState("open");
 		Audio.play(Audio.Effects.DoorOpening, 0.25);
@@ -623,6 +754,8 @@ class BuildingLogic
 		ctx.showMessage("...the blood... I need to find a light.");
 	    } else {
 		ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Why the blood?");
+		ctx.getThing("door").setState("closed");
+		this.monsterState = this.State.MonsterWaiting;
 	    }
 	    break;
 

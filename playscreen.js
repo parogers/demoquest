@@ -43,7 +43,7 @@ function PlayScreen(logic, dataList, width, height)
     this.viewWidth = width;
     this.viewHeight = height;
     this.isScenePaused = false;
-    this.isCutscene = false;
+    this.isCutscene = 0;
     // The thing being dragged around, or null if no dragging is happening
     // or the player is panning around instead.
     this.dragging = null;
@@ -327,6 +327,7 @@ PlayScreen.prototype.handleDrag = function(evt)
 PlayScreen.prototype.showMessage = function(msg)
 {
     this.dialog.showMessage(msg);
+    return this.dialog;
 }
 
 /* Pause the gameplay. This happens when showing the player a message */
@@ -349,12 +350,12 @@ PlayScreen.prototype.resume = function()
 
 PlayScreen.prototype.enterCutscene = function()
 {
-    this.isCutscene = true;
+    this.isCutscene++;
 }
 
 PlayScreen.prototype.leaveCutscene = function()
 {
-    this.isCutscene = false;
+    this.isCutscene--;
 }
 
 module.exports = PlayScreen;

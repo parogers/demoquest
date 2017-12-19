@@ -397,6 +397,14 @@ Thing.prototype.setState = function(state)
     return this.getSprite();
 }
 
+Thing.prototype.isVisible = function()
+{
+    for (var name in this.sprites) {
+	if (this.sprites[name].visible) return true;
+    }
+    return false;
+}
+
 Thing.prototype.setVisible = function(b)
 {
     for (var spriteName in this.sprites) {

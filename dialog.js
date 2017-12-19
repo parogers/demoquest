@@ -103,7 +103,7 @@ Dialog.prototype.show = function()
     if (this.state !== "idle") return;
     this.state = "showing";
 
-    this.delay = 0.15;
+    this.delay = 0;
     this.stage.addChild(this.container);
     // Have the dialog box slide into view from below
     this.dispatch("update", dt => {
