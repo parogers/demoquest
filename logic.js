@@ -44,24 +44,25 @@ class GameLogic
 {
     constructor() {
 	// Scene specific logic stored by name
-        this.state = new State();
+        this.gameState = new State();
 	this.sceneLogic = {
-	    "intro" : new IntroLogic(this.state),
-	    "ride" : new RideLogic(this.state),
-	    "road" : new RoadLogic(this.state),
-	    "closet" : new ClosetLogic(this.state),
-	    "building" : new BuildingLogic(this.state),
-	    "cave" : new CaveLogic(this.state),
-	    "darkroad" : new DarkRoadLogic(this.state)
+	    "intro" : new IntroLogic(this.gameState),
+	    "ride" : new RideLogic(this.gameState),
+	    "road" : new RoadLogic(this.gameState),
+	    "closet" : new ClosetLogic(this.gameState),
+	    "building" : new BuildingLogic(this.gameState),
+	    "cave" : new CaveLogic(this.gameState),
+	    "darkroad" : new DarkRoadLogic(this.gameState),
+	    "ending" : new EndingLogic(this.gameState)
 	};
     }
 
     getSceneLogic(name) { return this.sceneLogic[name]; }
 
     startGame(screen) {
-	//screen.changeScene("closet", {cameraX: 0});
-	let trans = new Transition.FadeInTransition(screen);
-	trans.start("intro", {cameraX: -1});
+	//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
+	let trans = new Transition.FadeIn(screen, "intro", {cameraX: -1});
+	trans.start();
     }
 }
 
@@ -107,11 +108,6 @@ LogicContext.prototype.showMessage = function(msg, options)
     return this.screen.showMessage(msg, options);
 }
 
-/*LogicContext.prototype.startTimer = function(callback, delay)
-{
-    return this.scene.timers.start(callback, delay);
-}*/
-
 LogicContext.prototype.addUpdate = function()
 {
     console.log("ADDUPDATE: " + arguments);
@@ -125,19 +121,21 @@ LogicContext.prototype.redraw = function()
 
 LogicContext.prototype.changeScene = function(name, args)
 {
-    if (this.screen.scene === null) {
-	
-    } else {
-	let trans = new Transition.FadeTransition(this.scene);
-	trans.start(name, args);
+    if (this.screen.scene) {
+	let trans = new Transition.FadeToScene(this.scene, name, args);
+	trans.start();
     }
 }
+
+/*************/
+/* BaseLogic */
+/*************/
 
 class BaseLogic 
 {
     constructor(state) {
 	this.timers = new Events.TimerList();
-	this.state = state;
+	this.gameState = state;
     }
 
     destroy() {
@@ -179,7 +177,6 @@ class BaseLogic
 /***************/
 
 /* Logic classes for the various scenes in the game */
-
 class IntroLogic extends BaseLogic
 {
     constructor(state) {
@@ -275,8 +272,8 @@ class RoadLogic extends BaseLogic
     initScene(screen, scene) {
 	super.initScene(screen, scene);
 
-	this.ctx.getThing("bush1").setVisible(!this.state.bush1Moved);
-	this.ctx.getThing("bush2").setVisible(!this.state.bush2Moved);
+	this.ctx.getThing("bush1").setVisible(!this.gameState.bush1Moved);
+	this.ctx.getThing("bush2").setVisible(!this.gameState.bush2Moved);
 
         this.updateCrow();
         this.onCameraCallback = this.ctx.screen.onCamera(() => {
@@ -307,9 +304,9 @@ class RoadLogic extends BaseLogic
 	    break;
 
 	case "bush1":
-	    this.state.bush1Moved = true;
+	    this.gameState.bush1Moved = true;
 	    thing.setVisible(false);
-	    if (this.state.bush2Moved) {
+	    if (this.gameState.bush2Moved) {
 		this.ctx.showMessage("There's a cave behind these bushes!")
 	    } else {
 		this.ctx.showMessage("I've cleared away some brush. There's something behind it!")
@@ -317,9 +314,9 @@ class RoadLogic extends BaseLogic
 	    break;
 
 	case "bush2":
-	    this.state.bush2Moved = true;
+	    this.gameState.bush2Moved = true;
 	    thing.setVisible(false);
-	    if (this.state.bush1Moved) {
+	    if (this.gameState.bush1Moved) {
 		this.ctx.showMessage("There's a cave behind these bushes!")
 	    } else {
 		this.ctx.showMessage("I've cleared away some brush. There's something behind it!")
@@ -327,7 +324,7 @@ class RoadLogic extends BaseLogic
 	    break;
 
 	case "cave":
-	    if (!this.state.bush1Moved || !this.state.bush2Moved) {
+	    if (!this.gameState.bush1Moved || !this.gameState.bush2Moved) {
 		this.ctx.showMessage("I must clear the way first.");
 	    } else {
 		this.ctx.changeScene("cave");
@@ -335,11 +332,11 @@ class RoadLogic extends BaseLogic
 	    break;
 
         case "house":
-            if (this.state.checkedDoor) {
+            if (this.gameState.checkedDoor) {
                 this.ctx.showMessage("Maybe I can find a key, or another way in.");
             } else {
                 this.ctx.showMessage("There's no answer and the door's locked.");
-                this.state.checkedDoor = true;
+                this.gameState.checkedDoor = true;
             }
             break;
 
@@ -366,7 +363,9 @@ class ClosetLogic extends BaseLogic
 	    // Right tentacle visible
 	    RightTentacle: 4,
 	    // Closet doors fully open
-	    DoorsOpen: 5
+	    DoorsOpen: 5,
+	    // Scene is fading out
+	    FadeOut: 6
 	};
 	this.state = this.States.None;
     }
@@ -386,14 +385,16 @@ class ClosetLogic extends BaseLogic
 	    this.fadeInScene();
 	});
 
-        this.ctx.screen.onCamera(() => {
+        this.onCameraCallback = this.ctx.screen.onCamera(() => {
 	    if (this.state === this.States.MonsterVisible &&
-		this.ctx.scene.cameraX > -0.35 && this.ctx.scene.cameraX < 0.35)
+		this.ctx.scene.cameraX > -0.35 && 
+		this.ctx.scene.cameraX < 0.35)
 	    {
 		this.changeState(this.States.CentreCamera);
 	    }
 	    if (this.state === this.States.None && 
-		(this.ctx.scene.cameraX > 0.75 || this.ctx.scene.cameraX < -0.75))
+		(this.ctx.scene.cameraX > 0.75 || 
+		 this.ctx.scene.cameraX < -0.75))
 	    {
 		this.changeState(this.States.MonsterVisible);
             }
@@ -429,6 +430,7 @@ class ClosetLogic extends BaseLogic
 		return true;
 	    },
 	    dt => {
+		// Player's eyes adjusting to the darkness
 		var sprite1 = this.ctx.getThing("darkright").getSprite();
 		var sprite2 = this.ctx.getThing("darkleft").getSprite();
 		sprite1.alpha -= 0.30*dt;
@@ -445,7 +447,6 @@ class ClosetLogic extends BaseLogic
 
     changeState(state)
     {
-	console.log("STATE: " + state);
 	this.state = state;
 	switch(state) {
 	case this.States.MonsterVisible:
@@ -507,12 +508,24 @@ class ClosetLogic extends BaseLogic
 		    this.ctx.getThing("tent1").getSprite().x -= speed*dt;
 		    this.ctx.getThing("tent2").getSprite().x += speed*dt;
 		    counter += speed*dt;
-		    if (counter > 5) return false;		    
+		    if (counter > 5) {
+			this.changeState(this.States.FadeOut);
+			return false;
+		    }
 		});
 		return false;
 	    }, 750);
 	    break;
 
+	case this.States.FadeOut:
+	    let trans = new Transition.FadeToScene(
+		this.ctx.scene, "ending", 
+		{
+		    colour: "white",
+		    pauseTime: 1.5
+		});
+	    trans.start();
+	    break;
 	}
     }
 }
@@ -556,7 +569,7 @@ class CaveLogic extends BaseLogic
 	    return true;
 	}, 5000);
         this.ctx.getThing("hole2").setState("empty");
-        this.ctx.getThing("key").setVisible(!this.state.hasRedKey);
+        this.ctx.getThing("key").setVisible(!this.gameState.hasRedKey);
         this.ctx.getThing("shape").getSprite().x = -24;
     }
 
@@ -565,7 +578,7 @@ class CaveLogic extends BaseLogic
 	switch(thing.name) 
 	{
         case "ladder":
-	    if (this.state.hasRedKey) {
+	    if (this.gameState.hasRedKey) {
 		this.ctx.changeScene("darkroad", {cameraX: 1});
 	    } else {
 		this.ctx.changeScene("road", {cameraX: 1});
@@ -574,16 +587,16 @@ class CaveLogic extends BaseLogic
 
         case "key":
             this.ctx.getThing("key").setVisible(false);
-            this.state.hasRedKey = true;
+            this.gameState.hasRedKey = true;
 	    this.ctx.showMessage("A small key. Odd it was left here.");
             break;
 
         case "hole1":
-            if (this.state.seenHole1) {
+            if (this.gameState.seenHole1) {
                 this.ctx.showMessage("There is only darkness.");
                 break;
             }
-            this.state.seenHole1 = true;
+            this.gameState.seenHole1 = true;
             this.ctx.getThing("hole1").setVisible(false);
 	    this.timers.start(() => {
 		Audio.play(Audio.Effects.ShapeSound);
@@ -635,15 +648,14 @@ class BuildingLogic extends BaseLogic
     constructor(state) {
 	super(state);
 	this.States = {
-	    // Default state
+	    // Default state when the player enters the scene
 	    None: 0,
 	    // Monster waiting behind door. Triggered by checking closet
 	    MonsterWaiting: 1,
 	    // Front door is closed, player must retreat to closet
 	    PlayerMustHide: 2
 	};
-
-	this.monsterState = this.States.None;
+	this.state = this.States.None;
     }
 
     initScene(screen, scene)
@@ -657,22 +669,32 @@ class BuildingLogic extends BaseLogic
 	this.ctx.getThing("darkness").invisibleToClicks = true;
 	this.ctx.getThing("closet").setState("dark");
 	this.ctx.getThing("monster").setVisible(false);
-	this.monsterState = this.States.MonsterWaiting;
-        this.ctx.getThing("door").setState("closed");
     }
+
+/*    changeState(state) {
+	this.state = state;
+	switch(state) 
+	{
+	case this.States.MonsterWaiting:
+	    break;
+
+	case this.States.PlayerMustHide:
+	    break;
+	}
+    }*/
 
     handleClicked(thing) 
     {
 	switch(thing.name) 
 	{
 	case "door":
-	    if (this.monsterState === this.States.MonsterWaiting) {
+	    if (this.state === this.States.MonsterWaiting) {
 		let fps = 5;
 		let frame = 0;
 		this.ctx.getThing("door").setState("open");
 		this.ctx.getThing("monster").setState("0");
 		this.timers.start(() => {
-		    if (this.monsterState === this.States.PlayerMustHide) {
+		    if (this.state === this.States.PlayerMustHide) {
 			return false;
 		    }
 		    frame = (frame+1) % 2;
@@ -682,12 +704,12 @@ class BuildingLogic extends BaseLogic
 		}, 1000.0/fps);
 
 		this.timers.start(() => {
-		    this.monsterState = this.States.PlayerMustHide;
+		    this.state = this.States.PlayerMustHide;
 		    this.ctx.getThing("door").setState("closed");
 		    this.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
 		}, 1000);
 
-	    } else if (this.monsterState === this.States.PlayerMustHide) {
+	    } else if (this.state === this.States.PlayerMustHide) {
 		this.ctx.showMessage("No! I've got to hide!");
 
 	    } else if (thing.state === "open") {
@@ -711,7 +733,7 @@ class BuildingLogic extends BaseLogic
 	    break;
 
 	case "closet":
-	    if (this.monsterState === this.States.PlayerMustHide) {
+	    if (this.state === this.States.PlayerMustHide) {
 		this.ctx.changeScene("closet", {cameraX: 0});
 	    } else if (thing.state === "dark") {
 		this.ctx.showMessage("Even with the lamp it's too dark to see anything in there.");
@@ -719,12 +741,12 @@ class BuildingLogic extends BaseLogic
 	    } else {
 		this.ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Why the blood?");
 		this.ctx.getThing("door").setState("closed");
-		this.monsterState = this.State.MonsterWaiting;
+		this.state = this.States.MonsterWaiting;
 	    }
 	    break;
 
 	case "clock":
-	    if (this.monsterState === this.States.PlayerMustHide) {
+	    if (this.state === this.States.PlayerMustHide) {
 		this.ctx.showMessage("I need to find a place to hide!");
 	    } else {
 		this.ctx.showMessage("It stopped years ago.");
@@ -732,7 +754,7 @@ class BuildingLogic extends BaseLogic
 	    break;
 
 	case "outside":
-	    if (this.monsterState === this.States.PlayerMustHide) {
+	    if (this.state === this.States.PlayerMustHide) {
 		this.ctx.showMessage("I need to find a place to hide!");
 	    } else {
 		this.ctx.showMessage("I should look around first.");
@@ -740,7 +762,7 @@ class BuildingLogic extends BaseLogic
 	    break;
 
 	case "bookshelf":
-	    if (this.monsterState === this.States.PlayerMustHide) {
+	    if (this.state === this.States.PlayerMustHide) {
 		this.ctx.showMessage("I need to find a place to hide!");
 	    } else {
 		this.ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
@@ -748,7 +770,7 @@ class BuildingLogic extends BaseLogic
 	    break;
 
 	case "clothes":
-	    if (this.monsterState === this.States.PlayerMustHide) {
+	    if (this.state === this.States.PlayerMustHide) {
 		this.ctx.showMessage("I need to find a place to hide!");
 	    } else {
 		this.ctx.showMessage("Dirty sheets... this place is a mess.")
@@ -756,7 +778,7 @@ class BuildingLogic extends BaseLogic
 	    break;
 
 	case "bloodarea":
-	    if (this.monsterState === this.States.PlayerMustHide) {
+	    if (this.state === this.States.PlayerMustHide) {
 		this.ctx.showMessage("I need to find a place to hide!");
 	    } else {
 		this.ctx.showMessage("Blood... what happened here?");
@@ -780,13 +802,28 @@ class BuildingLogic extends BaseLogic
 			return true;
 		    }
 		);
-	    } else if (this.monsterState === this.States.PlayerMustHide) {
+	    } else if (this.state === this.States.PlayerMustHide) {
 		this.ctx.showMessage("I need to find a place to hide!");
 	    } else {
 		this.ctx.showMessage("...I'd prefer the lights stay on.");
 	    }
 	    break;
 	}
+    }
+}
+
+class EndingLogic extends BaseLogic
+{
+    constructor(state) {
+	super(state);
+    }
+
+    enterScene() {
+	super.enterScene();
+
+	this.timers.start(() => {
+	    this.ctx.showMessage("Thanks for playing this demo!");
+	}, 5000);
     }
 }
 

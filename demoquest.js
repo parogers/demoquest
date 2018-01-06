@@ -1223,15 +1223,16 @@ var GameLogic = function () {
 		_classCallCheck(this, GameLogic);
 
 		// Scene specific logic stored by name
-		this.state = new State();
+		this.gameState = new State();
 		this.sceneLogic = {
-			"intro": new IntroLogic(this.state),
-			"ride": new RideLogic(this.state),
-			"road": new RoadLogic(this.state),
-			"closet": new ClosetLogic(this.state),
-			"building": new BuildingLogic(this.state),
-			"cave": new CaveLogic(this.state),
-			"darkroad": new DarkRoadLogic(this.state)
+			"intro": new IntroLogic(this.gameState),
+			"ride": new RideLogic(this.gameState),
+			"road": new RoadLogic(this.gameState),
+			"closet": new ClosetLogic(this.gameState),
+			"building": new BuildingLogic(this.gameState),
+			"cave": new CaveLogic(this.gameState),
+			"darkroad": new DarkRoadLogic(this.gameState),
+			"ending": new EndingLogic(this.gameState)
 		};
 	}
 
@@ -1243,9 +1244,9 @@ var GameLogic = function () {
 	}, {
 		key: "startGame",
 		value: function startGame(screen) {
-			//screen.changeScene("closet", {cameraX: 0});
-			var trans = new Transition.FadeInTransition(screen);
-			trans.start("intro", { cameraX: -1 });
+			//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
+			var trans = new Transition.FadeIn(screen, "intro", { cameraX: -1 });
+			trans.start();
 		}
 	}]);
 
@@ -1290,11 +1291,6 @@ LogicContext.prototype.showMessage = function (msg, options) {
 	return this.screen.showMessage(msg, options);
 };
 
-/*LogicContext.prototype.startTimer = function(callback, delay)
-{
-    return this.scene.timers.start(callback, delay);
-}*/
-
 LogicContext.prototype.addUpdate = function () {
 	console.log("ADDUPDATE: " + arguments);
 	return this.screen.addUpdate.apply(this.screen, arguments);
@@ -1305,18 +1301,22 @@ LogicContext.prototype.redraw = function () {
 };
 
 LogicContext.prototype.changeScene = function (name, args) {
-	if (this.screen.scene === null) {} else {
-		var trans = new Transition.FadeTransition(this.scene);
-		trans.start(name, args);
+	if (this.screen.scene) {
+		var trans = new Transition.FadeToScene(this.scene, name, args);
+		trans.start();
 	}
 };
+
+/*************/
+/* BaseLogic */
+/*************/
 
 var BaseLogic = function () {
 	function BaseLogic(state) {
 		_classCallCheck(this, BaseLogic);
 
 		this.timers = new Events.TimerList();
-		this.state = state;
+		this.gameState = state;
 	}
 
 	_createClass(BaseLogic, [{
@@ -1367,6 +1367,7 @@ var BaseLogic = function () {
 /***************/
 
 /* Logic classes for the various scenes in the game */
+
 
 var IntroLogic = function (_BaseLogic) {
 	_inherits(IntroLogic, _BaseLogic);
@@ -1487,8 +1488,8 @@ var RoadLogic = function (_BaseLogic3) {
 
 			_get(RoadLogic.prototype.__proto__ || Object.getPrototypeOf(RoadLogic.prototype), "initScene", this).call(this, screen, scene);
 
-			this.ctx.getThing("bush1").setVisible(!this.state.bush1Moved);
-			this.ctx.getThing("bush2").setVisible(!this.state.bush2Moved);
+			this.ctx.getThing("bush1").setVisible(!this.gameState.bush1Moved);
+			this.ctx.getThing("bush2").setVisible(!this.gameState.bush2Moved);
 
 			this.updateCrow();
 			this.onCameraCallback = this.ctx.screen.onCamera(function () {
@@ -1519,9 +1520,9 @@ var RoadLogic = function (_BaseLogic3) {
 					break;
 
 				case "bush1":
-					this.state.bush1Moved = true;
+					this.gameState.bush1Moved = true;
 					thing.setVisible(false);
-					if (this.state.bush2Moved) {
+					if (this.gameState.bush2Moved) {
 						this.ctx.showMessage("There's a cave behind these bushes!");
 					} else {
 						this.ctx.showMessage("I've cleared away some brush. There's something behind it!");
@@ -1529,9 +1530,9 @@ var RoadLogic = function (_BaseLogic3) {
 					break;
 
 				case "bush2":
-					this.state.bush2Moved = true;
+					this.gameState.bush2Moved = true;
 					thing.setVisible(false);
-					if (this.state.bush1Moved) {
+					if (this.gameState.bush1Moved) {
 						this.ctx.showMessage("There's a cave behind these bushes!");
 					} else {
 						this.ctx.showMessage("I've cleared away some brush. There's something behind it!");
@@ -1539,7 +1540,7 @@ var RoadLogic = function (_BaseLogic3) {
 					break;
 
 				case "cave":
-					if (!this.state.bush1Moved || !this.state.bush2Moved) {
+					if (!this.gameState.bush1Moved || !this.gameState.bush2Moved) {
 						this.ctx.showMessage("I must clear the way first.");
 					} else {
 						this.ctx.changeScene("cave");
@@ -1547,11 +1548,11 @@ var RoadLogic = function (_BaseLogic3) {
 					break;
 
 				case "house":
-					if (this.state.checkedDoor) {
+					if (this.gameState.checkedDoor) {
 						this.ctx.showMessage("Maybe I can find a key, or another way in.");
 					} else {
 						this.ctx.showMessage("There's no answer and the door's locked.");
-						this.state.checkedDoor = true;
+						this.gameState.checkedDoor = true;
 					}
 					break;
 
@@ -1585,7 +1586,9 @@ var ClosetLogic = function (_BaseLogic4) {
 			// Right tentacle visible
 			RightTentacle: 4,
 			// Closet doors fully open
-			DoorsOpen: 5
+			DoorsOpen: 5,
+			// Scene is fading out
+			FadeOut: 6
 		};
 		_this6.state = _this6.States.None;
 		return _this6;
@@ -1609,7 +1612,7 @@ var ClosetLogic = function (_BaseLogic4) {
 				_this7.fadeInScene();
 			});
 
-			this.ctx.screen.onCamera(function () {
+			this.onCameraCallback = this.ctx.screen.onCamera(function () {
 				if (_this7.state === _this7.States.MonsterVisible && _this7.ctx.scene.cameraX > -0.35 && _this7.ctx.scene.cameraX < 0.35) {
 					_this7.changeState(_this7.States.CentreCamera);
 				}
@@ -1647,6 +1650,7 @@ var ClosetLogic = function (_BaseLogic4) {
 				}
 				return true;
 			}, function (dt) {
+				// Player's eyes adjusting to the darkness
 				var sprite1 = _this8.ctx.getThing("darkright").getSprite();
 				var sprite2 = _this8.ctx.getThing("darkleft").getSprite();
 				sprite1.alpha -= 0.30 * dt;
@@ -1664,7 +1668,6 @@ var ClosetLogic = function (_BaseLogic4) {
 		value: function changeState(state) {
 			var _this9 = this;
 
-			console.log("STATE: " + state);
 			this.state = state;
 			switch (state) {
 				case this.States.MonsterVisible:
@@ -1725,12 +1728,22 @@ var ClosetLogic = function (_BaseLogic4) {
 							_this9.ctx.getThing("tent1").getSprite().x -= speed * dt;
 							_this9.ctx.getThing("tent2").getSprite().x += speed * dt;
 							counter += speed * dt;
-							if (counter > 5) return false;
+							if (counter > 5) {
+								_this9.changeState(_this9.States.FadeOut);
+								return false;
+							}
 						});
 						return false;
 					}, 750);
 					break;
 
+				case this.States.FadeOut:
+					var trans = new Transition.FadeToScene(this.ctx.scene, "ending", {
+						colour: "white",
+						pauseTime: 1.5
+					});
+					trans.start();
+					break;
 			}
 		}
 	}]);
@@ -1794,7 +1807,7 @@ var CaveLogic = function (_BaseLogic6) {
 				return true;
 			}, 5000);
 			this.ctx.getThing("hole2").setState("empty");
-			this.ctx.getThing("key").setVisible(!this.state.hasRedKey);
+			this.ctx.getThing("key").setVisible(!this.gameState.hasRedKey);
 			this.ctx.getThing("shape").getSprite().x = -24;
 		}
 	}, {
@@ -1804,7 +1817,7 @@ var CaveLogic = function (_BaseLogic6) {
 
 			switch (thing.name) {
 				case "ladder":
-					if (this.state.hasRedKey) {
+					if (this.gameState.hasRedKey) {
 						this.ctx.changeScene("darkroad", { cameraX: 1 });
 					} else {
 						this.ctx.changeScene("road", { cameraX: 1 });
@@ -1813,16 +1826,16 @@ var CaveLogic = function (_BaseLogic6) {
 
 				case "key":
 					this.ctx.getThing("key").setVisible(false);
-					this.state.hasRedKey = true;
+					this.gameState.hasRedKey = true;
 					this.ctx.showMessage("A small key. Odd it was left here.");
 					break;
 
 				case "hole1":
-					if (this.state.seenHole1) {
+					if (this.gameState.seenHole1) {
 						this.ctx.showMessage("There is only darkness.");
 						break;
 					}
-					this.state.seenHole1 = true;
+					this.gameState.seenHole1 = true;
 					this.ctx.getThing("hole1").setVisible(false);
 					this.timers.start(function () {
 						Audio.play(Audio.Effects.ShapeSound);
@@ -1881,15 +1894,14 @@ var BuildingLogic = function (_BaseLogic7) {
 		var _this13 = _possibleConstructorReturn(this, (BuildingLogic.__proto__ || Object.getPrototypeOf(BuildingLogic)).call(this, state));
 
 		_this13.States = {
-			// Default state
+			// Default state when the player enters the scene
 			None: 0,
 			// Monster waiting behind door. Triggered by checking closet
 			MonsterWaiting: 1,
 			// Front door is closed, player must retreat to closet
 			PlayerMustHide: 2
 		};
-
-		_this13.monsterState = _this13.States.None;
+		_this13.state = _this13.States.None;
 		return _this13;
 	}
 
@@ -1905,9 +1917,20 @@ var BuildingLogic = function (_BaseLogic7) {
 			this.ctx.getThing("darkness").invisibleToClicks = true;
 			this.ctx.getThing("closet").setState("dark");
 			this.ctx.getThing("monster").setVisible(false);
-			this.monsterState = this.States.MonsterWaiting;
-			this.ctx.getThing("door").setState("closed");
 		}
+
+		/*    changeState(state) {
+  	this.state = state;
+  	switch(state) 
+  	{
+  	case this.States.MonsterWaiting:
+  	    break;
+  
+  	case this.States.PlayerMustHide:
+  	    break;
+  	}
+      }*/
+
 	}, {
 		key: "handleClicked",
 		value: function handleClicked(thing) {
@@ -1915,13 +1938,13 @@ var BuildingLogic = function (_BaseLogic7) {
 
 			switch (thing.name) {
 				case "door":
-					if (this.monsterState === this.States.MonsterWaiting) {
+					if (this.state === this.States.MonsterWaiting) {
 						var fps = 5;
 						var frame = 0;
 						this.ctx.getThing("door").setState("open");
 						this.ctx.getThing("monster").setState("0");
 						this.timers.start(function () {
-							if (_this14.monsterState === _this14.States.PlayerMustHide) {
+							if (_this14.state === _this14.States.PlayerMustHide) {
 								return false;
 							}
 							frame = (frame + 1) % 2;
@@ -1931,11 +1954,11 @@ var BuildingLogic = function (_BaseLogic7) {
 						}, 1000.0 / fps);
 
 						this.timers.start(function () {
-							_this14.monsterState = _this14.States.PlayerMustHide;
+							_this14.state = _this14.States.PlayerMustHide;
 							_this14.ctx.getThing("door").setState("closed");
 							_this14.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
 						}, 1000);
-					} else if (this.monsterState === this.States.PlayerMustHide) {
+					} else if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("No! I've got to hide!");
 					} else if (thing.state === "open") {
 						thing.setState("closed");
@@ -1957,7 +1980,7 @@ var BuildingLogic = function (_BaseLogic7) {
 					break;
 
 				case "closet":
-					if (this.monsterState === this.States.PlayerMustHide) {
+					if (this.state === this.States.PlayerMustHide) {
 						this.ctx.changeScene("closet", { cameraX: 0 });
 					} else if (thing.state === "dark") {
 						this.ctx.showMessage("Even with the lamp it's too dark to see anything in there.");
@@ -1965,12 +1988,12 @@ var BuildingLogic = function (_BaseLogic7) {
 					} else {
 						this.ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Why the blood?");
 						this.ctx.getThing("door").setState("closed");
-						this.monsterState = this.State.MonsterWaiting;
+						this.state = this.States.MonsterWaiting;
 					}
 					break;
 
 				case "clock":
-					if (this.monsterState === this.States.PlayerMustHide) {
+					if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
 						this.ctx.showMessage("It stopped years ago.");
@@ -1978,7 +2001,7 @@ var BuildingLogic = function (_BaseLogic7) {
 					break;
 
 				case "outside":
-					if (this.monsterState === this.States.PlayerMustHide) {
+					if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
 						this.ctx.showMessage("I should look around first.");
@@ -1986,7 +2009,7 @@ var BuildingLogic = function (_BaseLogic7) {
 					break;
 
 				case "bookshelf":
-					if (this.monsterState === this.States.PlayerMustHide) {
+					if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
 						this.ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
@@ -1994,7 +2017,7 @@ var BuildingLogic = function (_BaseLogic7) {
 					break;
 
 				case "clothes":
-					if (this.monsterState === this.States.PlayerMustHide) {
+					if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
 						this.ctx.showMessage("Dirty sheets... this place is a mess.");
@@ -2002,7 +2025,7 @@ var BuildingLogic = function (_BaseLogic7) {
 					break;
 
 				case "bloodarea":
-					if (this.monsterState === this.States.PlayerMustHide) {
+					if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
 						this.ctx.showMessage("Blood... what happened here?");
@@ -2023,7 +2046,7 @@ var BuildingLogic = function (_BaseLogic7) {
 							}
 							return true;
 						});
-					} else if (this.monsterState === this.States.PlayerMustHide) {
+					} else if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
 						this.ctx.showMessage("...I'd prefer the lights stay on.");
@@ -2034,6 +2057,31 @@ var BuildingLogic = function (_BaseLogic7) {
 	}]);
 
 	return BuildingLogic;
+}(BaseLogic);
+
+var EndingLogic = function (_BaseLogic8) {
+	_inherits(EndingLogic, _BaseLogic8);
+
+	function EndingLogic(state) {
+		_classCallCheck(this, EndingLogic);
+
+		return _possibleConstructorReturn(this, (EndingLogic.__proto__ || Object.getPrototypeOf(EndingLogic)).call(this, state));
+	}
+
+	_createClass(EndingLogic, [{
+		key: "enterScene",
+		value: function enterScene() {
+			var _this16 = this;
+
+			_get(EndingLogic.prototype.__proto__ || Object.getPrototypeOf(EndingLogic.prototype), "enterScene", this).call(this);
+
+			this.timers.start(function () {
+				_this16.ctx.showMessage("Thanks for playing this demo!");
+			}, 5000);
+		}
+	}]);
+
+	return EndingLogic;
 }(BaseLogic);
 
 module.exports = {
@@ -2264,6 +2312,7 @@ PlayScreen.prototype.setScene = function (name, args) {
     this.scene = Scene.Scene.fromData(this.sceneDataList[name]);
 
     var logic = this.gameLogic.getSceneLogic(name);
+    if (!logic) throw Error("Logic not found for scene: " + name);
     this.scene.initScene(this, logic);
     this.sceneStage.children = [];
     this.sceneStage.addChild(this.scene.container);
@@ -3075,7 +3124,8 @@ var Utils = require("./utils");
 
 function Fader(width, height, args) {
 				var dir = args.dir !== undefined ? args.dir : 1;
-				var txt = Utils.makeSolidColourTexture("black", width, height);
+				var colour = args.colour !== undefined ? args.colour : "black";
+				var txt = Utils.makeSolidColourTexture(colour, width, height);
 				this.sprite = new PIXI.Sprite(txt);
 				this.sprite.alpha = 1 - dir;
 				this.duration = args.duration !== undefined ? args.duration : 1;
@@ -3105,33 +3155,44 @@ Fader.prototype.update = function (dt) {
 /******************/
 
 var FadeTransition = function () {
-				function FadeTransition(startScene) {
+				function FadeTransition(startScene, endSceneName, args) {
 								_classCallCheck(this, FadeTransition);
 
 								this.startSCene = startScene;
+								this.endSceneName = endSceneName;
 								this.screen = startScene.screen;
+								this.args = args || {};
 				}
 
 				_createClass(FadeTransition, [{
 								key: "start",
-								value: function start(endScene, args) {
+								value: function start() {
 												var _this = this;
 
 												// Fade out, switch scenes, then fade back in
-												var fadeout = new Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: 1, duration: 1 });
-												var fadein = new Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 1 });
+												var fadeout = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
+																dir: 1,
+																duration: this.args.duration || 1,
+																colour: this.args.colour
+												});
+												var fadein = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
+																dir: -1,
+																duration: this.args.duration || 1,
+																colour: this.args.colour
+												});
+												var pauseTime = this.args.pauseTime !== undefined ? this.args.pauseTime : 0;
 												//this.screen.stage.removeChild(fadeout.sprite);
 												this.screen.pause();
 												this.screen.enterCutscene();
 												fadeout.start(this.screen.stage);
 												this.screen.addUpdate(function (dt) {
 																if (!fadeout.update(dt)) {
-																				_this.screen.setScene(endScene, args);
+																				_this.screen.setScene(_this.endSceneName, _this.args);
 																				fadein.start(_this.screen.stage);
 																				return false;
 																}
 																return true;
-												}, function (dt) {
+												}, Utils.delayUpdate(pauseTime), function (dt) {
 																if (!fadein.update(dt)) {
 																				_this.screen.resume();
 																				_this.screen.leaveCutscene();
@@ -3150,21 +3211,26 @@ var FadeTransition = function () {
 /********************/
 
 var FadeInTransition = function () {
-				function FadeInTransition(screen) {
+				function FadeInTransition(screen, sceneName, args) {
 								_classCallCheck(this, FadeInTransition);
 
 								this.screen = screen;
+								this.sceneName = sceneName;
+								this.args = args || {};
 				}
 
 				_createClass(FadeInTransition, [{
 								key: "start",
-								value: function start(sceneName, args) {
+								value: function start() {
 												var _this2 = this;
 
-												// Slow fade into the starting scene
-												this.screen.setScene(sceneName, args);
+												this.screen.setScene(this.sceneName, this.args);
 												this.screen.pause();
-												var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 2 });
+												var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
+																dir: -1,
+																duration: this.args.duration || 2,
+																colour: this.args.colour
+												});
 												fader.start(this.screen.stage);
 												this.screen.addUpdate(function (dt) {
 																if (!fader.update(dt)) {
@@ -3179,9 +3245,44 @@ var FadeInTransition = function () {
 				return FadeInTransition;
 }();
 
+/*********************/
+/* FadeOutTransition */
+/*********************/
+
+var FadeOutTransition = function () {
+				function FadeOutTransition(screen, args) {
+								_classCallCheck(this, FadeOutTransition);
+
+								this.screen = screen;
+								this.args = args || {};
+				}
+
+				_createClass(FadeOutTransition, [{
+								key: "start",
+								value: function start(onComplete) {
+												var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
+																dir: 1,
+																duration: this.args.duration || 1,
+																colour: this.args.colour
+												});
+												fader.start(this.screen.stage);
+												this.screen.addUpdate(function (dt) {
+																if (!fader.update(dt)) {
+																				if (onComplete) onComplete();
+																				return false;
+																}
+																return true;
+												});
+								}
+				}]);
+
+				return FadeOutTransition;
+}();
+
 module.exports = {
-				FadeTransition: FadeTransition,
-				FadeInTransition: FadeInTransition,
+				FadeToScene: FadeTransition,
+				FadeIn: FadeInTransition,
+				FadeOut: FadeOutTransition,
 				Fader: Fader
 };
 

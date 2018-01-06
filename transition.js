@@ -24,7 +24,8 @@ var Utils = require("./utils");
 function Fader(width, height, args)
 {
     let dir = args.dir !== undefined ? args.dir : 1;
-    let txt = Utils.makeSolidColourTexture("black", width, height);
+    let colour = args.colour !== undefined ? args.colour : "black";
+    let txt = Utils.makeSolidColourTexture(colour, width, height);
     this.sprite = new PIXI.Sprite(txt);
     this.sprite.alpha = 1-dir;
     this.duration = args.duration !== undefined ? args.duration : 1;
@@ -57,21 +58,35 @@ Fader.prototype.update = function(dt)
 
 class FadeTransition
 {
-    constructor(startScene) {
+    constructor(startScene, endSceneName, args) {
 	this.startSCene = startScene;
+	this.endSceneName = endSceneName;
 	this.screen = startScene.screen;
+	this.args = args || {};
     }
 
-    start(endScene, args) {
+    start() {
 	// Fade out, switch scenes, then fade back in
 	var fadeout = new Fader(
 	    this.screen.viewWidth, 
 	    this.screen.viewHeight,
-	    {dir: 1, duration: 1});
+	    {
+		dir: 1, 
+		duration: this.args.duration || 1,
+		colour: this.args.colour
+	    }
+	);
 	var fadein = new Fader(
 	    this.screen.viewWidth, 
 	    this.screen.viewHeight,
-	    {dir: -1, duration: 1});
+	    {
+		dir: -1, 
+		duration: this.args.duration || 1, 
+		colour: this.args.colour
+	    }
+	);
+	let pauseTime = (
+	    this.args.pauseTime !== undefined ? this.args.pauseTime : 0);
 	//this.screen.stage.removeChild(fadeout.sprite);
 	this.screen.pause();
 	this.screen.enterCutscene();
@@ -80,12 +95,13 @@ class FadeTransition
             dt => {
 	        if (!fadeout.update(dt)) 
 	        {
-		    this.screen.setScene(endScene, args);
+		    this.screen.setScene(this.endSceneName, this.args);
 		    fadein.start(this.screen.stage);
                     return false;
                 }
                 return true
             },
+	    Utils.delayUpdate(pauseTime),
             dt => {
 		if (!fadein.update(dt)) {
 		    this.screen.resume();
@@ -104,18 +120,24 @@ class FadeTransition
 
 class FadeInTransition
 {
-    constructor(screen) {
+    constructor(screen, sceneName, args) {
 	this.screen = screen;
+	this.sceneName = sceneName
+	this.args = args || {};
     }
 
-    start(sceneName, args) {
-	// Slow fade into the starting scene
-	this.screen.setScene(sceneName, args);
+    start() {
+	this.screen.setScene(this.sceneName, this.args);
 	this.screen.pause();
 	var fader = new Fader(
 	    this.screen.viewWidth, 
 	    this.screen.viewHeight,
-	    {dir: -1, duration: 2});
+	    {
+		dir: -1, 
+		duration: this.args.duration || 2, 
+		colour: this.args.colour
+	    }
+	);
 	fader.start(this.screen.stage);
 	this.screen.addUpdate(dt => {
 	    if (!fader.update(dt)) {
@@ -127,9 +149,43 @@ class FadeInTransition
     }
 }
 
+/*********************/
+/* FadeOutTransition */
+/*********************/
+
+class FadeOutTransition
+{
+    constructor(screen, args) {
+	this.screen = screen;
+	this.args = args || {};
+    }
+
+    start(onComplete) 
+    {
+	var fader = new Fader(
+	    this.screen.viewWidth,
+	    this.screen.viewHeight,
+	    {
+		dir: 1, 
+		duration: this.args.duration || 1, 
+		colour: this.args.colour
+	    }
+	);
+	fader.start(this.screen.stage);
+	this.screen.addUpdate(dt => {
+	    if (!fader.update(dt)) {
+		if (onComplete) onComplete();
+		return false;
+	    }
+	    return true;
+	});
+    }
+}
+
 
 module.exports = {
-    FadeTransition: FadeTransition,
-    FadeInTransition: FadeInTransition,
+    FadeToScene: FadeTransition,
+    FadeIn: FadeInTransition,
+    FadeOut: FadeOutTransition,
     Fader: Fader
 };

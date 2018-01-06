@@ -169,6 +169,7 @@ PlayScreen.prototype.setScene = function(name, args)
     this.scene = Scene.Scene.fromData(this.sceneDataList[name]);
 
     let logic = this.gameLogic.getSceneLogic(name);
+    if (!logic) throw Error("Logic not found for scene: " + name);
     this.scene.initScene(this, logic);
     this.sceneStage.children = [];
     this.sceneStage.addChild(this.scene.container);

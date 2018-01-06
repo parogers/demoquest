@@ -1,7 +1,7 @@
 # Makefile
 
 BUNDLE=demoquest
-SCENES=intro road cave building closet darkroad ride
+SCENES=intro road cave building closet darkroad ride ending
 
 MAKE_SCENES=$(patsubst %,media/scenes/%/scene.json,$(SCENES))
 SCENE_TARGETS = $(call MAKE_SCENES)
