@@ -253,7 +253,7 @@ Dialog.prototype.handleResize = function (width, height) {
 
 module.exports = Dialog;
 
-},{"./events":3,"./utils":12}],3:[function(require,module,exports){
+},{"./events":3,"./utils":13}],3:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -471,6 +471,11 @@ TimerList.prototype.destroy = function () {
     this.timers = null;
 };
 
+TimerList.prototype.clear = function () {
+    this.destroy();
+    this.timers = [];
+};
+
 TimerList.prototype.start = function (callback, delay) {
     var _this5 = this;
 
@@ -590,8 +595,7 @@ function GameState(div) {
 
    // The screen currently displayed
    this.screen = null;
-   this.logic = new Logic.Logic();
-   this.state = new Logic.State();
+   this.gameLogic = new Logic.GameLogic();
    this.dataList = {};
    this.lastRenderTime = null;
 
@@ -709,7 +713,7 @@ GameState.prototype._startGame = function () {
    var _this3 = this;
 
    this.dataList = this.screen.dataList;
-   this.screen = new PlayScreen(this.logic, this.dataList, Render.getRenderer().width, Render.getRenderer().height);
+   this.screen = new PlayScreen(this.gameLogic, this.dataList, Render.getRenderer().width, Render.getRenderer().height);
 
    // Attach to various events exposed by the PlayScreen
    this.screen.onGameOver(function () {
@@ -725,9 +729,7 @@ GameState.prototype._startGame = function () {
    });
    // Now change to the opening scene
    //this.screen.changeScene("closet", {cameraX: 0});
-   this.logic.startGame(this.logic.makeContext({
-      screen: this.screen
-   }));
+   this.gameLogic.startGame(this.screen);
 };
 
 module.exports = GameState;
@@ -1165,7 +1167,13 @@ module.exports = {
 },{"./audio":1,"./events":3,"./scene":11}],7:[function(require,module,exports){
 "use strict";
 
+var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -1188,6 +1196,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var Utils = require("./utils");
 var Audio = require("./audio");
+var Events = require("./events");
+var Transition = require("./transition");
 
 /*********/
 /* State */
@@ -1208,94 +1218,55 @@ var State = function State() {
 /* Logic */
 /*********/
 
-var Logic = function () {
-	function Logic() {
-		_classCallCheck(this, Logic);
+var GameLogic = function () {
+	function GameLogic() {
+		_classCallCheck(this, GameLogic);
 
 		// Scene specific logic stored by name
 		this.state = new State();
 		this.sceneLogic = {
-			"intro": new IntroLogic(),
-			"ride": new RideLogic(),
-			"road": new RoadLogic(),
-			"closet": new ClosetLogic(),
-			"building": new BuildingLogic(),
-			"cave": new CaveLogic(),
-			"darkroad": new DarkRoadLogic()
+			"intro": new IntroLogic(this.state),
+			"ride": new RideLogic(this.state),
+			"road": new RoadLogic(this.state),
+			"closet": new ClosetLogic(this.state),
+			"building": new BuildingLogic(this.state),
+			"cave": new CaveLogic(this.state),
+			"darkroad": new DarkRoadLogic(this.state)
 		};
 	}
 
-	_createClass(Logic, [{
+	_createClass(GameLogic, [{
+		key: "getSceneLogic",
+		value: function getSceneLogic(name) {
+			return this.sceneLogic[name];
+		}
+	}, {
 		key: "startGame",
-		value: function startGame(ctx) {
-			ctx.changeScene("closet", { cameraX: 0 });
-			//ctx.screen.redraw();
+		value: function startGame(screen) {
+			//screen.changeScene("closet", {cameraX: 0});
+			var trans = new Transition.FadeInTransition(screen);
+			trans.start("intro", { cameraX: -1 });
 		}
-	}, {
-		key: "makeContext",
-		value: function makeContext(args) {
-			return new LogicContext(this.state, args);
-		}
-	}, {
-		key: "initScene",
-		value: function initScene(ctx) {
-			this._handleLogicEvent("initScene", ctx);
-		}
-	}, {
-		key: "uninitScene",
-		value: function uninitScene(ctx) {
-			this._handleLogicEvent("uninitScene", ctx);
-		}
-	}, {
-		key: "enterScene",
-		value: function enterScene(ctx) {
-			this._handleLogicEvent("enterScene", ctx);
-		}
-	}, {
-		key: "leaveScene",
-		value: function leaveScene(ctx) {
-			this._handleLogicEvent("leaveScene", ctx);
-		}
-	}, {
-		key: "handleClicked",
-		value: function handleClicked(ctx) {
-			this._handleLogicEvent("handleClicked", ctx);
-		}
-	}, {
-		key: "_handleLogicEvent",
-		value: function _handleLogicEvent(event, ctx) {
-			var logic = this.sceneLogic[ctx.scene.name];
-			if (logic && logic[event]) logic[event](ctx);
-		}
-	}, {
-		key: "handleDragStart",
-		value: function handleDragStart(ctx) {}
-	}, {
-		key: "handleDrag",
-		value: function handleDrag(ctx) {}
-	}, {
-		key: "handleDragStop",
-		value: function handleDragStop(ctx) {}
 	}]);
 
-	return Logic;
+	return GameLogic;
 }();
 
 /****************/
 /* LogicContext */
 /****************/
 
-function LogicContext(state, args) {
-	this.state = state;
+function LogicContext(args) {
 	this.screen = null;
 	this.scene = null;
 	this.thing = null;
-	this.sprite = null;
 	if (args) {
 		this.screen = args.screen;
 		this.scene = args.scene;
 		this.thing = args.thing;
-		this.sprite = args.sprite;
+
+		if (!this.screen) throw Error("LogicContext must include screen");
+		if (!this.scene) throw Error("LogicContext must include scene");
 	}
 }
 
@@ -1319,9 +1290,10 @@ LogicContext.prototype.showMessage = function (msg, options) {
 	return this.screen.showMessage(msg, options);
 };
 
-LogicContext.prototype.startTimer = function (callback, delay) {
-	return this.scene.timers.start(callback, delay);
-};
+/*LogicContext.prototype.startTimer = function(callback, delay)
+{
+    return this.scene.timers.start(callback, delay);
+}*/
 
 LogicContext.prototype.addUpdate = function () {
 	console.log("ADDUPDATE: " + arguments);
@@ -1333,46 +1305,62 @@ LogicContext.prototype.redraw = function () {
 };
 
 LogicContext.prototype.changeScene = function (name, args) {
-	var _this = this;
-
-	if (this.screen.scene === null) {
-		// Slow fade into the starting scene
-		this.screen.setScene(name, args);
-		this.screen.pause();
-		var fader = new Utils.Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 2 });
-		fader.start(this.screen.stage);
-		this.addUpdate(function (dt) {
-			if (!fader.update(dt)) {
-				_this.screen.resume();
-				return false;
-			}
-			return true;
-		});
-	} else {
-		// Fade out, switch scenes, then fade back in
-		var fadeout = new Utils.Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: 1, duration: 1 });
-		var fadein = new Utils.Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 1 });
-		//this.screen.stage.removeChild(fadeout.sprite);
-		this.screen.pause();
-		this.screen.enterCutscene();
-		fadeout.start(this.screen.stage);
-		this.addUpdate(function (dt) {
-			if (!fadeout.update(dt)) {
-				_this.screen.setScene(name, args);
-				fadein.start(_this.screen.stage);
-				return false;
-			}
-			return true;
-		}, function (dt) {
-			if (!fadein.update(dt)) {
-				_this.screen.resume();
-				_this.screen.leaveCutscene();
-				return false;
-			}
-			return true;
-		});
+	if (this.screen.scene === null) {} else {
+		var trans = new Transition.FadeTransition(this.scene);
+		trans.start(name, args);
 	}
 };
+
+var BaseLogic = function () {
+	function BaseLogic(state) {
+		_classCallCheck(this, BaseLogic);
+
+		this.timers = new Events.TimerList();
+		this.state = state;
+	}
+
+	_createClass(BaseLogic, [{
+		key: "destroy",
+		value: function destroy() {
+			this.timers.destroy();
+			this.timers = null;
+		}
+	}, {
+		key: "initScene",
+		value: function initScene(screen, scene) {
+			this.ctx = new LogicContext({
+				screen: screen,
+				scene: scene
+			});
+		}
+	}, {
+		key: "uninitScene",
+		value: function uninitScene() {
+			this.ctx = null;
+		}
+	}, {
+		key: "enterScene",
+		value: function enterScene() {}
+	}, {
+		key: "leaveScene",
+		value: function leaveScene() {}
+	}, {
+		key: "pause",
+		value: function pause() {
+			this.timers.pause();
+		}
+	}, {
+		key: "resume",
+		value: function resume() {
+			this.timers.resume();
+		}
+	}, {
+		key: "handleClicked",
+		value: function handleClicked(thing) {}
+	}]);
+
+	return BaseLogic;
+}();
 
 /***************/
 /* Scene Logic */
@@ -1380,198 +1368,212 @@ LogicContext.prototype.changeScene = function (name, args) {
 
 /* Logic classes for the various scenes in the game */
 
-var IntroLogic = function () {
-	function IntroLogic() {
+var IntroLogic = function (_BaseLogic) {
+	_inherits(IntroLogic, _BaseLogic);
+
+	function IntroLogic(state) {
 		_classCallCheck(this, IntroLogic);
+
+		return _possibleConstructorReturn(this, (IntroLogic.__proto__ || Object.getPrototypeOf(IntroLogic)).call(this, state));
 	}
 
 	_createClass(IntroLogic, [{
 		key: "initScene",
-		value: function initScene(ctx) {
-			ctx.getThing("door").setState("closed");
-			ctx.getThing("cupboard").setState("closed");
-
-			ctx.startTimer(function (ctx) {
-				//ctx.getThing("door").setState("open");
-				//ctx.showMessage("The door opens!");
+		value: function initScene(screen, scene) {
+			_get(IntroLogic.prototype.__proto__ || Object.getPrototypeOf(IntroLogic.prototype), "initScene", this).call(this, screen, scene);
+			this.ctx.getThing("door").setState("closed");
+			this.ctx.getThing("cupboard").setState("closed");
+		}
+	}, {
+		key: "enterScene",
+		value: function enterScene() {
+			this.timers.start(function () {
+				//this.ctx.getThing("door").setState("open");
+				//this.ctx.showMessage("The door opens!");
 				console.log("Tick");
 			}, 3000);
 
-			ctx.startTimer(function () {
+			this.timers.start(function () {
 				if (Math.random() < 0.4) {
 					Audio.play(Audio.Effects.Crickets, 0.1);
 				}
 				return true;
 			}, 700);
-
-			return;
-
-			var sprite = ctx.getThing("darkness").setVisible(false);
-			sprite.alpha = 0;
-
-			var timer = ctx.startTimer(1000, function (ctx) {
-				sprite.alpha = Math.max(sprite.alpha + 0.05, 1);
-				if (sprite.alpha >= 1) {}
-			});
-
-			timer.cancel();
-			timer.pause();
-			timer.resume();
 		}
 	}, {
 		key: "leaveScene",
-		value: function leaveScene(ctx) {}
+		value: function leaveScene() {
+			this.timers.clear();
+		}
 	}, {
 		key: "handleClicked",
-		value: function handleClicked(ctx) {
-			switch (ctx.thing.name) {
+		value: function handleClicked(thing) {
+			switch (thing.name) {
 				case "candle":
 					console.log("CANDLE");
-					ctx.showMessage("A candle for evening work. I won't need it.");
-					ctx.showMessage("Or maybe I will!");
+					this.ctx.showMessage("A candle for evening work. I won't need it.");
+					this.ctx.showMessage("Or maybe I will!");
 					break;
 
 				case "cupboard":
-					if (ctx.thing.state === "open") ctx.thing.setState("closed");else ctx.thing.setState("open");
+					if (thing.state === "open") thing.setState("closed");else thing.setState("open");
 
 					Audio.play(Audio.Effects.Cupboard, 0.4);
 					break;
 
 				case "door":
-					if (ctx.thing.state === "open") {
-						ctx.thing.setState("closed");
+					if (thing.state === "open") {
+						thing.setState("closed");
 						Audio.play(Audio.Effects.DoorClosing, 0.4);
 					} else {
-						ctx.thing.setState("open");
+						thing.setState("open");
 						Audio.play(Audio.Effects.DoorOpening, 0.25);
 					}
 					break;
 
 				case "outside":
-					ctx.changeScene("road");
+					this.ctx.changeScene("road");
 					break;
 			}
 		}
 	}]);
 
 	return IntroLogic;
-}();
+}(BaseLogic);
 
-var RideLogic = function () {
-	function RideLogic() {
+var RideLogic = function (_BaseLogic2) {
+	_inherits(RideLogic, _BaseLogic2);
+
+	function RideLogic(state) {
 		_classCallCheck(this, RideLogic);
+
+		return _possibleConstructorReturn(this, (RideLogic.__proto__ || Object.getPrototypeOf(RideLogic)).call(this, state));
 	}
 
 	_createClass(RideLogic, [{
 		key: "initScene",
-		value: function initScene(ctx) {
+		value: function initScene(screen, scene) {
+			var _this3 = this;
+
+			_get(RideLogic.prototype.__proto__ || Object.getPrototypeOf(RideLogic.prototype), "initScene", this).call(this, screen, scene);
+
 			var frame = 0;
 			var fps = 10;
-			ctx.startTimer(function () {
+			this.timers.start(function () {
 				frame = (frame + 1) % 4;
-				ctx.getThing("horse").setState("" + frame);
-				ctx.redraw();
+				_this3.ctx.getThing("horse").setState("" + frame);
+				_this3.ctx.redraw();
 				return true;
 			}, 1000 / fps);
 		}
 	}]);
 
 	return RideLogic;
-}();
+}(BaseLogic);
 
-var RoadLogic = function () {
-	function RoadLogic() {
+var RoadLogic = function (_BaseLogic3) {
+	_inherits(RoadLogic, _BaseLogic3);
+
+	function RoadLogic(state) {
 		_classCallCheck(this, RoadLogic);
+
+		return _possibleConstructorReturn(this, (RoadLogic.__proto__ || Object.getPrototypeOf(RoadLogic)).call(this, state));
 	}
 
 	_createClass(RoadLogic, [{
 		key: "initScene",
-		value: function initScene(ctx) {
-			var _this2 = this;
+		value: function initScene(screen, scene) {
+			var _this5 = this;
 
-			ctx.getThing("bush1").setVisible(!ctx.state.bush1Moved);
-			ctx.getThing("bush2").setVisible(!ctx.state.bush2Moved);
+			_get(RoadLogic.prototype.__proto__ || Object.getPrototypeOf(RoadLogic.prototype), "initScene", this).call(this, screen, scene);
 
-			this.updateCrow(ctx);
-			this.onCameraCallback = ctx.screen.onCamera(function (ctx) {
-				_this2.updateCrow(ctx);
+			this.ctx.getThing("bush1").setVisible(!this.state.bush1Moved);
+			this.ctx.getThing("bush2").setVisible(!this.state.bush2Moved);
+
+			this.updateCrow();
+			this.onCameraCallback = this.ctx.screen.onCamera(function () {
+				_this5.updateCrow();
 			});
 		}
 	}, {
 		key: "leaveScene",
-		value: function leaveScene(ctx) {
+		value: function leaveScene() {
 			this.onCameraCallback.remove();
 		}
 	}, {
 		key: "updateCrow",
-		value: function updateCrow(ctx) {
-			if (ctx.scene.cameraX > -0.1) {
+		value: function updateCrow() {
+			if (this.ctx.scene.cameraX > -0.1) {
 				this.crowFacing = "right";
-			} else if (ctx.scene.cameraX < -0.2) {
+			} else if (this.ctx.scene.cameraX < -0.2) {
 				this.crowFacing = "left";
 			}
-			ctx.getThing("crow").setState(this.crowFacing);
+			this.ctx.getThing("crow").setState(this.crowFacing);
 		}
 	}, {
 		key: "handleClicked",
-		value: function handleClicked(ctx) {
-			switch (ctx.thing.name) {
+		value: function handleClicked(thing) {
+			switch (thing.name) {
 				case "player":
-					ctx.showMessage("It's been a long road here.");
+					this.ctx.showMessage("It's been a long road here.");
 					break;
 
 				case "bush1":
-					ctx.state.bush1Moved = true;
-					ctx.thing.setVisible(false);
-					if (ctx.state.bush2Moved) {
-						ctx.showMessage("There's a cave behind these bushes!");
+					this.state.bush1Moved = true;
+					thing.setVisible(false);
+					if (this.state.bush2Moved) {
+						this.ctx.showMessage("There's a cave behind these bushes!");
 					} else {
-						ctx.showMessage("I've cleared away some brush. There's something behind it!");
+						this.ctx.showMessage("I've cleared away some brush. There's something behind it!");
 					}
 					break;
 
 				case "bush2":
-					ctx.state.bush2Moved = true;
-					ctx.thing.setVisible(false);
-					if (ctx.state.bush1Moved) {
-						ctx.showMessage("There's a cave behind these bushes!");
+					this.state.bush2Moved = true;
+					thing.setVisible(false);
+					if (this.state.bush1Moved) {
+						this.ctx.showMessage("There's a cave behind these bushes!");
 					} else {
-						ctx.showMessage("I've cleared away some brush. There's something behind it!");
+						this.ctx.showMessage("I've cleared away some brush. There's something behind it!");
 					}
 					break;
 
 				case "cave":
-					if (!ctx.state.bush1Moved || !ctx.state.bush2Moved) {
-						ctx.showMessage("I must clear the way first.");
+					if (!this.state.bush1Moved || !this.state.bush2Moved) {
+						this.ctx.showMessage("I must clear the way first.");
 					} else {
-						ctx.changeScene("cave");
+						this.ctx.changeScene("cave");
 					}
 					break;
 
 				case "house":
-					if (ctx.state.checkedDoor) {
-						ctx.showMessage("Maybe I can find a key, or another way in.");
+					if (this.state.checkedDoor) {
+						this.ctx.showMessage("Maybe I can find a key, or another way in.");
 					} else {
-						ctx.showMessage("There's no answer and the door's locked.");
-						ctx.state.checkedDoor = true;
+						this.ctx.showMessage("There's no answer and the door's locked.");
+						this.state.checkedDoor = true;
 					}
 					break;
 
 				case "crow":
-					ctx.showMessage("A crow is watching.");
+					this.ctx.showMessage("A crow is watching.");
 					break;
 			}
 		}
 	}]);
 
 	return RoadLogic;
-}();
+}(BaseLogic);
 
-var ClosetLogic = function () {
-	function ClosetLogic() {
+var ClosetLogic = function (_BaseLogic4) {
+	_inherits(ClosetLogic, _BaseLogic4);
+
+	function ClosetLogic(state) {
 		_classCallCheck(this, ClosetLogic);
 
-		this.States = {
+		var _this6 = _possibleConstructorReturn(this, (ClosetLogic.__proto__ || Object.getPrototypeOf(ClosetLogic)).call(this, state));
+
+		_this6.States = {
 			// Player enters scene
 			None: 0,
 			// Monster visible outside
@@ -1585,63 +1587,68 @@ var ClosetLogic = function () {
 			// Closet doors fully open
 			DoorsOpen: 5
 		};
-		this.state = this.States.None;
+		_this6.state = _this6.States.None;
+		return _this6;
 	}
 
 	_createClass(ClosetLogic, [{
 		key: "initScene",
-		value: function initScene(ctx) {
-			var _this3 = this;
+		value: function initScene(screen, scene) {
+			var _this7 = this;
 
-			ctx.getThing("monster").setVisible(false);
-			ctx.getThing("tent1").setVisible(false);
-			ctx.getThing("tent2").setVisible(false);
+			_get(ClosetLogic.prototype.__proto__ || Object.getPrototypeOf(ClosetLogic.prototype), "initScene", this).call(this, screen, scene);
 
-			ctx.screen.enterCutscene();
-			var dialog = ctx.showMessage("Am I safe in here???");
+			this.ctx.getThing("monster").setVisible(false);
+			this.ctx.getThing("tent1").setVisible(false);
+			this.ctx.getThing("tent2").setVisible(false);
+
+			this.ctx.screen.enterCutscene();
+			var dialog = this.ctx.showMessage("Am I safe in here???");
 			var closedCB = dialog.onClosed(function () {
 				closedCB.remove();
-				_this3.fadeInScene(ctx);
+				_this7.fadeInScene();
 			});
 
-			ctx.screen.onCamera(function (ctx) {
-				if (_this3.state === _this3.States.MonsterVisible && ctx.scene.cameraX > -0.35 && ctx.scene.cameraX < 0.35) {
-					_this3.changeState(ctx, _this3.States.CentreCamera);
+			this.ctx.screen.onCamera(function () {
+				if (_this7.state === _this7.States.MonsterVisible && _this7.ctx.scene.cameraX > -0.35 && _this7.ctx.scene.cameraX < 0.35) {
+					_this7.changeState(_this7.States.CentreCamera);
 				}
-				if (_this3.state === _this3.States.None && (ctx.scene.cameraX > 0.75 || ctx.scene.cameraX < -0.75)) {
-					_this3.changeState(ctx, _this3.States.MonsterVisible);
+				if (_this7.state === _this7.States.None && (_this7.ctx.scene.cameraX > 0.75 || _this7.ctx.scene.cameraX < -0.75)) {
+					_this7.changeState(_this7.States.MonsterVisible);
 				}
 			});
 		}
 	}, {
 		key: "leaveScene",
-		value: function leaveScene(ctx) {
+		value: function leaveScene() {
 			this.onCameraCallback.remove();
 		}
 	}, {
 		key: "handleClicked",
-		value: function handleClicked(ctx) {}
+		value: function handleClicked(thing) {}
 	}, {
 		key: "fadeInScene",
-		value: function fadeInScene(ctx) {
-			ctx.addUpdate(Utils.delayUpdate(1.5), function (dt) {
+		value: function fadeInScene() {
+			var _this8 = this;
+
+			this.ctx.addUpdate(Utils.delayUpdate(1.5), function (dt) {
 				// Opening the crack
-				var sprite = ctx.getThing("crack").getSprite();
-				var stop = ctx.getThing("darkright").getSprite();
-				var thing = ctx.getThing("crack");
+				var sprite = _this8.ctx.getThing("crack").getSprite();
+				var stop = _this8.ctx.getThing("darkright").getSprite();
+				var thing = _this8.ctx.getThing("crack");
 
 				//this.offset += dt;
 				//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
 				sprite.x += 8 * dt;
 				if (sprite.x > stop.x) {
 					sprite.visible = false;
-					ctx.screen.leaveCutscene();
+					_this8.ctx.screen.leaveCutscene();
 					return false;
 				}
 				return true;
 			}, function (dt) {
-				var sprite1 = ctx.getThing("darkright").getSprite();
-				var sprite2 = ctx.getThing("darkleft").getSprite();
+				var sprite1 = _this8.ctx.getThing("darkright").getSprite();
+				var sprite2 = _this8.ctx.getThing("darkleft").getSprite();
 				sprite1.alpha -= 0.30 * dt;
 				sprite2.alpha -= 0.30 * dt;
 				if (sprite1.alpha < 0) {
@@ -1654,21 +1661,21 @@ var ClosetLogic = function () {
 		}
 	}, {
 		key: "changeState",
-		value: function changeState(ctx, state) {
-			var _this4 = this;
+		value: function changeState(state) {
+			var _this9 = this;
 
 			console.log("STATE: " + state);
 			this.state = state;
 			switch (state) {
 				case this.States.MonsterVisible:
 					// Show the monster now
-					var monster = ctx.getThing("monster");
+					var monster = this.ctx.getThing("monster");
 					if (!monster.isVisible()) {
 						var frame = 0;
-						ctx.startTimer(function () {
+						this.timers.start(function () {
 							frame = (frame + 1) % 2;
 							monster.setState("" + frame);
-							ctx.redraw();
+							_this9.ctx.redraw();
 							return true;
 						}, 1000 / 5.0);
 					}
@@ -1676,47 +1683,47 @@ var ClosetLogic = function () {
 
 				case this.States.CentreCamera:
 					// Slowly pan the camera to X=0
-					ctx.screen.enterCutscene();
-					ctx.addUpdate(function (dt) {
+					this.ctx.screen.enterCutscene();
+					this.ctx.addUpdate(function (dt) {
 						var speed = 0.6;
-						var newX = ctx.scene.cameraX;
-						newX -= Math.sign(ctx.scene.cameraX) * speed * dt;
-						if (newX * ctx.scene.cameraX <= 0) {
+						var newX = _this9.ctx.scene.cameraX;
+						newX -= Math.sign(_this9.ctx.scene.cameraX) * speed * dt;
+						if (newX * _this9.ctx.scene.cameraX <= 0) {
 							// Done panning
-							ctx.scene.setCameraPos(0);
-							_this4.changeState(ctx, _this4.States.LeftTentacle);
+							_this9.ctx.scene.setCameraPos(0);
+							_this9.changeState(_this9.States.LeftTentacle);
 							return false;
 						}
-						ctx.scene.setCameraPos(newX);
+						_this9.ctx.scene.setCameraPos(newX);
 						return true;
 					});
 					break;
 
 				case this.States.LeftTentacle:
-					ctx.startTimer(function () {
-						ctx.getThing("tent1").setVisible(true);
-						_this4.changeState(ctx, _this4.States.RightTentacle);
+					this.timers.start(function () {
+						_this9.ctx.getThing("tent1").setVisible(true);
+						_this9.changeState(_this9.States.RightTentacle);
 						return false;
 					}, 750);
 					break;
 
 				case this.States.RightTentacle:
-					ctx.startTimer(function () {
-						ctx.getThing("tent2").setVisible(true);
-						_this4.changeState(ctx, _this4.States.DoorsOpen);
+					this.timers.start(function () {
+						_this9.ctx.getThing("tent2").setVisible(true);
+						_this9.changeState(_this9.States.DoorsOpen);
 						return false;
 					}, 750);
 					break;
 
 				case this.States.DoorsOpen:
-					ctx.startTimer(function () {
+					this.timers.start(function () {
 						var counter = 0;
-						ctx.addUpdate(function (dt) {
+						_this9.ctx.addUpdate(function (dt) {
 							var speed = 20;
-							ctx.getThing("doorleft").getSprite().x -= speed * dt;
-							ctx.getThing("doorright").getSprite().x += speed * dt;
-							ctx.getThing("tent1").getSprite().x -= speed * dt;
-							ctx.getThing("tent2").getSprite().x += speed * dt;
+							_this9.ctx.getThing("doorleft").getSprite().x -= speed * dt;
+							_this9.ctx.getThing("doorright").getSprite().x += speed * dt;
+							_this9.ctx.getThing("tent1").getSprite().x -= speed * dt;
+							_this9.ctx.getThing("tent2").getSprite().x += speed * dt;
 							counter += speed * dt;
 							if (counter > 5) return false;
 						});
@@ -1729,93 +1736,103 @@ var ClosetLogic = function () {
 	}]);
 
 	return ClosetLogic;
-}();
+}(BaseLogic);
 
-var DarkRoadLogic = function () {
+var DarkRoadLogic = function (_BaseLogic5) {
+	_inherits(DarkRoadLogic, _BaseLogic5);
+
 	function DarkRoadLogic() {
 		_classCallCheck(this, DarkRoadLogic);
+
+		return _possibleConstructorReturn(this, (DarkRoadLogic.__proto__ || Object.getPrototypeOf(DarkRoadLogic)).apply(this, arguments));
 	}
 
 	_createClass(DarkRoadLogic, [{
-		key: "initScene",
-		value: function initScene(ctx) {}
-	}, {
 		key: "enterScene",
-		value: function enterScene(ctx) {
-			ctx.showMessage("Sunset. How long was I down there?");
+		value: function enterScene() {
+			_get(DarkRoadLogic.prototype.__proto__ || Object.getPrototypeOf(DarkRoadLogic.prototype), "enterScene", this).call(this);
+			this.ctx.showMessage("Sunset. How long was I down there?");
 		}
 	}, {
 		key: "handleClicked",
-		value: function handleClicked(ctx) {
-			switch (ctx.thing.name) {
+		value: function handleClicked(thing) {
+			switch (thing.name) {
 				case "player":
-					ctx.showMessage("I'm glad I brought a light.");
+					this.ctx.showMessage("I'm glad I brought a light.");
 					break;
 
 				case "cave":
-					ctx.showMessage("No. I don't want to go back down there.");
+					this.ctx.showMessage("No. I don't want to go back down there.");
 					break;
 
 				case "house":
-					ctx.changeScene("building", { cameraX: -1 });
+					this.ctx.changeScene("building", { cameraX: -1 });
 					break;
 			}
 		}
 	}]);
 
 	return DarkRoadLogic;
-}();
+}(BaseLogic);
 
-var CaveLogic = function () {
-	function CaveLogic() {
+var CaveLogic = function (_BaseLogic6) {
+	_inherits(CaveLogic, _BaseLogic6);
+
+	function CaveLogic(state) {
 		_classCallCheck(this, CaveLogic);
+
+		return _possibleConstructorReturn(this, (CaveLogic.__proto__ || Object.getPrototypeOf(CaveLogic)).call(this, state));
 	}
 
 	_createClass(CaveLogic, [{
 		key: "initScene",
-		value: function initScene(ctx) {
-			ctx.startTimer(function () {
+		value: function initScene(screen, scene) {
+			_get(CaveLogic.prototype.__proto__ || Object.getPrototypeOf(CaveLogic.prototype), "initScene", this).call(this, screen, scene);
+
+			this.timers.start(function () {
 				Audio.play(Audio.Effects.Drip, 0.5);
 				return true;
 			}, 5000);
-			ctx.getThing("hole2").setState("empty");
-			ctx.getThing("key").setVisible(!ctx.state.hasRedKey);
-			ctx.getThing("shape").getSprite().x = -24;
+			this.ctx.getThing("hole2").setState("empty");
+			this.ctx.getThing("key").setVisible(!this.state.hasRedKey);
+			this.ctx.getThing("shape").getSprite().x = -24;
 		}
 	}, {
 		key: "handleClicked",
-		value: function handleClicked(ctx) {
-			switch (ctx.thing.name) {
+		value: function handleClicked(thing) {
+			var _this12 = this;
+
+			switch (thing.name) {
 				case "ladder":
-					if (ctx.state.hasRedKey) {
-						ctx.changeScene("darkroad", { cameraX: 1 });
+					if (this.state.hasRedKey) {
+						this.ctx.changeScene("darkroad", { cameraX: 1 });
 					} else {
-						ctx.changeScene("road", { cameraX: 1 });
+						this.ctx.changeScene("road", { cameraX: 1 });
 					}
 					break;
 
 				case "key":
-					ctx.getThing("key").setVisible(false);
-					ctx.state.hasRedKey = true;
-					ctx.showMessage("A small key. Odd it was left here.");
+					this.ctx.getThing("key").setVisible(false);
+					this.state.hasRedKey = true;
+					this.ctx.showMessage("A small key. Odd it was left here.");
 					break;
 
 				case "hole1":
-					if (ctx.state.seenHole1) {
-						ctx.showMessage("There is only darkness.");
+					if (this.state.seenHole1) {
+						this.ctx.showMessage("There is only darkness.");
 						break;
 					}
-					ctx.state.seenHole1 = true;
-					ctx.getThing("hole1").setVisible(false);
-					ctx.startTimer(function () {
+					this.state.seenHole1 = true;
+					this.ctx.getThing("hole1").setVisible(false);
+					this.timers.start(function () {
 						Audio.play(Audio.Effects.ShapeSound);
 					}, 250);
-					ctx.addUpdate(function (dt) {
-						var sprite = ctx.getThing("shape").getSprite();
+					this.ctx.addUpdate(function (dt) {
+						var sprite = _this12.ctx.getThing("shape").getSprite();
 						sprite.x += 40 * dt;
 						if (sprite.x > 16) {
-							ctx.getThing("hole1").setVisible(true);
-							ctx.showMessage("AHHH! What even was that?");
+							_this12.ctx.getThing("hole1").setVisible(true);
+							_this12.ctx.showMessage("AHHH! What even was that?");
 							return false;
 						}
 						return true;
@@ -1823,28 +1840,28 @@ var CaveLogic = function () {
 					break;
 
 				case "hole2":
-					//if (ctx.state.seenHole2) {
-					ctx.showMessage("There is only darkness.");
+					//if (this.ctx.state.seenHole2) {
+					this.ctx.showMessage("There is only darkness.");
 					break;
 					//}
-					//ctx.state.seenHole2 = true;
+					//this.ctx.state.seenHole2 = true;
 					/*
-     ctx.addUpdate(
+     this.ctx.addUpdate(
          Utils.delayUpdate(0.5),
          (dt) => {
-             ctx.getThing("hole2").setState("eyes");
+             this.ctx.getThing("hole2").setState("eyes");
          },
          Utils.delayUpdate(0.2),
          (dt) => {
-             ctx.getThing("hole2").setState("empty");
+             this.ctx.getThing("hole2").setState("empty");
          },
          Utils.delayUpdate(0.5),
          (dt) => {
-             ctx.getThing("hole2").setState("eyes");
+             this.ctx.getThing("hole2").setState("eyes");
          },
          Utils.delayUpdate(0.5),
          (dt) => {
-             ctx.getThing("hole2").setState("empty");
+             this.ctx.getThing("hole2").setState("empty");
          }
      );*/
 					break;
@@ -1853,13 +1870,17 @@ var CaveLogic = function () {
 	}]);
 
 	return CaveLogic;
-}();
+}(BaseLogic);
 
-var BuildingLogic = function () {
-	function BuildingLogic() {
+var BuildingLogic = function (_BaseLogic7) {
+	_inherits(BuildingLogic, _BaseLogic7);
+
+	function BuildingLogic(state) {
 		_classCallCheck(this, BuildingLogic);
 
-		this.States = {
+		var _this13 = _possibleConstructorReturn(this, (BuildingLogic.__proto__ || Object.getPrototypeOf(BuildingLogic)).call(this, state));
+
+		_this13.States = {
 			// Default state
 			None: 0,
 			// Monster waiting behind door. Triggered by checking closet
@@ -1868,141 +1889,144 @@ var BuildingLogic = function () {
 			PlayerMustHide: 2
 		};
 
-		this.monsterState = this.States.None;
+		_this13.monsterState = _this13.States.None;
+		return _this13;
 	}
 
 	_createClass(BuildingLogic, [{
 		key: "initScene",
-		value: function initScene(ctx) {
-			ctx.getThing("door").setState("open");
-			ctx.getThing("cdoor").setState("closed");
-			ctx.getThing("light").setState("off");
-			ctx.getThing("candle").invisibleToClicks = true;
-			ctx.getThing("darkness").invisibleToClicks = true;
-			ctx.getThing("closet").setState("dark");
-			ctx.getThing("monster").setVisible(false);
+		value: function initScene(screen, scene) {
+			_get(BuildingLogic.prototype.__proto__ || Object.getPrototypeOf(BuildingLogic.prototype), "initScene", this).call(this, screen, scene);
+
+			this.ctx.getThing("door").setState("open");
+			this.ctx.getThing("cdoor").setState("closed");
+			this.ctx.getThing("light").setState("off");
+			this.ctx.getThing("candle").invisibleToClicks = true;
+			this.ctx.getThing("darkness").invisibleToClicks = true;
+			this.ctx.getThing("closet").setState("dark");
+			this.ctx.getThing("monster").setVisible(false);
 			this.monsterState = this.States.MonsterWaiting;
-			ctx.getThing("door").setState("closed");
+			this.ctx.getThing("door").setState("closed");
 		}
 	}, {
 		key: "handleClicked",
-		value: function handleClicked(ctx) {
-			var _this5 = this;
+		value: function handleClicked(thing) {
+			var _this14 = this;
 
-			switch (ctx.thing.name) {
+			switch (thing.name) {
 				case "door":
 					if (this.monsterState === this.States.MonsterWaiting) {
 						var fps = 5;
 						var frame = 0;
-						ctx.getThing("door").setState("open");
-						ctx.getThing("monster").setState("0");
-						ctx.startTimer(function () {
-							if (_this5.monsterState === _this5.States.PlayerMustHide) {
+						this.ctx.getThing("door").setState("open");
+						this.ctx.getThing("monster").setState("0");
+						this.timers.start(function () {
+							if (_this14.monsterState === _this14.States.PlayerMustHide) {
 								return false;
 							}
 							frame = (frame + 1) % 2;
-							ctx.getThing("monster").setState("" + frame);
-							ctx.redraw();
+							_this14.ctx.getThing("monster").setState("" + frame);
+							_this14.ctx.redraw();
 							return true;
 						}, 1000.0 / fps);
 
-						ctx.startTimer(function () {
-							_this5.monsterState = _this5.States.PlayerMustHide;
-							ctx.getThing("door").setState("closed");
-							ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
+						this.timers.start(function () {
+							_this14.monsterState = _this14.States.PlayerMustHide;
+							_this14.ctx.getThing("door").setState("closed");
+							_this14.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
 						}, 1000);
 					} else if (this.monsterState === this.States.PlayerMustHide) {
-						ctx.showMessage("No! I've got to hide!");
-					} else if (ctx.thing.state === "open") {
-						ctx.thing.setState("closed");
+						this.ctx.showMessage("No! I've got to hide!");
+					} else if (thing.state === "open") {
+						thing.setState("closed");
 						Audio.play(Audio.Effects.DoorClosing, 0.4);
 					} else {
-						ctx.thing.setState("open");
+						thing.setState("open");
 						Audio.play(Audio.Effects.DoorOpening, 0.25);
 					}
 					break;
 
 				case "cdoor":
-					if (ctx.thing.state === "open") {
-						ctx.thing.setState("closed");
+					if (thing.state === "open") {
+						thing.setState("closed");
 						//Audio.play(Audio.Effects.DoorClosing, 0.4);
 					} else {
-						ctx.thing.setState("open");
+						thing.setState("open");
 						//Audio.play(Audio.Effects.DoorOpening, 0.25);
 					}
 					break;
 
 				case "closet":
 					if (this.monsterState === this.States.PlayerMustHide) {
-						ctx.changeScene("closet", { cameraX: 0 });
-					} else if (ctx.thing.state === "dark") {
-						ctx.showMessage("Even with the lamp it's too dark to see anything in there.");
-						ctx.showMessage("...the blood... I need to find a light.");
+						this.ctx.changeScene("closet", { cameraX: 0 });
+					} else if (thing.state === "dark") {
+						this.ctx.showMessage("Even with the lamp it's too dark to see anything in there.");
+						this.ctx.showMessage("...the blood... I need to find a light.");
 					} else {
-						ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Why the blood?");
-						ctx.getThing("door").setState("closed");
+						this.ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Why the blood?");
+						this.ctx.getThing("door").setState("closed");
 						this.monsterState = this.State.MonsterWaiting;
 					}
 					break;
 
 				case "clock":
 					if (this.monsterState === this.States.PlayerMustHide) {
-						ctx.showMessage("I need to find a place to hide!");
+						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
-						ctx.showMessage("It stopped years ago.");
+						this.ctx.showMessage("It stopped years ago.");
 					}
 					break;
 
 				case "outside":
 					if (this.monsterState === this.States.PlayerMustHide) {
-						ctx.showMessage("I need to find a place to hide!");
+						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
-						ctx.showMessage("I should look around first.");
+						this.ctx.showMessage("I should look around first.");
 					}
 					break;
 
 				case "bookshelf":
 					if (this.monsterState === this.States.PlayerMustHide) {
-						ctx.showMessage("I need to find a place to hide!");
+						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
-						ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
+						this.ctx.showMessage("Everything is covered in grit and dust. Does anybody still live here?");
 					}
 					break;
 
 				case "clothes":
 					if (this.monsterState === this.States.PlayerMustHide) {
-						ctx.showMessage("I need to find a place to hide!");
+						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
-						ctx.showMessage("Dirty sheets... this place is a mess.");
+						this.ctx.showMessage("Dirty sheets... this place is a mess.");
 					}
 					break;
 
 				case "bloodarea":
 					if (this.monsterState === this.States.PlayerMustHide) {
-						ctx.showMessage("I need to find a place to hide!");
+						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
-						ctx.showMessage("Blood... what happened here?");
+						this.ctx.showMessage("Blood... what happened here?");
 					}
 					break;
 
 				case "light":
-					if (ctx.thing.state === "off") {
-						ctx.thing.setState("on");
-						ctx.getThing("darkness").setVisible(false);
-						ctx.getThing("closet").setState("light");
-						ctx.addUpdate(Utils.delayUpdate(0.4), function (dt) {
-							var sprite = ctx.getThing("candle").getSprite();
+					if (thing.state === "off") {
+						thing.setState("on");
+						this.ctx.getThing("darkness").setVisible(false);
+						this.ctx.getThing("closet").setState("light");
+						this.ctx.addUpdate(Utils.delayUpdate(0.4), function (dt) {
+							var sprite = _this14.ctx.getThing("candle").getSprite();
 							sprite.y += 20 * dt;
 							if (sprite.y > 0) {
-								ctx.getThing("candle").setVisible(false);
+								_this14.ctx.getThing("candle").setVisible(false);
 								return false;
 							}
 							return true;
 						});
 					} else if (this.monsterState === this.States.PlayerMustHide) {
-						ctx.showMessage("I need to find a place to hide!");
+						this.ctx.showMessage("I need to find a place to hide!");
 					} else {
-						ctx.showMessage("...I'd prefer the lights stay on.");
+						this.ctx.showMessage("...I'd prefer the lights stay on.");
 					}
 					break;
 			}
@@ -2010,15 +2034,14 @@ var BuildingLogic = function () {
 	}]);
 
 	return BuildingLogic;
-}();
+}(BaseLogic);
 
 module.exports = {
-	Logic: Logic,
-	LogicContext: LogicContext,
+	GameLogic: GameLogic,
 	State: State
 };
 
-},{"./audio":1,"./utils":12}],8:[function(require,module,exports){
+},{"./audio":1,"./events":3,"./transition":12,"./utils":13}],8:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -2084,16 +2107,16 @@ var Utils = require("./utils");
 /* PlayScreen */
 /**************/
 
-function PlayScreen(logic, dataList, width, height) {
+function PlayScreen(gameLogic, dataList, width, height) {
     var _this = this;
 
     this.name = "PlayScreen";
     // The scene currently displayed (Scene instance)
     this.scene = null;
     // The gameplay logic
-    this.logic = logic;
+    this.gameLogic = gameLogic;
     // The collection of all scenes (SceneData) in the game
-    this.dataList = dataList;
+    this.sceneDataList = dataList;
     // The top-level PIXI container that holds the scene sprites. This 
     // container gets scaled to fit the canvas.
     this.stage = new PIXI.Container();
@@ -2110,8 +2133,6 @@ function PlayScreen(logic, dataList, width, height) {
     // The mouse cursor position when the player started dragging around
     this.dragStartX = 0;
     this.dragStartY = 0;
-    // List of currently active timers in the game (Timer instances)
-    this.timers = [];
     // List of animation callback functions
     this.updateCallbacks = [];
     // Setup some events for communicating with the main game state
@@ -2230,43 +2251,33 @@ PlayScreen.prototype.setScene = function (name, args) {
         if (args.cameraY !== undefined) cameraY = args.cameraY;
     }
 
-    if (!this.dataList[name]) {
+    if (!this.sceneDataList[name]) {
         throw Error("No such scene: " + name);
     }
     if (this.scene) {
-        var _ctx = this.logic.makeContext({
-            screen: this,
-            scene: this.scene
-        });
-        this.logic.leaveScene(_ctx);
+        this.scene.logic.leaveScene();
+        this.scene.logic.uninitScene();
         this.scene.destroy(); // TODO - cache the scene
         this.scene = null;
     }
-    var scene = Scene.Scene.fromData(this.dataList[name]);
-    scene.screen = this;
-    scene.setLogic(this.logic);
-    this.scene = scene;
+
+    this.scene = Scene.Scene.fromData(this.sceneDataList[name]);
+
+    var logic = this.gameLogic.getSceneLogic(name);
+    this.scene.initScene(this, logic);
     this.sceneStage.children = [];
-    this.sceneStage.addChild(scene.container);
+    this.sceneStage.addChild(this.scene.container);
     this.sceneStage.scale.set(this.getDisplayScale());
     this.sceneStage.x = this.viewWidth / 2;
     this.sceneStage.y = this.viewHeight / 2;
-    var ctx = this.logic.makeContext({
-        screen: this,
-        scene: this.scene
-    });
-    this.logic.enterScene(ctx);
     this.scene.setCameraPos(cameraX, cameraY);
+    this.scene.logic.enterScene();
 };
 
 PlayScreen.prototype.setCameraPos = function (xpos, ypos) {
     this.scene.setCameraPos(xpos, ypos);
     if (this.eventManager.hasListeners("camera")) {
-        var ctx = this.logic.makeContext({
-            screen: this,
-            scene: this.scene
-        });
-        this.dispatch("camera", ctx);
+        this.dispatch("camera");
     }
 };
 
@@ -2295,15 +2306,7 @@ PlayScreen.prototype.handleClick = function (evt) {
     var yp = evt.y / this.getDisplayScale();
 
     if (!this.isCutscene) {
-        var args = this.scene.checkHit(xp, yp);
-        if (args.thing) {
-            var ctx = this.logic.makeContext({
-                screen: this,
-                scene: this.scene,
-                thing: args.thing,
-                sprite: args.sprite
-            });
-            this.logic.handleClicked(ctx);
+        if (this.scene.handleClicked(xp, yp)) {
             this.redraw();
         }
     }
@@ -2415,7 +2418,7 @@ PlayScreen.prototype.leaveCutscene = function () {
 
 module.exports = PlayScreen;
 
-},{"./dialog":2,"./events":3,"./logic":7,"./scene":11,"./utils":12}],10:[function(require,module,exports){
+},{"./dialog":2,"./events":3,"./logic":7,"./scene":11,"./utils":13}],10:[function(require,module,exports){
 "use strict";
 
 /* APDUNGEON - A dungeon crawler demo written in javascript + pixi.js
@@ -2535,6 +2538,7 @@ module.exports.resize = function () {
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Logic = require("./logic");
 var Render = require("./render");
 var Events = require("./events");
 var Utils = require("./utils");
@@ -2559,23 +2563,9 @@ function Scene() {
     /*let mgr = new Events.EventManager();
     this.onCamera = mgr.hook("camera");
     this.onUpdate = mgr.hook("update");*/
-    this.timers = new Events.TimerList();
 }
 
-Scene.prototype.destroy = function () {
-    this.timers.destroy();
-    this.timers = null;
-};
-
-Scene.prototype.setLogic = function (logic) {
-    this.logic = logic;
-
-    var ctx = this.logic.makeContext({
-        screen: this.screen,
-        scene: this
-    });
-    this.logic.initScene(ctx);
-};
+Scene.prototype.destroy = function () {};
 
 /* Returns the width and height of the bottom layer in this scene. This is
  * considered the 'base size' and is used to determine how the scene should
@@ -2722,11 +2712,26 @@ Scene.prototype.getLayer = function (name) {
 };
 
 Scene.prototype.pause = function () {
-    this.timers.pause();
+    this.logic.pause();
 };
 
 Scene.prototype.resume = function () {
-    this.timers.resume();
+    this.logic.resume();
+};
+
+Scene.prototype.initScene = function (screen, logic) {
+    this.screen = screen;
+    this.logic = logic;
+    this.logic.initScene(screen, this);
+};
+
+Scene.prototype.handleClicked = function (x, y) {
+    var args = this.checkHit(x, y);
+    if (args.thing) {
+        this.logic.handleClicked(args.thing);
+        return true;
+    }
+    return false;
 };
 
 /* Builds a new scene given the SceneData instance. This function builds
@@ -3038,7 +3043,149 @@ module.exports = {
     Thing: Thing
 };
 
-},{"./events":3,"./render":10,"./utils":12}],12:[function(require,module,exports){
+},{"./events":3,"./logic":7,"./render":10,"./utils":13}],12:[function(require,module,exports){
+"use strict";
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/* demoquest - An adventure game demo with parallax scrolling
+ * Copyright (C) 2017  Peter Rogers
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+var Utils = require("./utils");
+
+/*********/
+/* Fader */
+/*********/
+
+function Fader(width, height, args) {
+				var dir = args.dir !== undefined ? args.dir : 1;
+				var txt = Utils.makeSolidColourTexture("black", width, height);
+				this.sprite = new PIXI.Sprite(txt);
+				this.sprite.alpha = 1 - dir;
+				this.duration = args.duration !== undefined ? args.duration : 1;
+				this.dir = dir;
+}
+
+Fader.prototype.start = function (stage) {
+				stage.addChild(this.sprite);
+};
+
+Fader.prototype.update = function (dt) {
+				this.sprite.alpha += this.dir * dt / this.duration;
+				if (this.dir > 0 && this.sprite.alpha >= 1) {
+								this.sprite.alpha = 1;
+								this.sprite.parent.removeChild(this.sprite);
+								return false;
+				} else if (this.dir < 0 && this.sprite.alpha <= 0) {
+								this.sprite.alpha = 0;
+								this.sprite.parent.removeChild(this.sprite);
+								return false;
+				}
+				return true;
+};
+
+/******************/
+/* FadeTransition */
+/******************/
+
+var FadeTransition = function () {
+				function FadeTransition(startScene) {
+								_classCallCheck(this, FadeTransition);
+
+								this.startSCene = startScene;
+								this.screen = startScene.screen;
+				}
+
+				_createClass(FadeTransition, [{
+								key: "start",
+								value: function start(endScene, args) {
+												var _this = this;
+
+												// Fade out, switch scenes, then fade back in
+												var fadeout = new Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: 1, duration: 1 });
+												var fadein = new Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 1 });
+												//this.screen.stage.removeChild(fadeout.sprite);
+												this.screen.pause();
+												this.screen.enterCutscene();
+												fadeout.start(this.screen.stage);
+												this.screen.addUpdate(function (dt) {
+																if (!fadeout.update(dt)) {
+																				_this.screen.setScene(endScene, args);
+																				fadein.start(_this.screen.stage);
+																				return false;
+																}
+																return true;
+												}, function (dt) {
+																if (!fadein.update(dt)) {
+																				_this.screen.resume();
+																				_this.screen.leaveCutscene();
+																				return false;
+																}
+																return true;
+												});
+								}
+				}]);
+
+				return FadeTransition;
+}();
+
+/********************/
+/* FadeInTransition */
+/********************/
+
+var FadeInTransition = function () {
+				function FadeInTransition(screen) {
+								_classCallCheck(this, FadeInTransition);
+
+								this.screen = screen;
+				}
+
+				_createClass(FadeInTransition, [{
+								key: "start",
+								value: function start(sceneName, args) {
+												var _this2 = this;
+
+												// Slow fade into the starting scene
+												this.screen.setScene(sceneName, args);
+												this.screen.pause();
+												var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, { dir: -1, duration: 2 });
+												fader.start(this.screen.stage);
+												this.screen.addUpdate(function (dt) {
+																if (!fader.update(dt)) {
+																				_this2.screen.resume();
+																				return false;
+																}
+																return true;
+												});
+								}
+				}]);
+
+				return FadeInTransition;
+}();
+
+module.exports = {
+				FadeTransition: FadeTransition,
+				FadeInTransition: FadeInTransition,
+				Fader: Fader
+};
+
+},{"./utils":13}],13:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -3117,41 +3264,9 @@ Screen.prototype.configure = function (renderer) {
     this.height = renderer.height;
 };
 
-/*********/
-/* Fader */
-/*********/
-
-function Fader(width, height, args) {
-    var dir = args.dir !== undefined ? args.dir : 1;
-    var txt = makeSolidColourTexture("black", width, height);
-    this.sprite = new PIXI.Sprite(txt);
-    this.sprite.alpha = 1 - dir;
-    this.duration = args.duration !== undefined ? args.duration : 1;
-    this.dir = dir;
-}
-
-Fader.prototype.start = function (stage) {
-    stage.addChild(this.sprite);
-};
-
-Fader.prototype.update = function (dt) {
-    this.sprite.alpha += this.dir * dt / this.duration;
-    if (this.dir > 0 && this.sprite.alpha >= 1) {
-        this.sprite.alpha = 1;
-        this.sprite.parent.removeChild(this.sprite);
-        return false;
-    } else if (this.dir < 0 && this.sprite.alpha <= 0) {
-        this.sprite.alpha = 0;
-        this.sprite.parent.removeChild(this.sprite);
-        return false;
-    }
-    return true;
-};
-
 module.exports = {
     makeSolidColourTexture: makeSolidColourTexture,
     getTransparencyMask: getTransparencyMask,
-    Fader: Fader,
     delayUpdate: delayUpdate
 };
 

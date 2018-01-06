@@ -25,15 +25,15 @@ var Utils = require("./utils");
 /* PlayScreen */
 /**************/
 
-function PlayScreen(logic, dataList, width, height)
+function PlayScreen(gameLogic, dataList, width, height)
 {
     this.name = "PlayScreen";
     // The scene currently displayed (Scene instance)
     this.scene = null;
     // The gameplay logic
-    this.logic = logic;
+    this.gameLogic = gameLogic;
     // The collection of all scenes (SceneData) in the game
-    this.dataList = dataList;
+    this.sceneDataList = dataList;
     // The top-level PIXI container that holds the scene sprites. This 
     // container gets scaled to fit the canvas.
     this.stage = new PIXI.Container();
@@ -50,8 +50,6 @@ function PlayScreen(logic, dataList, width, height)
     // The mouse cursor position when the player started dragging around
     this.dragStartX = 0;
     this.dragStartY = 0;
-    // List of currently active timers in the game (Timer instances)
-    this.timers = [];
     // List of animation callback functions
     this.updateCallbacks = [];
     // Setup some events for communicating with the main game state
@@ -157,44 +155,35 @@ PlayScreen.prototype.setScene = function(name, args)
         if (args.cameraY !== undefined) cameraY = args.cameraY;
     }
 
-    if (!this.dataList[name]) {
+    if (!this.sceneDataList[name]) {
 	throw Error("No such scene: " + name);
     }
-    if (this.scene) {
-        let ctx = this.logic.makeContext({
-            screen: this,
-            scene: this.scene
-        });
-	this.logic.leaveScene(ctx);
+    if (this.scene) 
+    {
+	this.scene.logic.leaveScene();
+	this.scene.logic.uninitScene();
 	this.scene.destroy(); // TODO - cache the scene
 	this.scene = null;
     }
-    var scene = Scene.Scene.fromData(this.dataList[name]);
-    scene.screen = this;
-    scene.setLogic(this.logic);
-    this.scene = scene;
+    
+    this.scene = Scene.Scene.fromData(this.sceneDataList[name]);
+
+    let logic = this.gameLogic.getSceneLogic(name);
+    this.scene.initScene(this, logic);
     this.sceneStage.children = [];
-    this.sceneStage.addChild(scene.container);
+    this.sceneStage.addChild(this.scene.container);
     this.sceneStage.scale.set(this.getDisplayScale());
     this.sceneStage.x = this.viewWidth/2;
     this.sceneStage.y = this.viewHeight/2;
-    let ctx = this.logic.makeContext({
-        screen: this, 
-        scene: this.scene
-    })
-    this.logic.enterScene(ctx);
     this.scene.setCameraPos(cameraX, cameraY)
+    this.scene.logic.enterScene();
 }
 
 PlayScreen.prototype.setCameraPos = function(xpos, ypos)
 {
     this.scene.setCameraPos(xpos, ypos);
     if (this.eventManager.hasListeners("camera")) {
-	let ctx = this.logic.makeContext({
-            screen: this,
-            scene: this.scene
-        });
-        this.dispatch("camera", ctx);
+        this.dispatch("camera");
     }
 }
 
@@ -227,15 +216,7 @@ PlayScreen.prototype.handleClick = function(evt)
 
     if (!this.isCutscene)
     {
-	var args = this.scene.checkHit(xp, yp);
-	if (args.thing) {
-	    var ctx = this.logic.makeContext({
-		screen: this,
-		scene: this.scene, 
-		thing: args.thing, 
-		sprite: args.sprite
-            });
-	    this.logic.handleClicked(ctx);
+	if (this.scene.handleClicked(xp, yp)) {
 	    this.redraw();
 	}
     }

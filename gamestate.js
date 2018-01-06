@@ -29,8 +29,7 @@ function GameState(div)
 {
     // The screen currently displayed
     this.screen = null;
-    this.logic = new Logic.Logic();
-    this.state = new Logic.State();
+    this.gameLogic = new Logic.GameLogic();
     this.dataList = {};
     this.lastRenderTime = null;
 
@@ -155,7 +154,7 @@ GameState.prototype._startGame = function()
 {
     this.dataList = this.screen.dataList;
     this.screen = new PlayScreen(
-	this.logic, 
+	this.gameLogic, 
 	this.dataList,
 	Render.getRenderer().width, 
 	Render.getRenderer().height);
@@ -174,9 +173,7 @@ GameState.prototype._startGame = function()
     });
     // Now change to the opening scene
     //this.screen.changeScene("closet", {cameraX: 0});
-    this.logic.startGame(this.logic.makeContext({
-	screen: this.screen
-    }));
+    this.gameLogic.startGame(this.screen);
 }
 
 module.exports = GameState;

@@ -79,43 +79,8 @@ Screen.prototype.configure = function(renderer)
     this.height = renderer.height;
 }
 
-/*********/
-/* Fader */
-/*********/
-
-function Fader(width, height, args)
-{
-    let dir = args.dir !== undefined ? args.dir : 1;
-    let txt = makeSolidColourTexture("black", width, height);
-    this.sprite = new PIXI.Sprite(txt);
-    this.sprite.alpha = 1-dir;
-    this.duration = args.duration !== undefined ? args.duration : 1;
-    this.dir = dir;
-}
-
-Fader.prototype.start = function(stage)
-{
-    stage.addChild(this.sprite);
-}
-
-Fader.prototype.update = function(dt)
-{
-    this.sprite.alpha += this.dir*dt/this.duration;
-    if (this.dir > 0 && this.sprite.alpha >= 1) {
-	this.sprite.alpha = 1;
-	this.sprite.parent.removeChild(this.sprite);
-	return false;
-    } else if (this.dir < 0 && this.sprite.alpha <= 0) {
-	this.sprite.alpha = 0;
-	this.sprite.parent.removeChild(this.sprite);
-	return false;
-    }
-    return true;
-}
-
 module.exports = {
     makeSolidColourTexture: makeSolidColourTexture,
     getTransparencyMask: getTransparencyMask,
-    Fader: Fader,
     delayUpdate: delayUpdate
 };

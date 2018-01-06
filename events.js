@@ -176,6 +176,12 @@ TimerList.prototype.destroy = function()
     this.timers = null;
 }
 
+TimerList.prototype.clear = function()
+{
+    this.destroy();
+    this.timers = [];
+}
+
 TimerList.prototype.start = function(callback, delay)
 {
     var tm = new Timer(() => {

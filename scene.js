@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+var Logic = require("./logic");
 var Render = require("./render");
 var Events = require("./events");
 var Utils = require("./utils");
@@ -40,24 +41,10 @@ function Scene()
     /*let mgr = new Events.EventManager();
     this.onCamera = mgr.hook("camera");
     this.onUpdate = mgr.hook("update");*/
-    this.timers = new Events.TimerList();
 }
 
 Scene.prototype.destroy = function()
 {
-    this.timers.destroy();
-    this.timers = null;
-}
-
-Scene.prototype.setLogic = function(logic)
-{
-    this.logic = logic;
-
-    let ctx = this.logic.makeContext({
-        screen: this.screen,
-        scene: this
-    });
-    this.logic.initScene(ctx);
 }
 
 /* Returns the width and height of the bottom layer in this scene. This is
@@ -148,12 +135,29 @@ Scene.prototype.getLayer = function(name)
 
 Scene.prototype.pause = function()
 {
-    this.timers.pause();
+    this.logic.pause();
 }
 
 Scene.prototype.resume = function()
 {
-    this.timers.resume();
+    this.logic.resume();
+}
+
+Scene.prototype.initScene = function(screen, logic)
+{
+    this.screen = screen;
+    this.logic = logic;
+    this.logic.initScene(screen, this);
+}
+
+Scene.prototype.handleClicked = function(x, y)
+{
+    var args = this.checkHit(x, y);
+    if (args.thing) {
+	this.logic.handleClicked(args.thing);
+	return true;
+    }
+    return false;
 }
 
 /* Builds a new scene given the SceneData instance. This function builds
