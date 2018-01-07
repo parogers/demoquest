@@ -48,8 +48,8 @@ function PlayScreen(gameLogic, dataList, width, height)
     // or the player is panning around instead.
     this.dragging = null;
     // The mouse cursor position when the player started dragging around
-    this.dragStartX = 0;
-    this.dragStartY = 0;
+    this.dragStartX = null;
+    this.dragStartY = null;
     // List of animation callback functions
     this.updateCallbacks = [];
     // Setup some events for communicating with the main game state
@@ -278,7 +278,8 @@ PlayScreen.prototype.handleDragStop = function(evt)
 	this.handleClick(evt);
     }
     this.dragging = null;
-
+    this.dragStartX = null;
+    this.dragStartY = null;
     this.dispatch("dragStop");
 }
 
@@ -286,7 +287,7 @@ PlayScreen.prototype.handleDrag = function(evt)
 {
     if (!this.scene) return;
 
-    if (!this.isCutscene)
+    if (!this.isCutscene && this.dragStartX !== null)
     {
 	if (this.dragging) {
 	    // Dragging a thing

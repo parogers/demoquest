@@ -16,6 +16,7 @@
  */
 
 var Utils = require("./utils");
+var Events = require("./events");
 
 /*********/
 /* Fader */
@@ -124,11 +125,15 @@ class FadeInTransition
 	this.screen = screen;
 	this.sceneName = sceneName
 	this.args = args || {};
+
+	var mgr = new Events.EventManager();
+	this.onComplete = mgr.hook("complete");
+	this.dispatch = mgr.dispatcher();
     }
 
     start() {
 	this.screen.setScene(this.sceneName, this.args);
-	this.screen.pause();
+	this.screen.enterCutscene();
 	var fader = new Fader(
 	    this.screen.viewWidth, 
 	    this.screen.viewHeight,
@@ -141,7 +146,7 @@ class FadeInTransition
 	fader.start(this.screen.stage);
 	this.screen.addUpdate(dt => {
 	    if (!fader.update(dt)) {
-		this.screen.resume();
+		this.screen.leaveCutscene();
 		return false;
 	    }
 	    return true;

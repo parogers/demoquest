@@ -1246,6 +1246,8 @@ var GameLogic = function () {
 		value: function startGame(screen) {
 			//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
 			var trans = new Transition.FadeIn(screen, "intro", { cameraX: -1 });
+			/*trans.onComplete(() => {
+   });*/
 			trans.start();
 		}
 	}]);
@@ -1395,7 +1397,7 @@ var IntroLogic = function (_BaseLogic) {
 			}, 3000);
 
 			this.timers.start(function () {
-				if (Math.random() < 0.4) {
+				if (Math.random() < 0.6) {
 					Audio.play(Audio.Effects.Crickets, 0.1);
 				}
 				return true;
@@ -1411,9 +1413,23 @@ var IntroLogic = function (_BaseLogic) {
 		value: function handleClicked(thing) {
 			switch (thing.name) {
 				case "candle":
-					console.log("CANDLE");
 					this.ctx.showMessage("A candle for evening work. I won't need it.");
-					this.ctx.showMessage("Or maybe I will!");
+					var dialog = this.ctx.showMessage("Or maybe I will. I better take it.");
+					dialog.onClosed(function () {
+						thing.setVisible(false);
+					});
+					break;
+
+				case "suitcase":
+					this.ctx.showMessage("Packed belongings for the journey. Do I have everything?");
+					break;
+
+				case "letter":
+					this.ctx.showMessage("A letter from my grandfather. It doesn't say very much, but I know I need to see him.");
+					break;
+
+				case "pocketwatch":
+					this.ctx.showMessage("My grandfather's pocket watch. It came with the letter.");
 					break;
 
 				case "cupboard":
@@ -2179,8 +2195,8 @@ function PlayScreen(gameLogic, dataList, width, height) {
     // or the player is panning around instead.
     this.dragging = null;
     // The mouse cursor position when the player started dragging around
-    this.dragStartX = 0;
-    this.dragStartY = 0;
+    this.dragStartX = null;
+    this.dragStartY = null;
     // List of animation callback functions
     this.updateCallbacks = [];
     // Setup some events for communicating with the main game state
@@ -2411,14 +2427,15 @@ PlayScreen.prototype.handleDragStop = function (evt) {
         this.handleClick(evt);
     }
     this.dragging = null;
-
+    this.dragStartX = null;
+    this.dragStartY = null;
     this.dispatch("dragStop");
 };
 
 PlayScreen.prototype.handleDrag = function (evt) {
     if (!this.scene) return;
 
-    if (!this.isCutscene) {
+    if (!this.isCutscene && this.dragStartX !== null) {
         if (this.dragging) {
             // Dragging a thing
             this.dragging.x = this.dragStartX + evt.dx / this.getDisplayScale();
@@ -2523,8 +2540,8 @@ module.exports.configure = function (div, aspect) {
         height = Math.round(rect.height / aspect);
     }
 
-    //renderer = new PIXI.CanvasRenderer({
-    renderer = PIXI.autoDetectRenderer({
+    renderer = new PIXI.CanvasRenderer({
+        //renderer = PIXI.autoDetectRenderer({
         width: width,
         height: height,
         //antialias: true,
@@ -3117,6 +3134,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  */
 
 var Utils = require("./utils");
+var Events = require("./events");
 
 /*********/
 /* Fader */
@@ -3217,6 +3235,10 @@ var FadeInTransition = function () {
 								this.screen = screen;
 								this.sceneName = sceneName;
 								this.args = args || {};
+
+								var mgr = new Events.EventManager();
+								this.onComplete = mgr.hook("complete");
+								this.dispatch = mgr.dispatcher();
 				}
 
 				_createClass(FadeInTransition, [{
@@ -3225,7 +3247,7 @@ var FadeInTransition = function () {
 												var _this2 = this;
 
 												this.screen.setScene(this.sceneName, this.args);
-												this.screen.pause();
+												this.screen.enterCutscene();
 												var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
 																dir: -1,
 																duration: this.args.duration || 2,
@@ -3234,7 +3256,7 @@ var FadeInTransition = function () {
 												fader.start(this.screen.stage);
 												this.screen.addUpdate(function (dt) {
 																if (!fader.update(dt)) {
-																				_this2.screen.resume();
+																				_this2.screen.leaveCutscene();
 																				return false;
 																}
 																return true;
@@ -3286,7 +3308,7 @@ module.exports = {
 				Fader: Fader
 };
 
-},{"./utils":13}],13:[function(require,module,exports){
+},{"./events":3,"./utils":13}],13:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling

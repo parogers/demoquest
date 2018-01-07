@@ -62,6 +62,8 @@ class GameLogic
     startGame(screen) {
 	//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
 	let trans = new Transition.FadeIn(screen, "intro", {cameraX: -1});
+	/*trans.onComplete(() => {
+	});*/
 	trans.start();
     }
 }
@@ -197,7 +199,7 @@ class IntroLogic extends BaseLogic
 	}, 3000);
 
 	this.timers.start(() => {
-	    if (Math.random() < 0.4) {
+	    if (Math.random() < 0.6) {
 		Audio.play(Audio.Effects.Crickets, 0.1);
 	    }
 	    return true;
@@ -212,9 +214,23 @@ class IntroLogic extends BaseLogic
 	switch(thing.name) 
 	{
 	case "candle":
-	    console.log("CANDLE");
 	    this.ctx.showMessage("A candle for evening work. I won't need it.");
-	    this.ctx.showMessage("Or maybe I will!");
+	    let dialog = this.ctx.showMessage("Or maybe I will. I better take it.");
+	    dialog.onClosed(() => {
+		thing.setVisible(false);
+	    });
+	    break;
+
+	case "suitcase":
+	    this.ctx.showMessage("Packed belongings for the journey. Do I have everything?");
+	    break;
+
+	case "letter":
+	    this.ctx.showMessage("A letter from my grandfather. It doesn't say very much, but I know I need to see him.");
+	    break;
+
+	case "pocketwatch":
+	    this.ctx.showMessage("My grandfather's pocket watch. It came with the letter.");
 	    break;
 
 	case "cupboard":
