@@ -58,13 +58,5 @@ module.exports.load = function(sources, opts)
     sounds.whenLoaded = opts.whenLoaded || null;
     sounds.onFailed = opts.onFailed || null;
     sounds.onProgress = opts.onProgress || null;
-    // Show and update the new progress bar for loading audio
-/*    progress.setText("LOADING AUDIO...");
-    sounds.onProgress = function(percent) {
-        progress.update(percent/100.0);
-        requestAnimationFrame(function() {
-            Render.getRenderer().render(stage);
-        });
-    };*/
     sounds.load(sources);
 }

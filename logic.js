@@ -33,6 +33,7 @@ class State
         this.bush2Moved = false;
         this.seenHole1 = false;
         this.seenHole2 = false;
+	this.hasCandle = false;
     }
 }
 
@@ -61,7 +62,7 @@ class GameLogic
 
     startGame(screen) {
 	//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
-	let trans = new Transition.FadeIn(screen, "intro", {cameraX: -1});
+	let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
 	/*trans.onComplete(() => {
 	});*/
 	trans.start();
@@ -178,6 +179,63 @@ class BaseLogic
 /* Scene Logic */
 /***************/
 
+class CricketNoise
+{
+    constructor() {
+	this.current = null;
+	this.timeoutEvent = null;
+	this.times = 0;
+    }
+
+    play(delay) {
+	// Schedule the first chirp
+	if (!this.current) {
+	    this._scheduleNext(delay);
+	}
+    }
+
+    stop() {
+	if (this.current !== null) {
+	    // Fully stop the sound playing again. Note calling 'pause' here
+	    // then 'play' again later doubles the playback speed. (BUG)
+	    this.current.soundNode.stop(0);
+	    this.current = null;
+	}
+	if (this.timeoutEvent !== null) {
+	    console.log("CLEAR TIMEOUT");
+	    clearTimeout(this.timeoutEvent);
+	    this.timeoutEvent = null;
+	}
+    }
+
+    isStopped() { return this.current === null; }
+
+    /* Schedules the next cricket chirp to happen after a given delay */
+    _scheduleNext(delay) {
+	this.timeoutEvent = setTimeout(() => {
+	    let snd = Audio.play(Audio.Effects.Crickets, 0.1);
+	    snd.soundNode.onended = () => {
+		if (this.isStopped()) {
+		    return;
+		}
+		// Schedule the next chirp to happen either immediately (with
+		// a longer chirp-chain meaning a decreasing probability of
+		// that happening), or after a period of silence determined 
+		// by the length of the (now finished) chirp chain.
+		this.times++;
+		if (Math.random() < Math.pow(1/this.times, 0.9)) {
+		    delay = 1;
+		} else {
+		    delay = (1000+500*Math.random())*this.times;
+		    this.times = 0;
+		}
+		this._scheduleNext(delay);
+	    };
+	    this.current = snd;
+	}, delay);
+    }
+}
+
 /* Logic classes for the various scenes in the game */
 class IntroLogic extends BaseLogic
 {
@@ -192,22 +250,35 @@ class IntroLogic extends BaseLogic
     }
 
     enterScene() {
-	this.timers.start(function() {
-	    //this.ctx.getThing("door").setState("open");
-	    //this.ctx.showMessage("The door opens!");
-	    console.log("Tick");
-	}, 3000);
+	this.crickets = new CricketNoise();
+	this.crickets.play(1000);
 
+	this.ctx.screen.enterCutscene();
 	this.timers.start(() => {
-	    if (Math.random() < 0.6) {
-		Audio.play(Audio.Effects.Crickets, 0.1);
-	    }
-	    return true;
-	}, 700);
+	    let dialog = this.ctx.showMessage("It's getting late. I should prepare to leave.");
+	    let closeHandler = dialog.onClosed(() => {
+		closeHandler.remove();
+		let counter = 0;
+		this.timers.start(() => {
+		    this.ctx.scene.setCameraPos(this.ctx.scene.cameraX - 0.01);
+		    this.ctx.screen.redraw();
+		    if (this.ctx.scene.cameraX <= -1) 
+		    {
+			this.ctx.screen.leaveCutscene();
+			this.ctx.showMessage("Alright. I must collect my things.");
+			return false;
+		    }
+		    return true;
+		}, 25);
+	    });
+	    return false;
+	}, 3500);
     }
 
     leaveScene() {
 	this.timers.clear();
+	this.crickets.stop();
+	this.crickets = null;
     }
 
     handleClicked(thing) {
@@ -219,6 +290,7 @@ class IntroLogic extends BaseLogic
 	    dialog.onClosed(() => {
 		thing.setVisible(false);
 	    });
+	    this.gameState.hasCandle = true;
 	    break;
 
 	case "suitcase":
@@ -290,8 +362,10 @@ class RoadLogic extends BaseLogic
 
 	this.ctx.getThing("bush1").setVisible(!this.gameState.bush1Moved);
 	this.ctx.getThing("bush2").setVisible(!this.gameState.bush2Moved);
-
         this.updateCrow();
+    }
+
+    enterScene() {
         this.onCameraCallback = this.ctx.screen.onCamera(() => {
             this.updateCrow();
         });
@@ -551,6 +625,13 @@ class DarkRoadLogic extends BaseLogic
     enterScene() {
 	super.enterScene();
 	this.ctx.showMessage("Sunset. How long was I down there?");
+	this.crickets = new CricketNoise();
+	this.crickets.play(1000);
+    }
+
+    leaveScene() {
+	this.crickets.stop();
+	this.crickets = null;
     }
 
     handleClicked(thing) {
@@ -583,7 +664,7 @@ class CaveLogic extends BaseLogic
 	this.timers.start(() => {
 	    Audio.play(Audio.Effects.Drip, 0.5);
 	    return true;
-	}, 5000);
+	}, 4500);
         this.ctx.getThing("hole2").setState("empty");
         this.ctx.getThing("key").setVisible(!this.gameState.hasRedKey);
         this.ctx.getThing("shape").getSprite().x = -24;
@@ -838,7 +919,7 @@ class EndingLogic extends BaseLogic
 	super.enterScene();
 
 	this.timers.start(() => {
-	    this.ctx.showMessage("Thanks for playing this demo!");
+	    this.ctx.showMessage("That's the demo. Thanks for playing!");
 	}, 5000);
     }
 }

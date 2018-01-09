@@ -29,12 +29,15 @@ module.exports = {};
 /* Configures the renderer (via PIXI) and adds the view to the given HTML
  * element. The renderer width/height will conform to the given aspect 
  * ratio. */
-module.exports.configure = function(div, aspect)
+module.exports.configure = function(div, options)
 {
+    let aspect = options.aspect || 1;
+    let forceCanvas = (options.forceCanvas == true);
+
     // Set pixel scaling to be "nearest neighbour" which makes textures 
     // render nice and blocky.
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-    // Disable the ticker sinc we don't use it (rendering happens as needed)
+    // Disable the ticker since we don't use it (rendering happens as needed)
     PIXI.ticker.shared.autoStart = false;
     PIXI.ticker.shared.stop();
 
@@ -53,18 +56,23 @@ module.exports.configure = function(div, aspect)
         height = Math.round(rect.height/aspect);
     }
 
-    renderer = new PIXI.CanvasRenderer({
-    //renderer = PIXI.autoDetectRenderer({
+    let renderArgs = {
         width: width,
         height: height,
         //antialias: true,
         // Required to prevent flickering in Chrome on Android (others too?)
         preserveDrawingBuffer: true,
         //clearBeforeRender: true
-    });
-    renderer.plugins.interaction.destroy();
+    }
 
-    //renderer.view.className = "canvas";
+    if (forceCanvas) {
+	// Canvas rendering seems to work better on mobile than webgl
+	renderer = new PIXI.CanvasRenderer(renderArgs);
+    } else {
+	// Preferably use webgl, fallback to canvas rendering
+	renderer = PIXI.autoDetectRenderer(renderArgs);
+    }
+    renderer.plugins.interaction.destroy();
 
     div.innerHTML = "";
     div.appendChild(renderer.view);

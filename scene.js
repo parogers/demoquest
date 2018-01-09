@@ -74,6 +74,7 @@ Scene.prototype.setCameraPos = function(xpos, ypos)
     {
 	var backWidth = this.getBaseSize().width;
 	var centreX = 0;
+	xpos = Math.min(Math.max(xpos, -1), 1);
 	for (var layer of this.layers) {
 	    var pos = centreX-xpos*(layer.getWidth()/2-backWidth/2);
 	    layer.container.x = pos;

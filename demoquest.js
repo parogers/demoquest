@@ -79,18 +79,38 @@ module.exports.load = function (sources, opts) {
     sounds.whenLoaded = opts.whenLoaded || null;
     sounds.onFailed = opts.onFailed || null;
     sounds.onProgress = opts.onProgress || null;
-    // Show and update the new progress bar for loading audio
-    /*    progress.setText("LOADING AUDIO...");
-        sounds.onProgress = function(percent) {
-            progress.update(percent/100.0);
-            requestAnimationFrame(function() {
-                Render.getRenderer().render(stage);
-            });
-        };*/
     sounds.load(sources);
 };
 
 },{}],2:[function(require,module,exports){
+"use strict";
+
+/* demoquest - An adventure game demo with parallax scrolling
+ * Copyright (C) 2017  Peter Rogers
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+module.exports = {};
+
+/* Checks if the browser is on a mobile device */
+module.exports.isMobileDevice = function () {
+  return (/Mobi/.test(navigator.userAgent)
+  );
+};
+
+},{}],3:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -253,7 +273,7 @@ Dialog.prototype.handleResize = function (width, height) {
 
 module.exports = Dialog;
 
-},{"./events":3,"./utils":13}],3:[function(require,module,exports){
+},{"./events":4,"./utils":14}],4:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -560,7 +580,7 @@ module.exports = {
     TimerList: TimerList
 };
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -585,6 +605,7 @@ var Logic = require("./logic");
 var Input = require("./input");
 var Loader = require("./loader");
 var PlayScreen = require("./playscreen");
+var Browser = require("./browser");
 
 /*************/
 /* GameState */
@@ -599,8 +620,6 @@ function GameState(div) {
    this.dataList = {};
    this.lastRenderTime = null;
 
-   //this.screen = new Screen();
-
    // Callback function for passing to renderAnimationFrame
    this.staticRenderFrame = function () {
       _this.renderFrame();
@@ -608,10 +627,13 @@ function GameState(div) {
    window.addEventListener("resize", function () {
       _this.handleResize();
    });
-   // Call our resize handler to setup the render area at the correct size
-   //this.handleResize();
 
-   Render.configure(div, 1);
+   // Note we force (HTML5) canvas rendering for mobile devices, because
+   // it tends to be faster.
+   Render.configure(div, {
+      aspect: 1,
+      forceCanvas: Browser.isMobileDevice()
+   });
 
    // Setup mouse and/or touch handlers
    var m = new Input.MouseAdapter(Render.getRenderer().view);
@@ -620,6 +642,7 @@ function GameState(div) {
    this.screen = new Loader.LoadingScreen(Render.getRenderer().width, Render.getRenderer().height);
 
    this.screen.onDone(function () {
+      _this.dataList = _this.screen.dataList;
       _this._startGame();
    });
 
@@ -665,13 +688,6 @@ GameState.prototype.redraw = function () {
    }
 };
 
-/* Returns the bounding (client) rectangle of the game rendering area */
-/*
-GameState.prototype.getBoundingClientRect = function()
-{
-    return this.renderer.view.getBoundingClientRect();
-}*/
-
 /* Renders the current screen. Should be called from requestAnimationFrame */
 GameState.prototype.renderFrame = function () {
    if (!this.screen) return;
@@ -701,6 +717,7 @@ GameState.prototype.renderFrame = function () {
    this.manualRedraw = false;
 };
 
+/* Called when the game should be resized to fill the available space */
 GameState.prototype.handleResize = function () {
    Render.resize();
    if (this.screen && this.screen.handleResize) {
@@ -712,7 +729,6 @@ GameState.prototype.handleResize = function () {
 GameState.prototype._startGame = function () {
    var _this3 = this;
 
-   this.dataList = this.screen.dataList;
    this.screen = new PlayScreen(this.gameLogic, this.dataList, Render.getRenderer().width, Render.getRenderer().height);
 
    // Attach to various events exposed by the PlayScreen
@@ -727,14 +743,13 @@ GameState.prototype._startGame = function () {
    this.screen.onRedraw(function () {
       _this3.redraw();
    });
-   // Now change to the opening scene
-   //this.screen.changeScene("closet", {cameraX: 0});
+   // Start the game
    this.gameLogic.startGame(this.screen);
 };
 
 module.exports = GameState;
 
-},{"./input":5,"./loader":6,"./logic":7,"./playscreen":9,"./render":10}],5:[function(require,module,exports){
+},{"./browser":2,"./input":6,"./loader":7,"./logic":8,"./playscreen":10,"./render":11}],6:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -864,7 +879,7 @@ module.exports = {
    GameEvent: GameEvent
 };
 
-},{"./events":3}],6:[function(require,module,exports){
+},{"./events":4}],7:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -1164,7 +1179,7 @@ module.exports = {
     LoadingScreen: LoadingScreen
 };
 
-},{"./audio":1,"./events":3,"./scene":11}],7:[function(require,module,exports){
+},{"./audio":1,"./events":4,"./scene":12}],8:[function(require,module,exports){
 "use strict";
 
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
@@ -1212,6 +1227,7 @@ var State = function State() {
 	this.bush2Moved = false;
 	this.seenHole1 = false;
 	this.seenHole2 = false;
+	this.hasCandle = false;
 };
 
 /*********/
@@ -1245,7 +1261,7 @@ var GameLogic = function () {
 		key: "startGame",
 		value: function startGame(screen) {
 			//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
-			var trans = new Transition.FadeIn(screen, "intro", { cameraX: -1 });
+			var trans = new Transition.FadeIn(screen, "intro", { cameraX: 0.12 });
 			/*trans.onComplete(() => {
    });*/
 			trans.start();
@@ -1368,6 +1384,78 @@ var BaseLogic = function () {
 /* Scene Logic */
 /***************/
 
+var CricketNoise = function () {
+	function CricketNoise() {
+		_classCallCheck(this, CricketNoise);
+
+		this.current = null;
+		this.timeoutEvent = null;
+		this.times = 0;
+	}
+
+	_createClass(CricketNoise, [{
+		key: "play",
+		value: function play(delay) {
+			// Schedule the first chirp
+			if (!this.current) {
+				this._scheduleNext(delay);
+			}
+		}
+	}, {
+		key: "stop",
+		value: function stop() {
+			if (this.current !== null) {
+				// Fully stop the sound playing again. Note calling 'pause' here
+				// then 'play' again later doubles the playback speed. (BUG)
+				this.current.soundNode.stop(0);
+				this.current = null;
+			}
+			if (this.timeoutEvent !== null) {
+				console.log("CLEAR TIMEOUT");
+				clearTimeout(this.timeoutEvent);
+				this.timeoutEvent = null;
+			}
+		}
+	}, {
+		key: "isStopped",
+		value: function isStopped() {
+			return this.current === null;
+		}
+
+		/* Schedules the next cricket chirp to happen after a given delay */
+
+	}, {
+		key: "_scheduleNext",
+		value: function _scheduleNext(delay) {
+			var _this = this;
+
+			this.timeoutEvent = setTimeout(function () {
+				var snd = Audio.play(Audio.Effects.Crickets, 0.1);
+				snd.soundNode.onended = function () {
+					if (_this.isStopped()) {
+						return;
+					}
+					// Schedule the next chirp to happen either immediately (with
+					// a longer chirp-chain meaning a decreasing probability of
+					// that happening), or after a period of silence determined 
+					// by the length of the (now finished) chirp chain.
+					_this.times++;
+					if (Math.random() < Math.pow(1 / _this.times, 0.9)) {
+						delay = 1;
+					} else {
+						delay = (1000 + 500 * Math.random()) * _this.times;
+						_this.times = 0;
+					}
+					_this._scheduleNext(delay);
+				};
+				_this.current = snd;
+			}, delay);
+		}
+	}]);
+
+	return CricketNoise;
+}();
+
 /* Logic classes for the various scenes in the game */
 
 
@@ -1390,23 +1478,37 @@ var IntroLogic = function (_BaseLogic) {
 	}, {
 		key: "enterScene",
 		value: function enterScene() {
-			this.timers.start(function () {
-				//this.ctx.getThing("door").setState("open");
-				//this.ctx.showMessage("The door opens!");
-				console.log("Tick");
-			}, 3000);
+			var _this3 = this;
 
+			this.crickets = new CricketNoise();
+			this.crickets.play(1000);
+
+			this.ctx.screen.enterCutscene();
 			this.timers.start(function () {
-				if (Math.random() < 0.6) {
-					Audio.play(Audio.Effects.Crickets, 0.1);
-				}
-				return true;
-			}, 700);
+				var dialog = _this3.ctx.showMessage("It's getting late. I should prepare to leave.");
+				var closeHandler = dialog.onClosed(function () {
+					closeHandler.remove();
+					var counter = 0;
+					_this3.timers.start(function () {
+						_this3.ctx.scene.setCameraPos(_this3.ctx.scene.cameraX - 0.01);
+						_this3.ctx.screen.redraw();
+						if (_this3.ctx.scene.cameraX <= -1) {
+							_this3.ctx.screen.leaveCutscene();
+							_this3.ctx.showMessage("Alright. I must collect my things.");
+							return false;
+						}
+						return true;
+					}, 25);
+				});
+				return false;
+			}, 3500);
 		}
 	}, {
 		key: "leaveScene",
 		value: function leaveScene() {
 			this.timers.clear();
+			this.crickets.stop();
+			this.crickets = null;
 		}
 	}, {
 		key: "handleClicked",
@@ -1418,6 +1520,7 @@ var IntroLogic = function (_BaseLogic) {
 					dialog.onClosed(function () {
 						thing.setVisible(false);
 					});
+					this.gameState.hasCandle = true;
 					break;
 
 				case "suitcase":
@@ -1470,7 +1573,7 @@ var RideLogic = function (_BaseLogic2) {
 	_createClass(RideLogic, [{
 		key: "initScene",
 		value: function initScene(screen, scene) {
-			var _this3 = this;
+			var _this5 = this;
 
 			_get(RideLogic.prototype.__proto__ || Object.getPrototypeOf(RideLogic.prototype), "initScene", this).call(this, screen, scene);
 
@@ -1478,8 +1581,8 @@ var RideLogic = function (_BaseLogic2) {
 			var fps = 10;
 			this.timers.start(function () {
 				frame = (frame + 1) % 4;
-				_this3.ctx.getThing("horse").setState("" + frame);
-				_this3.ctx.redraw();
+				_this5.ctx.getThing("horse").setState("" + frame);
+				_this5.ctx.redraw();
 				return true;
 			}, 1000 / fps);
 		}
@@ -1500,16 +1603,19 @@ var RoadLogic = function (_BaseLogic3) {
 	_createClass(RoadLogic, [{
 		key: "initScene",
 		value: function initScene(screen, scene) {
-			var _this5 = this;
-
 			_get(RoadLogic.prototype.__proto__ || Object.getPrototypeOf(RoadLogic.prototype), "initScene", this).call(this, screen, scene);
 
 			this.ctx.getThing("bush1").setVisible(!this.gameState.bush1Moved);
 			this.ctx.getThing("bush2").setVisible(!this.gameState.bush2Moved);
-
 			this.updateCrow();
+		}
+	}, {
+		key: "enterScene",
+		value: function enterScene() {
+			var _this7 = this;
+
 			this.onCameraCallback = this.ctx.screen.onCamera(function () {
-				_this5.updateCrow();
+				_this7.updateCrow();
 			});
 		}
 	}, {
@@ -1588,9 +1694,9 @@ var ClosetLogic = function (_BaseLogic4) {
 	function ClosetLogic(state) {
 		_classCallCheck(this, ClosetLogic);
 
-		var _this6 = _possibleConstructorReturn(this, (ClosetLogic.__proto__ || Object.getPrototypeOf(ClosetLogic)).call(this, state));
+		var _this8 = _possibleConstructorReturn(this, (ClosetLogic.__proto__ || Object.getPrototypeOf(ClosetLogic)).call(this, state));
 
-		_this6.States = {
+		_this8.States = {
 			// Player enters scene
 			None: 0,
 			// Monster visible outside
@@ -1606,14 +1712,14 @@ var ClosetLogic = function (_BaseLogic4) {
 			// Scene is fading out
 			FadeOut: 6
 		};
-		_this6.state = _this6.States.None;
-		return _this6;
+		_this8.state = _this8.States.None;
+		return _this8;
 	}
 
 	_createClass(ClosetLogic, [{
 		key: "initScene",
 		value: function initScene(screen, scene) {
-			var _this7 = this;
+			var _this9 = this;
 
 			_get(ClosetLogic.prototype.__proto__ || Object.getPrototypeOf(ClosetLogic.prototype), "initScene", this).call(this, screen, scene);
 
@@ -1625,15 +1731,15 @@ var ClosetLogic = function (_BaseLogic4) {
 			var dialog = this.ctx.showMessage("Am I safe in here???");
 			var closedCB = dialog.onClosed(function () {
 				closedCB.remove();
-				_this7.fadeInScene();
+				_this9.fadeInScene();
 			});
 
 			this.onCameraCallback = this.ctx.screen.onCamera(function () {
-				if (_this7.state === _this7.States.MonsterVisible && _this7.ctx.scene.cameraX > -0.35 && _this7.ctx.scene.cameraX < 0.35) {
-					_this7.changeState(_this7.States.CentreCamera);
+				if (_this9.state === _this9.States.MonsterVisible && _this9.ctx.scene.cameraX > -0.35 && _this9.ctx.scene.cameraX < 0.35) {
+					_this9.changeState(_this9.States.CentreCamera);
 				}
-				if (_this7.state === _this7.States.None && (_this7.ctx.scene.cameraX > 0.75 || _this7.ctx.scene.cameraX < -0.75)) {
-					_this7.changeState(_this7.States.MonsterVisible);
+				if (_this9.state === _this9.States.None && (_this9.ctx.scene.cameraX > 0.75 || _this9.ctx.scene.cameraX < -0.75)) {
+					_this9.changeState(_this9.States.MonsterVisible);
 				}
 			});
 		}
@@ -1648,27 +1754,27 @@ var ClosetLogic = function (_BaseLogic4) {
 	}, {
 		key: "fadeInScene",
 		value: function fadeInScene() {
-			var _this8 = this;
+			var _this10 = this;
 
 			this.ctx.addUpdate(Utils.delayUpdate(1.5), function (dt) {
 				// Opening the crack
-				var sprite = _this8.ctx.getThing("crack").getSprite();
-				var stop = _this8.ctx.getThing("darkright").getSprite();
-				var thing = _this8.ctx.getThing("crack");
+				var sprite = _this10.ctx.getThing("crack").getSprite();
+				var stop = _this10.ctx.getThing("darkright").getSprite();
+				var thing = _this10.ctx.getThing("crack");
 
 				//this.offset += dt;
 				//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
 				sprite.x += 8 * dt;
 				if (sprite.x > stop.x) {
 					sprite.visible = false;
-					_this8.ctx.screen.leaveCutscene();
+					_this10.ctx.screen.leaveCutscene();
 					return false;
 				}
 				return true;
 			}, function (dt) {
 				// Player's eyes adjusting to the darkness
-				var sprite1 = _this8.ctx.getThing("darkright").getSprite();
-				var sprite2 = _this8.ctx.getThing("darkleft").getSprite();
+				var sprite1 = _this10.ctx.getThing("darkright").getSprite();
+				var sprite2 = _this10.ctx.getThing("darkleft").getSprite();
 				sprite1.alpha -= 0.30 * dt;
 				sprite2.alpha -= 0.30 * dt;
 				if (sprite1.alpha < 0) {
@@ -1682,7 +1788,7 @@ var ClosetLogic = function (_BaseLogic4) {
 	}, {
 		key: "changeState",
 		value: function changeState(state) {
-			var _this9 = this;
+			var _this11 = this;
 
 			this.state = state;
 			switch (state) {
@@ -1694,7 +1800,7 @@ var ClosetLogic = function (_BaseLogic4) {
 						this.timers.start(function () {
 							frame = (frame + 1) % 2;
 							monster.setState("" + frame);
-							_this9.ctx.redraw();
+							_this11.ctx.redraw();
 							return true;
 						}, 1000 / 5.0);
 					}
@@ -1705,31 +1811,31 @@ var ClosetLogic = function (_BaseLogic4) {
 					this.ctx.screen.enterCutscene();
 					this.ctx.addUpdate(function (dt) {
 						var speed = 0.6;
-						var newX = _this9.ctx.scene.cameraX;
-						newX -= Math.sign(_this9.ctx.scene.cameraX) * speed * dt;
-						if (newX * _this9.ctx.scene.cameraX <= 0) {
+						var newX = _this11.ctx.scene.cameraX;
+						newX -= Math.sign(_this11.ctx.scene.cameraX) * speed * dt;
+						if (newX * _this11.ctx.scene.cameraX <= 0) {
 							// Done panning
-							_this9.ctx.scene.setCameraPos(0);
-							_this9.changeState(_this9.States.LeftTentacle);
+							_this11.ctx.scene.setCameraPos(0);
+							_this11.changeState(_this11.States.LeftTentacle);
 							return false;
 						}
-						_this9.ctx.scene.setCameraPos(newX);
+						_this11.ctx.scene.setCameraPos(newX);
 						return true;
 					});
 					break;
 
 				case this.States.LeftTentacle:
 					this.timers.start(function () {
-						_this9.ctx.getThing("tent1").setVisible(true);
-						_this9.changeState(_this9.States.RightTentacle);
+						_this11.ctx.getThing("tent1").setVisible(true);
+						_this11.changeState(_this11.States.RightTentacle);
 						return false;
 					}, 750);
 					break;
 
 				case this.States.RightTentacle:
 					this.timers.start(function () {
-						_this9.ctx.getThing("tent2").setVisible(true);
-						_this9.changeState(_this9.States.DoorsOpen);
+						_this11.ctx.getThing("tent2").setVisible(true);
+						_this11.changeState(_this11.States.DoorsOpen);
 						return false;
 					}, 750);
 					break;
@@ -1737,15 +1843,15 @@ var ClosetLogic = function (_BaseLogic4) {
 				case this.States.DoorsOpen:
 					this.timers.start(function () {
 						var counter = 0;
-						_this9.ctx.addUpdate(function (dt) {
+						_this11.ctx.addUpdate(function (dt) {
 							var speed = 20;
-							_this9.ctx.getThing("doorleft").getSprite().x -= speed * dt;
-							_this9.ctx.getThing("doorright").getSprite().x += speed * dt;
-							_this9.ctx.getThing("tent1").getSprite().x -= speed * dt;
-							_this9.ctx.getThing("tent2").getSprite().x += speed * dt;
+							_this11.ctx.getThing("doorleft").getSprite().x -= speed * dt;
+							_this11.ctx.getThing("doorright").getSprite().x += speed * dt;
+							_this11.ctx.getThing("tent1").getSprite().x -= speed * dt;
+							_this11.ctx.getThing("tent2").getSprite().x += speed * dt;
 							counter += speed * dt;
 							if (counter > 5) {
-								_this9.changeState(_this9.States.FadeOut);
+								_this11.changeState(_this11.States.FadeOut);
 								return false;
 							}
 						});
@@ -1781,6 +1887,14 @@ var DarkRoadLogic = function (_BaseLogic5) {
 		value: function enterScene() {
 			_get(DarkRoadLogic.prototype.__proto__ || Object.getPrototypeOf(DarkRoadLogic.prototype), "enterScene", this).call(this);
 			this.ctx.showMessage("Sunset. How long was I down there?");
+			this.crickets = new CricketNoise();
+			this.crickets.play(1000);
+		}
+	}, {
+		key: "leaveScene",
+		value: function leaveScene() {
+			this.crickets.stop();
+			this.crickets = null;
 		}
 	}, {
 		key: "handleClicked",
@@ -1821,7 +1935,7 @@ var CaveLogic = function (_BaseLogic6) {
 			this.timers.start(function () {
 				Audio.play(Audio.Effects.Drip, 0.5);
 				return true;
-			}, 5000);
+			}, 4500);
 			this.ctx.getThing("hole2").setState("empty");
 			this.ctx.getThing("key").setVisible(!this.gameState.hasRedKey);
 			this.ctx.getThing("shape").getSprite().x = -24;
@@ -1829,7 +1943,7 @@ var CaveLogic = function (_BaseLogic6) {
 	}, {
 		key: "handleClicked",
 		value: function handleClicked(thing) {
-			var _this12 = this;
+			var _this14 = this;
 
 			switch (thing.name) {
 				case "ladder":
@@ -1857,11 +1971,11 @@ var CaveLogic = function (_BaseLogic6) {
 						Audio.play(Audio.Effects.ShapeSound);
 					}, 250);
 					this.ctx.addUpdate(function (dt) {
-						var sprite = _this12.ctx.getThing("shape").getSprite();
+						var sprite = _this14.ctx.getThing("shape").getSprite();
 						sprite.x += 40 * dt;
 						if (sprite.x > 16) {
-							_this12.ctx.getThing("hole1").setVisible(true);
-							_this12.ctx.showMessage("AHHH! What even was that?");
+							_this14.ctx.getThing("hole1").setVisible(true);
+							_this14.ctx.showMessage("AHHH! What even was that?");
 							return false;
 						}
 						return true;
@@ -1907,9 +2021,9 @@ var BuildingLogic = function (_BaseLogic7) {
 	function BuildingLogic(state) {
 		_classCallCheck(this, BuildingLogic);
 
-		var _this13 = _possibleConstructorReturn(this, (BuildingLogic.__proto__ || Object.getPrototypeOf(BuildingLogic)).call(this, state));
+		var _this15 = _possibleConstructorReturn(this, (BuildingLogic.__proto__ || Object.getPrototypeOf(BuildingLogic)).call(this, state));
 
-		_this13.States = {
+		_this15.States = {
 			// Default state when the player enters the scene
 			None: 0,
 			// Monster waiting behind door. Triggered by checking closet
@@ -1917,8 +2031,8 @@ var BuildingLogic = function (_BaseLogic7) {
 			// Front door is closed, player must retreat to closet
 			PlayerMustHide: 2
 		};
-		_this13.state = _this13.States.None;
-		return _this13;
+		_this15.state = _this15.States.None;
+		return _this15;
 	}
 
 	_createClass(BuildingLogic, [{
@@ -1950,7 +2064,7 @@ var BuildingLogic = function (_BaseLogic7) {
 	}, {
 		key: "handleClicked",
 		value: function handleClicked(thing) {
-			var _this14 = this;
+			var _this16 = this;
 
 			switch (thing.name) {
 				case "door":
@@ -1960,19 +2074,19 @@ var BuildingLogic = function (_BaseLogic7) {
 						this.ctx.getThing("door").setState("open");
 						this.ctx.getThing("monster").setState("0");
 						this.timers.start(function () {
-							if (_this14.state === _this14.States.PlayerMustHide) {
+							if (_this16.state === _this16.States.PlayerMustHide) {
 								return false;
 							}
 							frame = (frame + 1) % 2;
-							_this14.ctx.getThing("monster").setState("" + frame);
-							_this14.ctx.redraw();
+							_this16.ctx.getThing("monster").setState("" + frame);
+							_this16.ctx.redraw();
 							return true;
 						}, 1000.0 / fps);
 
 						this.timers.start(function () {
-							_this14.state = _this14.States.PlayerMustHide;
-							_this14.ctx.getThing("door").setState("closed");
-							_this14.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
+							_this16.state = _this16.States.PlayerMustHide;
+							_this16.ctx.getThing("door").setState("closed");
+							_this16.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
 						}, 1000);
 					} else if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("No! I've got to hide!");
@@ -2054,10 +2168,10 @@ var BuildingLogic = function (_BaseLogic7) {
 						this.ctx.getThing("darkness").setVisible(false);
 						this.ctx.getThing("closet").setState("light");
 						this.ctx.addUpdate(Utils.delayUpdate(0.4), function (dt) {
-							var sprite = _this14.ctx.getThing("candle").getSprite();
+							var sprite = _this16.ctx.getThing("candle").getSprite();
 							sprite.y += 20 * dt;
 							if (sprite.y > 0) {
-								_this14.ctx.getThing("candle").setVisible(false);
+								_this16.ctx.getThing("candle").setVisible(false);
 								return false;
 							}
 							return true;
@@ -2087,12 +2201,12 @@ var EndingLogic = function (_BaseLogic8) {
 	_createClass(EndingLogic, [{
 		key: "enterScene",
 		value: function enterScene() {
-			var _this16 = this;
+			var _this18 = this;
 
 			_get(EndingLogic.prototype.__proto__ || Object.getPrototypeOf(EndingLogic.prototype), "enterScene", this).call(this);
 
 			this.timers.start(function () {
-				_this16.ctx.showMessage("Thanks for playing this demo!");
+				_this18.ctx.showMessage("That's the demo. Thanks for playing!");
 			}, 5000);
 		}
 	}]);
@@ -2105,7 +2219,7 @@ module.exports = {
 	State: State
 };
 
-},{"./audio":1,"./events":3,"./transition":12,"./utils":13}],8:[function(require,module,exports){
+},{"./audio":1,"./events":4,"./transition":13,"./utils":14}],9:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -2141,7 +2255,7 @@ module.exports.resize = function () {
     return gameState.handleResize();
 };
 
-},{"./gamestate":4}],9:[function(require,module,exports){
+},{"./gamestate":5}],10:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -2303,6 +2417,10 @@ PlayScreen.prototype.addUpdate = function () {
     };
     this.updateCallbacks.push(callback);
     this.redraw();
+};
+
+PlayScreen.prototype.getScene = function () {
+    return this.scene;
 };
 
 PlayScreen.prototype.setScene = function (name, args) {
@@ -2484,7 +2602,7 @@ PlayScreen.prototype.leaveCutscene = function () {
 
 module.exports = PlayScreen;
 
-},{"./dialog":2,"./events":3,"./logic":7,"./scene":11,"./utils":13}],10:[function(require,module,exports){
+},{"./dialog":3,"./events":4,"./logic":8,"./scene":12,"./utils":14}],11:[function(require,module,exports){
 "use strict";
 
 /* APDUNGEON - A dungeon crawler demo written in javascript + pixi.js
@@ -2518,11 +2636,14 @@ module.exports = {};
 /* Configures the renderer (via PIXI) and adds the view to the given HTML
  * element. The renderer width/height will conform to the given aspect 
  * ratio. */
-module.exports.configure = function (div, aspect) {
+module.exports.configure = function (div, options) {
+    var aspect = options.aspect || 1;
+    var forceCanvas = options.forceCanvas == true;
+
     // Set pixel scaling to be "nearest neighbour" which makes textures 
     // render nice and blocky.
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-    // Disable the ticker sinc we don't use it (rendering happens as needed)
+    // Disable the ticker since we don't use it (rendering happens as needed)
     PIXI.ticker.shared.autoStart = false;
     PIXI.ticker.shared.stop();
 
@@ -2540,18 +2661,23 @@ module.exports.configure = function (div, aspect) {
         height = Math.round(rect.height / aspect);
     }
 
-    renderer = new PIXI.CanvasRenderer({
-        //renderer = PIXI.autoDetectRenderer({
+    var renderArgs = {
         width: width,
         height: height,
         //antialias: true,
         // Required to prevent flickering in Chrome on Android (others too?)
         preserveDrawingBuffer: true
         //clearBeforeRender: true
-    });
-    renderer.plugins.interaction.destroy();
+    };
 
-    //renderer.view.className = "canvas";
+    if (forceCanvas) {
+        // Canvas rendering seems to work better on mobile than webgl
+        renderer = new PIXI.CanvasRenderer(renderArgs);
+    } else {
+        // Preferably use webgl, fallback to canvas rendering
+        renderer = PIXI.autoDetectRenderer(renderArgs);
+    }
+    renderer.plugins.interaction.destroy();
 
     div.innerHTML = "";
     div.appendChild(renderer.view);
@@ -2584,7 +2710,7 @@ module.exports.resize = function () {
     //container.appendChild(renderer.view);
 };
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -2656,6 +2782,7 @@ Scene.prototype.setCameraPos = function (xpos, ypos) {
     if (xpos !== this.cameraX || ypos !== this.cameraY) {
         var backWidth = this.getBaseSize().width;
         var centreX = 0;
+        xpos = Math.min(Math.max(xpos, -1), 1);
         var _iteratorNormalCompletion = true;
         var _didIteratorError = false;
         var _iteratorError = undefined;
@@ -3109,7 +3236,7 @@ module.exports = {
     Thing: Thing
 };
 
-},{"./events":3,"./logic":7,"./render":10,"./utils":13}],12:[function(require,module,exports){
+},{"./events":4,"./logic":8,"./render":11,"./utils":14}],13:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -3257,6 +3384,7 @@ var FadeInTransition = function () {
 												this.screen.addUpdate(function (dt) {
 																if (!fader.update(dt)) {
 																				_this2.screen.leaveCutscene();
+																				_this2.dispatch("complete");
 																				return false;
 																}
 																return true;
@@ -3308,7 +3436,7 @@ module.exports = {
 				Fader: Fader
 };
 
-},{"./events":3,"./utils":13}],13:[function(require,module,exports){
+},{"./events":4,"./utils":14}],14:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling
@@ -3393,5 +3521,5 @@ module.exports = {
     delayUpdate: delayUpdate
 };
 
-},{}]},{},[8])(8)
+},{}]},{},[9])(9)
 });

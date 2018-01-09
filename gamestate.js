@@ -20,6 +20,7 @@ var Logic = require("./logic");
 var Input = require("./input");
 var Loader = require("./loader");
 var PlayScreen = require("./playscreen");
+var Browser = require("./browser");
 
 /*************/
 /* GameState */
@@ -33,8 +34,6 @@ function GameState(div)
     this.dataList = {};
     this.lastRenderTime = null;
 
-    //this.screen = new Screen();
-
     // Callback function for passing to renderAnimationFrame
     this.staticRenderFrame = (() => {
 	this.renderFrame();
@@ -42,10 +41,13 @@ function GameState(div)
     window.addEventListener("resize", () => {
 	this.handleResize();
     });
-    // Call our resize handler to setup the render area at the correct size
-    //this.handleResize();
 
-    Render.configure(div, 1);
+    // Note we force (HTML5) canvas rendering for mobile devices, because
+    // it tends to be faster.
+    Render.configure(div, {
+	aspect: 1,
+	forceCanvas: Browser.isMobileDevice()
+    });
 
     // Setup mouse and/or touch handlers
     var m = new Input.MouseAdapter(Render.getRenderer().view);
@@ -56,6 +58,7 @@ function GameState(div)
         Render.getRenderer().height);
 
     this.screen.onDone(() => {
+	this.dataList = this.screen.dataList;
 	this._startGame();
     });
 
@@ -101,13 +104,6 @@ GameState.prototype.redraw = function()
     }
 }
 
-/* Returns the bounding (client) rectangle of the game rendering area */
-/*
-GameState.prototype.getBoundingClientRect = function()
-{
-    return this.renderer.view.getBoundingClientRect();
-}*/
-
 /* Renders the current screen. Should be called from requestAnimationFrame */
 GameState.prototype.renderFrame = function()
 {
@@ -139,6 +135,7 @@ GameState.prototype.renderFrame = function()
     this.manualRedraw = false;
 }
 
+/* Called when the game should be resized to fill the available space */
 GameState.prototype.handleResize = function()
 {
     Render.resize();
@@ -152,7 +149,6 @@ GameState.prototype.handleResize = function()
 
 GameState.prototype._startGame = function()
 {
-    this.dataList = this.screen.dataList;
     this.screen = new PlayScreen(
 	this.gameLogic, 
 	this.dataList,
@@ -171,8 +167,7 @@ GameState.prototype._startGame = function()
     this.screen.onRedraw(() => {
 	this.redraw();
     });
-    // Now change to the opening scene
-    //this.screen.changeScene("closet", {cameraX: 0});
+    // Start the game
     this.gameLogic.startGame(this.screen);
 }
 

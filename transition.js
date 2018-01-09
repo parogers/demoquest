@@ -147,6 +147,7 @@ class FadeInTransition
 	this.screen.addUpdate(dt => {
 	    if (!fader.update(dt)) {
 		this.screen.leaveCutscene();
+		this.dispatch("complete", );
 		return false;
 	    }
 	    return true;

@@ -144,6 +144,8 @@ PlayScreen.prototype.addUpdate = function()
     this.redraw();
 }
 
+PlayScreen.prototype.getScene = function() { return this.scene; }
+
 PlayScreen.prototype.setScene = function(name, args)
 {
     // Default camera position for a new scene
