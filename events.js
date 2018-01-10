@@ -182,7 +182,7 @@ TimerList.prototype.clear = function()
     this.timers = [];
 }
 
-TimerList.prototype.start = function(callback, delay)
+TimerList.prototype.start = function(callback, delay, immediate)
 {
     var tm = new Timer(() => {
 	let ret = callback();
@@ -193,6 +193,11 @@ TimerList.prototype.start = function(callback, delay)
 	return ret;
     }, delay);
     this.timers.push(tm);
+    if (immediate === true) {
+	tm.pause();
+	tm.timeLeft = 1;
+	tm.resume();
+    }
     return tm;
 }
 

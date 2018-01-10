@@ -34,6 +34,8 @@ class State
         this.seenHole1 = false;
         this.seenHole2 = false;
 	this.hasCandle = false;
+	this.hasWatch = false;
+	this.hasLetter = false;
     }
 }
 
@@ -62,7 +64,8 @@ class GameLogic
 
     startGame(screen) {
 	//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
-	let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
+	let trans = new Transition.FadeIn(screen, "building", {cameraX: -1});
+	//let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
 	/*trans.onComplete(() => {
 	});*/
 	trans.start();
@@ -179,6 +182,18 @@ class BaseLogic
 /* Scene Logic */
 /***************/
 
+function runSequence() 
+{
+    let callbacks = Array.prototype.slice.call(arguments, 0);
+    let onDone = () => {
+	if (callbacks.length > 0) {
+	    let cb = callbacks.shift();
+	    cb(onDone);
+	}
+    };
+    onDone();
+}
+
 class CricketNoise
 {
     constructor() {
@@ -254,25 +269,38 @@ class IntroLogic extends BaseLogic
 	this.crickets.play(1000);
 
 	this.ctx.screen.enterCutscene();
-	this.timers.start(() => {
-	    let dialog = this.ctx.showMessage("It's getting late. I should prepare to leave.");
-	    let closeHandler = dialog.onClosed(() => {
-		closeHandler.remove();
+
+	// Opening sequence
+	runSequence(
+	    (onDone) => {
+		this.timers.start(onDone, 3500);
+	    },
+	    (onDone) => {
+		let dialog = this.ctx.showMessage("It's getting late. I should prepare to leave.");
+		let closeHandler = dialog.onClosed(() => {
+		    closeHandler.remove();
+		    onDone();
+		});
+	    },
+	    (onDone) => {
 		let counter = 0;
 		this.timers.start(() => {
 		    this.ctx.scene.setCameraPos(this.ctx.scene.cameraX - 0.01);
 		    this.ctx.screen.redraw();
 		    if (this.ctx.scene.cameraX <= -1) 
 		    {
-			this.ctx.screen.leaveCutscene();
-			this.ctx.showMessage("Alright. I must collect my things.");
+			onDone();
 			return false;
 		    }
 		    return true;
 		}, 25);
-	    });
-	    return false;
-	}, 3500);
+	    },
+	    (onDone) => {
+		this.ctx.screen.leaveCutscene();
+		this.ctx.showMessage("Alright. I must collect my things.");
+		onDone();
+	    }
+	);
     }
 
     leaveScene() {
@@ -282,11 +310,12 @@ class IntroLogic extends BaseLogic
     }
 
     handleClicked(thing) {
+	let dialog = null;
 	switch(thing.name) 
 	{
 	case "candle":
 	    this.ctx.showMessage("A candle for evening work. I won't need it.");
-	    let dialog = this.ctx.showMessage("Or maybe I will. I better take it.");
+	    dialog = this.ctx.showMessage("Or maybe I will. I better take it.");
 	    dialog.onClosed(() => {
 		thing.setVisible(false);
 	    });
@@ -298,11 +327,19 @@ class IntroLogic extends BaseLogic
 	    break;
 
 	case "letter":
-	    this.ctx.showMessage("A letter from my grandfather. It doesn't say very much, but I know I need to see him.");
+	    dialog = this.ctx.showMessage("A letter from my grandfather. It doesn't say very much, but I know I need to see him. I'll take it.");
+	    dialog.onClosed(() => {
+		thing.setVisible(false);
+		this.gameState.hasLetter = true;
+	    });
 	    break;
 
 	case "pocketwatch":
-	    this.ctx.showMessage("My grandfather's pocket watch. It came with the letter.");
+	    dialog = this.ctx.showMessage("My grandfather's pocket watch. It came with the letter. I'll take it.");
+	    dialog.onClosed(() => {
+		thing.setVisible(false);
+		this.gameState.hasWatch = true;
+	    });
 	    break;
 
 	case "cupboard":
@@ -474,6 +511,11 @@ class ClosetLogic extends BaseLogic
 	    closedCB.remove();
 	    this.fadeInScene();
 	});
+
+	this.breathingTimer = this.timers.start(() => {
+	    Audio.play(Audio.Effects.Purring, 0.5);
+	    return true;
+	}, 2500);
 
         this.onCameraCallback = this.ctx.screen.onCamera(() => {
 	    if (this.state === this.States.MonsterVisible &&
@@ -790,6 +832,7 @@ class BuildingLogic extends BaseLogic
 		let frame = 0;
 		this.ctx.getThing("door").setState("open");
 		this.ctx.getThing("monster").setState("0");
+		Audio.play(Audio.Effects.Monster);
 		this.timers.start(() => {
 		    if (this.state === this.States.PlayerMustHide) {
 			return false;
@@ -836,9 +879,18 @@ class BuildingLogic extends BaseLogic
 		this.ctx.showMessage("Even with the lamp it's too dark to see anything in there.");
 		this.ctx.showMessage("...the blood... I need to find a light.");
 	    } else {
-		this.ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Why the blood?");
 		this.ctx.getThing("door").setState("closed");
-		this.state = this.States.MonsterWaiting;
+		let dialog = this.ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Something is wrong...");
+		if (this.state !== this.States.MonsterWaiting) {
+		    let closedEvent = dialog.onClosed(() => {
+			closedEvent.remove();
+			this.purringTimer = this.timers.start(() => {
+			    Audio.play(Audio.Effects.Purring, 0.4);
+			    return true;
+			}, 2500, true);
+		    });
+		    this.state = this.States.MonsterWaiting;
+		}
 	    }
 	    break;
 

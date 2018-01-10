@@ -30,12 +30,16 @@ module.exports.Effects = {
     Crickets: "media/effects/crickets.mp3",
     Crickets2: "media/effects/crickets2.mp3",
     Cupboard: "media/effects/soft-click.mp3",
-    Switch: "media/effects/soft-click.mp3"
+    Switch: "media/effects/soft-click.mp3",
+    Monster: "media/effects/creepy-snake.mp3",
+    Bang: "media/effects/bang.mp3",
+    Purring: "media/effects/purring.mp3"
 };
 
 module.exports.play = function(res, vol)
 {
     if (enabled) {
+	if (!sounds[res]) throw Error("Invalid sound: " + res);
         if (vol !== undefined) sounds[res].volume = vol;
         sounds[res].play();
 	return sounds[res];

@@ -40,12 +40,13 @@ Fader.prototype.start = function(stage)
 
 Fader.prototype.update = function(dt)
 {
+    let margin = 0.05;
     this.sprite.alpha += this.dir*dt/this.duration;
-    if (this.dir > 0 && this.sprite.alpha >= 1) {
+    if (this.dir > 0 && this.sprite.alpha >= 1-margin) {
 	this.sprite.alpha = 1;
 	this.sprite.parent.removeChild(this.sprite);
 	return false;
-    } else if (this.dir < 0 && this.sprite.alpha <= 0) {
+    } else if (this.dir < 0 && this.sprite.alpha <= margin) {
 	this.sprite.alpha = 0;
 	this.sprite.parent.removeChild(this.sprite);
 	return false;
@@ -147,7 +148,7 @@ class FadeInTransition
 	this.screen.addUpdate(dt => {
 	    if (!fader.update(dt)) {
 		this.screen.leaveCutscene();
-		this.dispatch("complete", );
+		this.dispatch("complete");
 		return false;
 	    }
 	    return true;
