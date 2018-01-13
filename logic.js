@@ -64,8 +64,8 @@ class GameLogic
 
     startGame(screen) {
 	//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
-	let trans = new Transition.FadeIn(screen, "building", {cameraX: -1});
-	//let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
+	//let trans = new Transition.FadeIn(screen, "building", {cameraX: -1});
+	let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
 	/*trans.onComplete(() => {
 	});*/
 	trans.start();
@@ -270,22 +270,27 @@ class IntroLogic extends BaseLogic
 
 	this.ctx.screen.enterCutscene();
 
+	/*let test = Promise.resolve().then(value => {
+	    console.log("RESOLVED: " + value);
+	    return 1;
+	}).then(value => {
+	    console.log("RESOLVED: " + value);
+	    return 2;
+	});*/
+
 	// Opening sequence
 	runSequence(
 	    (onDone) => {
-		this.timers.start(onDone, 3500);
+		this.timers.wait(3500).then(onDone);
 	    },
 	    (onDone) => {
 		let dialog = this.ctx.showMessage("It's getting late. I should prepare to leave.");
-		let closeHandler = dialog.onClosed(() => {
-		    closeHandler.remove();
-		    onDone();
-		});
+		dialog.closed().then(onDone);
 	    },
 	    (onDone) => {
 		let counter = 0;
 		this.timers.start(() => {
-		    this.ctx.scene.setCameraPos(this.ctx.scene.cameraX - 0.01);
+		    this.ctx.scene.setCameraPos(this.ctx.scene.cameraX - 0.015);
 		    this.ctx.screen.redraw();
 		    if (this.ctx.scene.cameraX <= -1) 
 		    {
@@ -316,10 +321,11 @@ class IntroLogic extends BaseLogic
 	case "candle":
 	    this.ctx.showMessage("A candle for evening work. I won't need it.");
 	    dialog = this.ctx.showMessage("Or maybe I will. I better take it.");
-	    dialog.onClosed(() => {
+	    dialog.closed().then(() => {
 		thing.setVisible(false);
+		this.gameState.hasCandle = true;
 	    });
-	    this.gameState.hasCandle = true;
+
 	    break;
 
 	case "suitcase":
@@ -328,7 +334,7 @@ class IntroLogic extends BaseLogic
 
 	case "letter":
 	    dialog = this.ctx.showMessage("A letter from my grandfather. It doesn't say very much, but I know I need to see him. I'll take it.");
-	    dialog.onClosed(() => {
+	    dialog.closed().then(() => {
 		thing.setVisible(false);
 		this.gameState.hasLetter = true;
 	    });
@@ -336,7 +342,7 @@ class IntroLogic extends BaseLogic
 
 	case "pocketwatch":
 	    dialog = this.ctx.showMessage("My grandfather's pocket watch. It came with the letter. I'll take it.");
-	    dialog.onClosed(() => {
+	    dialog.closed().then(() => {
 		thing.setVisible(false);
 		this.gameState.hasWatch = true;
 	    });
@@ -507,26 +513,24 @@ class ClosetLogic extends BaseLogic
 
 	this.ctx.screen.enterCutscene();
 	let dialog = this.ctx.showMessage("Am I safe in here???");
-	let closedCB = dialog.onClosed(() => {
-	    closedCB.remove();
+	dialog.closed().then(() => {
 	    this.fadeInScene();
 	});
 
 	this.breathingTimer = this.timers.start(() => {
-	    Audio.play(Audio.Effects.Purring, 0.5);
+	    Audio.play(Audio.Effects.PurringFast, 0.4);
 	    return true;
-	}, 2500);
+	}, 2200);
 
         this.onCameraCallback = this.ctx.screen.onCamera(() => {
 	    if (this.state === this.States.MonsterVisible &&
-		this.ctx.scene.cameraX > -0.35 && 
-		this.ctx.scene.cameraX < 0.35)
+		this.ctx.scene.cameraX < 0.55)
 	    {
+		this.breathingTimer.cancel();
 		this.changeState(this.States.CentreCamera);
 	    }
 	    if (this.state === this.States.None && 
-		(this.ctx.scene.cameraX > 0.75 || 
-		 this.ctx.scene.cameraX < -0.75))
+		this.ctx.scene.cameraX > 0.75)
 	    {
 		this.changeState(this.States.MonsterVisible);
             }
@@ -618,6 +622,7 @@ class ClosetLogic extends BaseLogic
 	    this.timers.start(() => {
 		this.ctx.getThing("tent1").setVisible(true);
 		this.changeState(this.States.RightTentacle);
+		Audio.play(Audio.Effects.Bang, 0.7);
 		return false;
 	    }, 750);
 	    break;
@@ -626,6 +631,10 @@ class ClosetLogic extends BaseLogic
 	    this.timers.start(() => {
 		this.ctx.getThing("tent2").setVisible(true);
 		this.changeState(this.States.DoorsOpen);
+		Audio.play(Audio.Effects.Bang, 0.7);
+		this.timers.start(() => {
+		    Audio.play(Audio.Effects.ShapeSound2, 0.7);
+		}, 500);
 		return false;
 	    }, 750);
 	    break;
@@ -832,7 +841,6 @@ class BuildingLogic extends BaseLogic
 		let frame = 0;
 		this.ctx.getThing("door").setState("open");
 		this.ctx.getThing("monster").setState("0");
-		Audio.play(Audio.Effects.Monster);
 		this.timers.start(() => {
 		    if (this.state === this.States.PlayerMustHide) {
 			return false;
@@ -842,6 +850,9 @@ class BuildingLogic extends BaseLogic
 		    this.ctx.redraw();
 		    return true;
 		}, 1000.0/fps);
+
+		this.breathingTimer.cancel();
+		Audio.play(Audio.Effects.Monster);
 
 		this.timers.start(() => {
 		    this.state = this.States.PlayerMustHide;
@@ -882,10 +893,9 @@ class BuildingLogic extends BaseLogic
 		this.ctx.getThing("door").setState("closed");
 		let dialog = this.ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Something is wrong...");
 		if (this.state !== this.States.MonsterWaiting) {
-		    let closedEvent = dialog.onClosed(() => {
-			closedEvent.remove();
-			this.purringTimer = this.timers.start(() => {
-			    Audio.play(Audio.Effects.Purring, 0.4);
+		    dialog.closed().then(() => {
+			this.breathingTimer = this.timers.start(() => {
+			    Audio.play(Audio.Effects.Purring, 0.3);
 			    return true;
 			}, 2500, true);
 		    });

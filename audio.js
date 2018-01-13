@@ -1,4 +1,4 @@
-/* APDUNGEON - A dungeon crawler demo written in javascript + pixi.js
+/* demoquest - An adventure game demo with parallax scrolling
  * Copyright (C) 2017  Peter Rogers (peter.rogers@gmail.com)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -25,6 +25,7 @@ module.exports.Effects = {
     Crow: "media/effects/crow.mp3",
     Drip: "media/effects/water-drop.mp3",
     ShapeSound: "media/effects/ufo.mp3",
+    ShapeSound2: "media/effects/ufo2.mp3",
     DoorOpening: "media/effects/door-opening.mp3",
     DoorClosing: "media/effects/door-closing.mp3",
     Crickets: "media/effects/crickets.mp3",
@@ -33,7 +34,8 @@ module.exports.Effects = {
     Switch: "media/effects/soft-click.mp3",
     Monster: "media/effects/creepy-snake.mp3",
     Bang: "media/effects/bang.mp3",
-    Purring: "media/effects/purring.mp3"
+    Purring: "media/effects/purring.mp3",
+    PurringFast: "media/effects/purring2.mp3"
 };
 
 module.exports.play = function(res, vol)

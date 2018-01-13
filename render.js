@@ -1,4 +1,4 @@
-/* APDUNGEON - A dungeon crawler demo written in javascript + pixi.js
+/* demoquest - An adventure game demo with parallax scrolling
  * Copyright (C) 2017  Peter Rogers (peter.rogers@gmail.com)
  *
  * This program is free software: you can redistribute it and/or modify

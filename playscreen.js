@@ -67,35 +67,27 @@ function PlayScreen(gameLogic, dataList, width, height)
     this.dispatch = mgr.dispatcher();
     this.redraw = mgr.dispatcher("redraw");
     this.eventManager = mgr;
-
-    // Setup the dialog/message area and attach some event handlers
+    this.dialog = null;
+    // Create a new dialog box
     this.dialog = new Dialog(
 	this.viewWidth, 
 	this.viewHeight, 
 	this.stage, 
 	{
 	    fill: "black",
-	    background: "white",
-	    lightbox: "black"
+	    background: "white"
 	}
     );
 
-    this.dialog.onUpdate(cb => {
-	this.addUpdate(cb);
-    });
-
-    this.dialog.onRedraw(this.redraw.bind());
-
-    this.dialog.onOpened(cb => {
-	// Pause game play and show the message (will be resumed when the 
-	// dialog box is closed)
-	this.pause();
-	this.enterCutscene();
-    });
-
+    this.dialog.onUpdate(this.addUpdate.bind(this));
+    this.dialog.onRedraw(this.redraw.bind(this));
     this.dialog.onClosing(cb => {
 	this.resume();
 	this.leaveCutscene();
+    });
+    this.dialog.onOpening(cb => {
+	this.pause();
+	this.enterCutscene();
     });
 }
 
@@ -115,8 +107,6 @@ PlayScreen.prototype.update = function(dt)
     }
     this.updateCallbacks = lst;
     // Request more redraws while there is stuff to animate (via callbacks)
-    //this.redraw()
-    //return redraw;
     return this.updateCallbacks.length > 0;
 }
 
@@ -205,7 +195,7 @@ PlayScreen.prototype.handleResize = function(width, height)
 	this.sceneStage.x = width/2;
 	this.sceneStage.y = height/2;
 	this.sceneStage.scale.set(this.getDisplayScale());
-	this.dialog.handleResize(width, height);
+	if (this.dialog) this.dialog.handleResize(width, height);
 	this.dispatch("resize", width, height);
     }
 }
@@ -225,7 +215,7 @@ PlayScreen.prototype.handleClick = function(evt)
     }
 
     // A direct click will dismiss the dialog box
-    if (this.dialog.isShown()) {
+    if (this.dialog && this.dialog.isShown()) {
 	this.dialog.hide();
 	return;
     }
@@ -236,7 +226,7 @@ PlayScreen.prototype.handleDragStart = function(evt)
 {
     if (!this.scene) return;
 
-    if (this.dialog.isShown()) {
+    if (this.dialog && this.dialog.isShown()) {
 	this.dialog.hide(0.75);
 	/*setTimeout(() => {
 	    this.dialog.hide();

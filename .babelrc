@@ -1,9 +1,10 @@
 {
     "presets": [
         ["env", {
-	    "targets" : {
-                "browsers" : ["firefox > 40"]
-            }
-	}]
+	        "targets" : {
+    	            "browsers" : ["firefox > 40"]
+        	},
+	        "useBuiltIns": true
+        }]
     ],
 }

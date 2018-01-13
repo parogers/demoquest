@@ -119,6 +119,8 @@ GameState.prototype.renderFrame = function()
 	}
 	this.lastRenderTime = now;
 	redraw = this.screen.update(dt);
+	// Get in one last redraw just in case
+	if (!redraw) this.manualRedraw = true;
     }
 
     if (!this.screen.stage) {

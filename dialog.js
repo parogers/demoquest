@@ -18,6 +18,20 @@
 var Events = require("./events");
 var Utils = require("./utils");
 
+// Object cache for holding a (PIXI) rendered texture, to be used as the dialog
+// box background. Generating a texture takes a noticable amount of time to 
+// do at runtime. So this is nice to cache globally to use across all 
+// dialog instances. 
+var CachedTexture = new (class {
+    makeTexture(colour) {
+	if (colour !== undefined && this.colour !== colour) {
+	    this.texture = Utils.makeSolidColourTexture(colour, 10, 10);
+	    this.colour = colour;
+	}
+	return this.texture;
+    }
+});
+
 /**********/
 /* Dialog */
 /**********/
@@ -32,7 +46,7 @@ function Dialog(width, height, stage, options)
     this.stage = stage;
 
     var mgr = new Events.EventManager();
-    this.onOpened = mgr.hook("opened");
+    this.onOpening = mgr.hook("opening");
     this.onClosed = mgr.hook("closed");
     this.onClosing = mgr.hook("closing");
     this.onRedraw = mgr.hook("redraw");
@@ -41,9 +55,7 @@ function Dialog(width, height, stage, options)
 
     this.state = "idle";
 
-    // Render a solid colour. We cache it here for efficiency, and scale it 
-    // to whatever size is needed below. 
-    var texture = Utils.makeSolidColourTexture(this.options.background, 10, 10);
+    let texture = CachedTexture.makeTexture(options.background);
     this.bg = new PIXI.Sprite(texture);
     this.container.addChild(this.bg);
 }
@@ -72,10 +84,6 @@ Dialog.prototype.showMessage = function(msg)
     });
     text.x = pad;
     text.y = pad;
-
-    /*var lightbox = new PIXI.Sprite(texture);
-    lightbox.alpha = 0.65;
-    this.container.addChild(lightbox);*/
 
     this.bg.scale.set(
 	this.viewWidth/this.bg.texture.width, 
@@ -121,7 +129,7 @@ Dialog.prototype.show = function()
 	}
 	return true;
     });
-    this.dispatch("opened");
+    this.dispatch("opening");
 }
 
 Dialog.prototype.hide = function(delay)
@@ -160,6 +168,22 @@ Dialog.prototype.handleResize = function(width, height)
     this.viewWidth = width;
     this.viewHeight = height;
     // TODO - handle resize when a message is displayed currently
+}
+
+/* Returns a promise that resolves once the dialog is closed */
+Dialog.prototype.closed = function()
+{
+    return new Promise(
+	(resolve, reject) => {
+	    let closedEvent = this.onClosed(() => {
+		closedEvent.remove();
+		resolve();
+	    });
+	}, 
+	err => {
+	    console.log("Error closing dialog: " + err);
+	}
+    );
 }
 
 module.exports = Dialog;

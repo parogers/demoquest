@@ -36,7 +36,7 @@ EventManager.prototype.hasListeners = function(event)
 }
 
 /* Add an event callback under the given name */
-EventManager.prototype.addEventListener = function(event, callback)
+EventManager.prototype.addEventListener = function(event, callback, autoRemove)
 {
     if (!this.callbacks[event]) {
 	this.callbacks[event] = [];
@@ -99,12 +99,9 @@ EventManager.prototype.dispatch = function(event)
  */
 EventManager.prototype.hook = function(event)
 {
-    let func = (callback) => {
-	return this.addEventListener(event, callback);
+    let func = (callback, autoRemove) => {
+	return this.addEventListener(event, callback, autoRemove);
     };
-    /*func.remove = (callback) => {
-        this.removeEventListener(event, callback);
-    };*/
     return func
 }
 
@@ -123,6 +120,7 @@ function Timer(callback, delay)
     this.paused = true;
     this.timeoutEvent = null;
     this.resume();
+    this.timerList = null;
 }
 
 Timer.prototype.destroy = function()
@@ -159,6 +157,12 @@ Timer.prototype.resume = function()
     }
 }
 
+Timer.prototype.cancel = function()
+{
+    this.pause();
+    if (this.timerList) this.timerList.cancel(this);
+}
+
 /*************/
 /* TimerList */
 /*************/
@@ -192,6 +196,7 @@ TimerList.prototype.start = function(callback, delay, immediate)
 	}
 	return ret;
     }, delay);
+    tm.timerList = this;
     this.timers.push(tm);
     if (immediate === true) {
 	tm.pause();
@@ -223,6 +228,22 @@ TimerList.prototype.resume = function()
     for (var tm of this.timers) {
 	tm.resume();
     }
+}
+
+/* Returns a promise that waits a period of (game) time before resolving */
+TimerList.prototype.wait = function(delay)
+{
+    return new Promise(
+	(resolve, reject) => {
+	    let tm = this.start(() => {
+		resolve();
+		return false;
+	    }, delay);
+	},
+	err => {
+	    console.log("Error running timer: " + err);
+	}
+    );
 }
 
 module.exports = {
