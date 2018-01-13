@@ -120,6 +120,7 @@ PlayScreen.prototype.update = function(dt)
  */
 PlayScreen.prototype.addUpdate = function()
 {
+    console.log("ADDUPDATE: " + arguments);
     let callbacks = Array.prototype.slice.call(arguments);
     let callback = function(dt) 
     {
@@ -132,6 +133,19 @@ PlayScreen.prototype.addUpdate = function()
     }
     this.updateCallbacks.push(callback);
     this.redraw();
+}
+
+PlayScreen.prototype.updater = function(cb)
+{
+    return new Promise((resolve, reject) => {
+	this.addUpdate(dt => {
+	    if (!cb(dt)) {
+		resolve();
+		return false;
+	    }
+	    return true;
+	});
+    });
 }
 
 PlayScreen.prototype.getScene = function() { return this.scene; }

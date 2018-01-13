@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-require("core-js/es6/promise");
+//require("core-js/es6/promise");
 
 var GameState = require("./gamestate");
 var gameState = null;

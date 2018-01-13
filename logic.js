@@ -116,7 +116,6 @@ LogicContext.prototype.showMessage = function(msg, options)
 
 LogicContext.prototype.addUpdate = function()
 {
-    console.log("ADDUPDATE: " + arguments);
     return this.screen.addUpdate.apply(this.screen, arguments);
 }
 
@@ -181,18 +180,6 @@ class BaseLogic
 /***************/
 /* Scene Logic */
 /***************/
-
-function runSequence() 
-{
-    let callbacks = Array.prototype.slice.call(arguments, 0);
-    let onDone = () => {
-	if (callbacks.length > 0) {
-	    let cb = callbacks.shift();
-	    cb(onDone);
-	}
-    };
-    onDone();
-}
 
 class CricketNoise
 {
@@ -270,42 +257,30 @@ class IntroLogic extends BaseLogic
 
 	this.ctx.screen.enterCutscene();
 
-	/*let test = Promise.resolve().then(value => {
-	    console.log("RESOLVED: " + value);
-	    return 1;
-	}).then(value => {
-	    console.log("RESOLVED: " + value);
-	    return 2;
-	});*/
-
 	// Opening sequence
-	runSequence(
-	    (onDone) => {
-		this.timers.wait(3500).then(onDone);
-	    },
-	    (onDone) => {
-		let dialog = this.ctx.showMessage("It's getting late. I should prepare to leave.");
-		dialog.closed().then(onDone);
-	    },
-	    (onDone) => {
-		let counter = 0;
-		this.timers.start(() => {
-		    this.ctx.scene.setCameraPos(this.ctx.scene.cameraX - 0.015);
-		    this.ctx.screen.redraw();
-		    if (this.ctx.scene.cameraX <= -1) 
-		    {
-			onDone();
-			return false;
-		    }
-		    return true;
-		}, 25);
-	    },
-	    (onDone) => {
-		this.ctx.screen.leaveCutscene();
-		this.ctx.showMessage("Alright. I must collect my things.");
-		onDone();
-	    }
-	);
+	this.timers.wait(3500).then(result => {
+	    let dialog = this.ctx.showMessage(
+		"It's getting late. I should prepare to leave.");
+	    return dialog.closed();
+
+	}).then(result => {
+	    return this.ctx.screen.updater(dt => {
+		let newx = this.ctx.scene.cameraX - 0.55*dt;
+		this.ctx.scene.setCameraPos(newx);
+		//this.ctx.screen.redraw();
+		if (this.ctx.scene.cameraX <= -1) 
+		{
+		    return false;
+		}
+		return true;
+	    });
+
+	}).then(result => {
+	    this.ctx.screen.leaveCutscene();
+	    let dialog = this.ctx.showMessage(
+		"Alright. I must collect my things.");
+	    return dialog.closed();
+	});
     }
 
     leaveScene() {
