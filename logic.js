@@ -63,9 +63,9 @@ class GameLogic
     getSceneLogic(name) { return this.sceneLogic[name]; }
 
     startGame(screen) {
-	let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
+	//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
 	//let trans = new Transition.FadeIn(screen, "building", {cameraX: -1});
-	//let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
+	let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
 	trans.start();
     }
 }
@@ -485,7 +485,7 @@ class ClosetLogic extends BaseLogic
 	this.ctx.screen.enterCutscene();
 	let dialog = this.ctx.showMessage("Am I safe in here???");
 	dialog.closed().then(result => {
-	    return this.ctx.screen.updater(Utils.delayUpdate(1.5));
+	    return this.timers.wait(1500);
 
 	}).then(result => {
 	    return this.ctx.screen.updater(dt => {
@@ -733,28 +733,6 @@ class CaveLogic extends BaseLogic
             //if (this.ctx.state.seenHole2) {
             this.ctx.showMessage("There is only darkness.");
             break;
-            //}
-            //this.ctx.state.seenHole2 = true;
-            /*
-            this.ctx.addUpdate(
-                Utils.delayUpdate(0.5),
-                (dt) => {
-                    this.ctx.getThing("hole2").setState("eyes");
-                },
-                Utils.delayUpdate(0.2),
-                (dt) => {
-                    this.ctx.getThing("hole2").setState("empty");
-                },
-                Utils.delayUpdate(0.5),
-                (dt) => {
-                    this.ctx.getThing("hole2").setState("eyes");
-                },
-                Utils.delayUpdate(0.5),
-                (dt) => {
-                    this.ctx.getThing("hole2").setState("empty");
-                }
-            );*/
-            break;
 	}
     }
 }
@@ -917,9 +895,8 @@ class BuildingLogic extends BaseLogic
 		thing.setState("on");
 		this.ctx.getThing("darkness").setVisible(false);
 		this.ctx.getThing("closet").setState("light");
-		this.ctx.addUpdate(
-                    Utils.delayUpdate(0.4),
-		    (dt) => {
+		this.timers.wait(400).then(result => {
+		    return this.ctx.screen.updater(dt => {
 			let sprite = this.ctx.getThing("candle").getSprite();
 			sprite.y += 20*dt;
 			if (sprite.y > 0) {
@@ -927,8 +904,8 @@ class BuildingLogic extends BaseLogic
 			    return false;
 			}
 			return true;
-		    }
-		);
+		    });
+		});
 	    } else if (this.state === this.States.PlayerMustHide) {
 		this.ctx.showMessage("I need to find a place to hide!");
 	    } else {
