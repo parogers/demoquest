@@ -63,11 +63,9 @@ class GameLogic
     getSceneLogic(name) { return this.sceneLogic[name]; }
 
     startGame(screen) {
-	//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
+	let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
 	//let trans = new Transition.FadeIn(screen, "building", {cameraX: -1});
-	let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
-	/*trans.onComplete(() => {
-	});*/
+	//let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
 	trans.start();
     }
 }
@@ -267,9 +265,7 @@ class IntroLogic extends BaseLogic
 	    return this.ctx.screen.updater(dt => {
 		let newx = this.ctx.scene.cameraX - 0.55*dt;
 		this.ctx.scene.setCameraPos(newx);
-		//this.ctx.screen.redraw();
-		if (this.ctx.scene.cameraX <= -1) 
-		{
+		if (this.ctx.scene.cameraX <= -1) {
 		    return false;
 		}
 		return true;
@@ -488,8 +484,41 @@ class ClosetLogic extends BaseLogic
 
 	this.ctx.screen.enterCutscene();
 	let dialog = this.ctx.showMessage("Am I safe in here???");
-	dialog.closed().then(() => {
-	    this.fadeInScene();
+	dialog.closed().then(result => {
+	    return this.ctx.screen.updater(Utils.delayUpdate(1.5));
+
+	}).then(result => {
+	    return this.ctx.screen.updater(dt => {
+		// Opening the crack
+		var sprite = this.ctx.getThing("crack").getSprite();
+		var stop = this.ctx.getThing("darkright").getSprite();
+		var thing = this.ctx.getThing("crack");
+
+		//this.offset += dt;
+		//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
+		sprite.x += 8*dt;
+		if (sprite.x > stop.x) {
+		    sprite.visible = false;
+		    this.ctx.screen.leaveCutscene();
+		    return false;
+		}
+		return true;
+	    });
+
+	}).then(result => {
+	    this.ctx.screen.updater(dt => {
+		// Player's eyes adjusting to the darkness
+		var sprite1 = this.ctx.getThing("darkright").getSprite();
+		var sprite2 = this.ctx.getThing("darkleft").getSprite();
+		sprite1.alpha -= 0.30*dt;
+		sprite2.alpha -= 0.30*dt;
+		if (sprite1.alpha < 0) {
+		    sprite1.visible = false;
+		    sprite2.visible = false;
+		    return false;
+		}
+		return true;
+	    })
 	});
 
 	this.breathingTimer = this.timers.start(() => {
@@ -518,42 +547,6 @@ class ClosetLogic extends BaseLogic
     }
 
     handleClicked(thing) {
-    }
-
-    fadeInScene()
-    {
-	this.ctx.addUpdate(
-	    Utils.delayUpdate(1.5),
-	    dt => {
-		// Opening the crack
-		var sprite = this.ctx.getThing("crack").getSprite();
-		var stop = this.ctx.getThing("darkright").getSprite();
-		var thing = this.ctx.getThing("crack");
-
-		//this.offset += dt;
-		//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
-		sprite.x += 8*dt;
-		if (sprite.x > stop.x) {
-		    sprite.visible = false;
-		    this.ctx.screen.leaveCutscene();
-		    return false;
-		}
-		return true;
-	    },
-	    dt => {
-		// Player's eyes adjusting to the darkness
-		var sprite1 = this.ctx.getThing("darkright").getSprite();
-		var sprite2 = this.ctx.getThing("darkleft").getSprite();
-		sprite1.alpha -= 0.30*dt;
-		sprite2.alpha -= 0.30*dt;
-		if (sprite1.alpha < 0) {
-		    sprite1.visible = false;
-		    sprite2.visible = false;
-		    return false;
-		}
-		return true;
-	    }
-	);
     }
 
     changeState(state)

@@ -1328,11 +1328,9 @@ var GameLogic = function () {
 	}, {
 		key: "startGame",
 		value: function startGame(screen) {
-			//let trans = new Transition.FadeIn(screen, "closet", {cameraX: 0});
+			var trans = new Transition.FadeIn(screen, "closet", { cameraX: 0 });
 			//let trans = new Transition.FadeIn(screen, "building", {cameraX: -1});
-			var trans = new Transition.FadeIn(screen, "intro", { cameraX: 0.12 });
-			/*trans.onComplete(() => {
-   });*/
+			//let trans = new Transition.FadeIn(screen, "intro", {cameraX: 0.12});
 			trans.start();
 		}
 	}]);
@@ -1561,7 +1559,6 @@ var IntroLogic = function (_BaseLogic) {
 				return _this3.ctx.screen.updater(function (dt) {
 					var newx = _this3.ctx.scene.cameraX - 0.55 * dt;
 					_this3.ctx.scene.setCameraPos(newx);
-					//this.ctx.screen.redraw();
 					if (_this3.ctx.scene.cameraX <= -1) {
 						return false;
 					}
@@ -1811,8 +1808,39 @@ var ClosetLogic = function (_BaseLogic4) {
 
 			this.ctx.screen.enterCutscene();
 			var dialog = this.ctx.showMessage("Am I safe in here???");
-			dialog.closed().then(function () {
-				_this10.fadeInScene();
+			dialog.closed().then(function (result) {
+				return _this10.ctx.screen.updater(Utils.delayUpdate(1.5));
+			}).then(function (result) {
+				return _this10.ctx.screen.updater(function (dt) {
+					// Opening the crack
+					var sprite = _this10.ctx.getThing("crack").getSprite();
+					var stop = _this10.ctx.getThing("darkright").getSprite();
+					var thing = _this10.ctx.getThing("crack");
+
+					//this.offset += dt;
+					//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
+					sprite.x += 8 * dt;
+					if (sprite.x > stop.x) {
+						sprite.visible = false;
+						_this10.ctx.screen.leaveCutscene();
+						return false;
+					}
+					return true;
+				});
+			}).then(function (result) {
+				_this10.ctx.screen.updater(function (dt) {
+					// Player's eyes adjusting to the darkness
+					var sprite1 = _this10.ctx.getThing("darkright").getSprite();
+					var sprite2 = _this10.ctx.getThing("darkleft").getSprite();
+					sprite1.alpha -= 0.30 * dt;
+					sprite2.alpha -= 0.30 * dt;
+					if (sprite1.alpha < 0) {
+						sprite1.visible = false;
+						sprite2.visible = false;
+						return false;
+					}
+					return true;
+				});
 			});
 
 			this.breathingTimer = this.timers.start(function () {
@@ -1839,43 +1867,9 @@ var ClosetLogic = function (_BaseLogic4) {
 		key: "handleClicked",
 		value: function handleClicked(thing) {}
 	}, {
-		key: "fadeInScene",
-		value: function fadeInScene() {
-			var _this11 = this;
-
-			this.ctx.addUpdate(Utils.delayUpdate(1.5), function (dt) {
-				// Opening the crack
-				var sprite = _this11.ctx.getThing("crack").getSprite();
-				var stop = _this11.ctx.getThing("darkright").getSprite();
-				var thing = _this11.ctx.getThing("crack");
-
-				//this.offset += dt;
-				//sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
-				sprite.x += 8 * dt;
-				if (sprite.x > stop.x) {
-					sprite.visible = false;
-					_this11.ctx.screen.leaveCutscene();
-					return false;
-				}
-				return true;
-			}, function (dt) {
-				// Player's eyes adjusting to the darkness
-				var sprite1 = _this11.ctx.getThing("darkright").getSprite();
-				var sprite2 = _this11.ctx.getThing("darkleft").getSprite();
-				sprite1.alpha -= 0.30 * dt;
-				sprite2.alpha -= 0.30 * dt;
-				if (sprite1.alpha < 0) {
-					sprite1.visible = false;
-					sprite2.visible = false;
-					return false;
-				}
-				return true;
-			});
-		}
-	}, {
 		key: "changeState",
 		value: function changeState(state) {
-			var _this12 = this;
+			var _this11 = this;
 
 			this.state = state;
 			switch (state) {
@@ -1887,7 +1881,7 @@ var ClosetLogic = function (_BaseLogic4) {
 						this.timers.start(function () {
 							frame = (frame + 1) % 2;
 							monster.setState("" + frame);
-							_this12.ctx.redraw();
+							_this11.ctx.redraw();
 							return true;
 						}, 1000 / 5.0);
 					}
@@ -1898,23 +1892,23 @@ var ClosetLogic = function (_BaseLogic4) {
 					this.ctx.screen.enterCutscene();
 					this.ctx.addUpdate(function (dt) {
 						var speed = 0.6;
-						var newX = _this12.ctx.scene.cameraX;
-						newX -= Math.sign(_this12.ctx.scene.cameraX) * speed * dt;
-						if (newX * _this12.ctx.scene.cameraX <= 0) {
+						var newX = _this11.ctx.scene.cameraX;
+						newX -= Math.sign(_this11.ctx.scene.cameraX) * speed * dt;
+						if (newX * _this11.ctx.scene.cameraX <= 0) {
 							// Done panning
-							_this12.ctx.scene.setCameraPos(0);
-							_this12.changeState(_this12.States.LeftTentacle);
+							_this11.ctx.scene.setCameraPos(0);
+							_this11.changeState(_this11.States.LeftTentacle);
 							return false;
 						}
-						_this12.ctx.scene.setCameraPos(newX);
+						_this11.ctx.scene.setCameraPos(newX);
 						return true;
 					});
 					break;
 
 				case this.States.LeftTentacle:
 					this.timers.start(function () {
-						_this12.ctx.getThing("tent1").setVisible(true);
-						_this12.changeState(_this12.States.RightTentacle);
+						_this11.ctx.getThing("tent1").setVisible(true);
+						_this11.changeState(_this11.States.RightTentacle);
 						Audio.play(Audio.Effects.Bang, 0.7);
 						return false;
 					}, 750);
@@ -1922,10 +1916,10 @@ var ClosetLogic = function (_BaseLogic4) {
 
 				case this.States.RightTentacle:
 					this.timers.start(function () {
-						_this12.ctx.getThing("tent2").setVisible(true);
-						_this12.changeState(_this12.States.DoorsOpen);
+						_this11.ctx.getThing("tent2").setVisible(true);
+						_this11.changeState(_this11.States.DoorsOpen);
 						Audio.play(Audio.Effects.Bang, 0.7);
-						_this12.timers.start(function () {
+						_this11.timers.start(function () {
 							Audio.play(Audio.Effects.ShapeSound2, 0.7);
 						}, 500);
 						return false;
@@ -1935,15 +1929,15 @@ var ClosetLogic = function (_BaseLogic4) {
 				case this.States.DoorsOpen:
 					this.timers.start(function () {
 						var counter = 0;
-						_this12.ctx.addUpdate(function (dt) {
+						_this11.ctx.addUpdate(function (dt) {
 							var speed = 20;
-							_this12.ctx.getThing("doorleft").getSprite().x -= speed * dt;
-							_this12.ctx.getThing("doorright").getSprite().x += speed * dt;
-							_this12.ctx.getThing("tent1").getSprite().x -= speed * dt;
-							_this12.ctx.getThing("tent2").getSprite().x += speed * dt;
+							_this11.ctx.getThing("doorleft").getSprite().x -= speed * dt;
+							_this11.ctx.getThing("doorright").getSprite().x += speed * dt;
+							_this11.ctx.getThing("tent1").getSprite().x -= speed * dt;
+							_this11.ctx.getThing("tent2").getSprite().x += speed * dt;
 							counter += speed * dt;
 							if (counter > 5) {
-								_this12.changeState(_this12.States.FadeOut);
+								_this11.changeState(_this11.States.FadeOut);
 								return false;
 							}
 						});
@@ -2035,7 +2029,7 @@ var CaveLogic = function (_BaseLogic6) {
 	}, {
 		key: "handleClicked",
 		value: function handleClicked(thing) {
-			var _this15 = this;
+			var _this14 = this;
 
 			switch (thing.name) {
 				case "ladder":
@@ -2063,11 +2057,11 @@ var CaveLogic = function (_BaseLogic6) {
 						Audio.play(Audio.Effects.ShapeSound);
 					}, 250);
 					this.ctx.addUpdate(function (dt) {
-						var sprite = _this15.ctx.getThing("shape").getSprite();
+						var sprite = _this14.ctx.getThing("shape").getSprite();
 						sprite.x += 40 * dt;
 						if (sprite.x > 16) {
-							_this15.ctx.getThing("hole1").setVisible(true);
-							_this15.ctx.showMessage("AHHH! What even was that?");
+							_this14.ctx.getThing("hole1").setVisible(true);
+							_this14.ctx.showMessage("AHHH! What even was that?");
 							return false;
 						}
 						return true;
@@ -2113,9 +2107,9 @@ var BuildingLogic = function (_BaseLogic7) {
 	function BuildingLogic(state) {
 		_classCallCheck(this, BuildingLogic);
 
-		var _this16 = _possibleConstructorReturn(this, (BuildingLogic.__proto__ || Object.getPrototypeOf(BuildingLogic)).call(this, state));
+		var _this15 = _possibleConstructorReturn(this, (BuildingLogic.__proto__ || Object.getPrototypeOf(BuildingLogic)).call(this, state));
 
-		_this16.States = {
+		_this15.States = {
 			// Default state when the player enters the scene
 			None: 0,
 			// Monster waiting behind door. Triggered by checking closet
@@ -2123,8 +2117,8 @@ var BuildingLogic = function (_BaseLogic7) {
 			// Front door is closed, player must retreat to closet
 			PlayerMustHide: 2
 		};
-		_this16.state = _this16.States.None;
-		return _this16;
+		_this15.state = _this15.States.None;
+		return _this15;
 	}
 
 	_createClass(BuildingLogic, [{
@@ -2156,7 +2150,7 @@ var BuildingLogic = function (_BaseLogic7) {
 	}, {
 		key: "handleClicked",
 		value: function handleClicked(thing) {
-			var _this17 = this;
+			var _this16 = this;
 
 			switch (thing.name) {
 				case "door":
@@ -2166,12 +2160,12 @@ var BuildingLogic = function (_BaseLogic7) {
 						this.ctx.getThing("door").setState("open");
 						this.ctx.getThing("monster").setState("0");
 						this.timers.start(function () {
-							if (_this17.state === _this17.States.PlayerMustHide) {
+							if (_this16.state === _this16.States.PlayerMustHide) {
 								return false;
 							}
 							frame = (frame + 1) % 2;
-							_this17.ctx.getThing("monster").setState("" + frame);
-							_this17.ctx.redraw();
+							_this16.ctx.getThing("monster").setState("" + frame);
+							_this16.ctx.redraw();
 							return true;
 						}, 1000.0 / fps);
 
@@ -2179,9 +2173,9 @@ var BuildingLogic = function (_BaseLogic7) {
 						Audio.play(Audio.Effects.Monster);
 
 						this.timers.start(function () {
-							_this17.state = _this17.States.PlayerMustHide;
-							_this17.ctx.getThing("door").setState("closed");
-							_this17.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
+							_this16.state = _this16.States.PlayerMustHide;
+							_this16.ctx.getThing("door").setState("closed");
+							_this16.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
 						}, 1000);
 					} else if (this.state === this.States.PlayerMustHide) {
 						this.ctx.showMessage("No! I've got to hide!");
@@ -2215,7 +2209,7 @@ var BuildingLogic = function (_BaseLogic7) {
 						var dialog = this.ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Something is wrong...");
 						if (this.state !== this.States.MonsterWaiting) {
 							dialog.closed().then(function () {
-								_this17.breathingTimer = _this17.timers.start(function () {
+								_this16.breathingTimer = _this16.timers.start(function () {
 									Audio.play(Audio.Effects.Purring, 0.3);
 									return true;
 								}, 2500, true);
@@ -2271,10 +2265,10 @@ var BuildingLogic = function (_BaseLogic7) {
 						this.ctx.getThing("darkness").setVisible(false);
 						this.ctx.getThing("closet").setState("light");
 						this.ctx.addUpdate(Utils.delayUpdate(0.4), function (dt) {
-							var sprite = _this17.ctx.getThing("candle").getSprite();
+							var sprite = _this16.ctx.getThing("candle").getSprite();
 							sprite.y += 20 * dt;
 							if (sprite.y > 0) {
-								_this17.ctx.getThing("candle").setVisible(false);
+								_this16.ctx.getThing("candle").setVisible(false);
 								return false;
 							}
 							return true;
@@ -2304,12 +2298,12 @@ var EndingLogic = function (_BaseLogic8) {
 	_createClass(EndingLogic, [{
 		key: "enterScene",
 		value: function enterScene() {
-			var _this19 = this;
+			var _this18 = this;
 
 			_get(EndingLogic.prototype.__proto__ || Object.getPrototypeOf(EndingLogic.prototype), "enterScene", this).call(this);
 
 			this.timers.start(function () {
-				_this19.ctx.showMessage("That's the demo. Thanks for playing!");
+				_this18.ctx.showMessage("That's the demo. Thanks for playing!");
 			}, 5000);
 		}
 	}]);
@@ -3371,95 +3365,115 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  */
 
 var Utils = require("./utils");
-var Events = require("./events");
 
 /*********/
 /* Fader */
 /*********/
 
 function Fader(width, height, args) {
-				var dir = args.dir !== undefined ? args.dir : 1;
-				var colour = args.colour !== undefined ? args.colour : "black";
-				var txt = Utils.makeSolidColourTexture(colour, width, height);
-				this.sprite = new PIXI.Sprite(txt);
-				this.sprite.alpha = 1 - dir;
-				this.duration = args.duration !== undefined ? args.duration : 1;
-				this.dir = dir;
+	var dir = args.dir !== undefined ? args.dir : 1;
+	var colour = args.colour !== undefined ? args.colour : "black";
+	var txt = Utils.makeSolidColourTexture(colour, width, height);
+	this.sprite = new PIXI.Sprite(txt);
+	this.sprite.alpha = 1 - dir;
+	this.duration = args.duration !== undefined ? args.duration : 1;
+	this.dir = dir;
 }
 
 Fader.prototype.start = function (stage) {
-				stage.addChild(this.sprite);
+	stage.addChild(this.sprite);
 };
 
 Fader.prototype.update = function (dt) {
-				var margin = 0.05;
-				this.sprite.alpha += this.dir * dt / this.duration;
-				if (this.dir > 0 && this.sprite.alpha >= 1 - margin) {
-								this.sprite.alpha = 1;
-								this.sprite.parent.removeChild(this.sprite);
-								return false;
-				} else if (this.dir < 0 && this.sprite.alpha <= margin) {
-								this.sprite.alpha = 0;
-								this.sprite.parent.removeChild(this.sprite);
-								return false;
-				}
-				return true;
+	var margin = 0.05;
+	this.sprite.alpha += this.dir * dt / this.duration;
+	if (this.dir > 0 && this.sprite.alpha >= 1 - margin) {
+		this.sprite.alpha = 1;
+		this.sprite.parent.removeChild(this.sprite);
+		return false;
+	} else if (this.dir < 0 && this.sprite.alpha <= margin) {
+		this.sprite.alpha = 0;
+		this.sprite.parent.removeChild(this.sprite);
+		return false;
+	}
+	return true;
 };
+
+var Transition = function () {
+	function Transition() {
+		_classCallCheck(this, Transition);
+	}
+
+	_createClass(Transition, [{
+		key: "start",
+
+		/* Start the scene transition, returning a promise that resolves when
+   * it's complete. */
+		value: function start() {}
+	}]);
+
+	return Transition;
+}();
 
 /******************/
 /* FadeTransition */
 /******************/
 
 var FadeTransition = function () {
-				function FadeTransition(startScene, endSceneName, args) {
-								_classCallCheck(this, FadeTransition);
+	function FadeTransition(startScene, endSceneName, args) {
+		_classCallCheck(this, FadeTransition);
 
-								this.startSCene = startScene;
-								this.endSceneName = endSceneName;
-								this.screen = startScene.screen;
-								this.args = args || {};
+		this.startSCene = startScene;
+		this.endSceneName = endSceneName;
+		this.screen = startScene.screen;
+		this.args = args || {};
+	}
+
+	_createClass(FadeTransition, [{
+		key: "start",
+		value: function start() {
+			var _this = this;
+
+			// Fade out, switch scenes, then fade back in
+			var fadeout = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
+				dir: 1,
+				duration: this.args.duration || 1,
+				colour: this.args.colour
+			});
+			var fadein = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
+				dir: -1,
+				duration: this.args.duration || 1,
+				colour: this.args.colour
+			});
+			var pauseTime = this.args.pauseTime !== undefined ? this.args.pauseTime : 0;
+			//this.screen.stage.removeChild(fadeout.sprite);
+			this.screen.pause();
+			this.screen.enterCutscene();
+			fadeout.start(this.screen.stage);
+
+			return this.screen.updater(function (dt) {
+				if (!fadeout.update(dt)) {
+					_this.screen.setScene(_this.endSceneName, _this.args);
+					fadein.start(_this.screen.stage);
+					return false;
 				}
+				return true;
+			}).then(function (result) {
+				return _this.screen.updater(Utils.delayUpdate(pauseTime));
+			}).then(function (result) {
+				_this.screen.updater(function (dt) {
+					if (!fadein.update(dt)) {
+						_this.screen.resume();
+						_this.screen.leaveCutscene();
+						return false;
+					}
+					return true;
+				});
+			});
+		}
+	}]);
 
-				_createClass(FadeTransition, [{
-								key: "start",
-								value: function start() {
-												var _this = this;
-
-												// Fade out, switch scenes, then fade back in
-												var fadeout = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
-																dir: 1,
-																duration: this.args.duration || 1,
-																colour: this.args.colour
-												});
-												var fadein = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
-																dir: -1,
-																duration: this.args.duration || 1,
-																colour: this.args.colour
-												});
-												var pauseTime = this.args.pauseTime !== undefined ? this.args.pauseTime : 0;
-												//this.screen.stage.removeChild(fadeout.sprite);
-												this.screen.pause();
-												this.screen.enterCutscene();
-												fadeout.start(this.screen.stage);
-												this.screen.addUpdate(function (dt) {
-																if (!fadeout.update(dt)) {
-																				_this.screen.setScene(_this.endSceneName, _this.args);
-																				fadein.start(_this.screen.stage);
-																				return false;
-																}
-																return true;
-												}, Utils.delayUpdate(pauseTime), function (dt) {
-																if (!fadein.update(dt)) {
-																				_this.screen.resume();
-																				_this.screen.leaveCutscene();
-																				return false;
-																}
-																return true;
-												});
-								}
-				}]);
-
-				return FadeTransition;
+	return FadeTransition;
 }();
 
 /********************/
@@ -3467,43 +3481,39 @@ var FadeTransition = function () {
 /********************/
 
 var FadeInTransition = function () {
-				function FadeInTransition(screen, sceneName, args) {
-								_classCallCheck(this, FadeInTransition);
+	function FadeInTransition(screen, sceneName, args) {
+		_classCallCheck(this, FadeInTransition);
 
-								this.screen = screen;
-								this.sceneName = sceneName;
-								this.args = args || {};
+		this.screen = screen;
+		this.sceneName = sceneName;
+		this.args = args || {};
+	}
 
-								var mgr = new Events.EventManager();
-								this.onComplete = mgr.hook("complete");
-								this.dispatch = mgr.dispatcher();
+	_createClass(FadeInTransition, [{
+		key: "start",
+		value: function start() {
+			var _this2 = this;
+
+			this.screen.setScene(this.sceneName, this.args);
+			this.screen.enterCutscene();
+			var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
+				dir: -1,
+				duration: this.args.duration || 2,
+				colour: this.args.colour
+			});
+			fader.start(this.screen.stage);
+
+			return this.screen.updater(function (dt) {
+				if (!fader.update(dt)) {
+					_this2.screen.leaveCutscene();
+					return false;
 				}
+				return true;
+			});
+		}
+	}]);
 
-				_createClass(FadeInTransition, [{
-								key: "start",
-								value: function start() {
-												var _this2 = this;
-
-												this.screen.setScene(this.sceneName, this.args);
-												this.screen.enterCutscene();
-												var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
-																dir: -1,
-																duration: this.args.duration || 2,
-																colour: this.args.colour
-												});
-												fader.start(this.screen.stage);
-												this.screen.addUpdate(function (dt) {
-																if (!fader.update(dt)) {
-																				_this2.screen.leaveCutscene();
-																				_this2.dispatch("complete");
-																				return false;
-																}
-																return true;
-												});
-								}
-				}]);
-
-				return FadeInTransition;
+	return FadeInTransition;
 }();
 
 /*********************/
@@ -3511,43 +3521,43 @@ var FadeInTransition = function () {
 /*********************/
 
 var FadeOutTransition = function () {
-				function FadeOutTransition(screen, args) {
-								_classCallCheck(this, FadeOutTransition);
+	function FadeOutTransition(screen, args) {
+		_classCallCheck(this, FadeOutTransition);
 
-								this.screen = screen;
-								this.args = args || {};
+		this.screen = screen;
+		this.args = args || {};
+	}
+
+	_createClass(FadeOutTransition, [{
+		key: "start",
+		value: function start(onComplete) {
+			var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
+				dir: 1,
+				duration: this.args.duration || 1,
+				colour: this.args.colour
+			});
+			fader.start(this.screen.stage);
+			return this.screen.updater(function (dt) {
+				if (!fader.update(dt)) {
+					if (onComplete) onComplete();
+					return false;
 				}
+				return true;
+			});
+		}
+	}]);
 
-				_createClass(FadeOutTransition, [{
-								key: "start",
-								value: function start(onComplete) {
-												var fader = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
-																dir: 1,
-																duration: this.args.duration || 1,
-																colour: this.args.colour
-												});
-												fader.start(this.screen.stage);
-												this.screen.addUpdate(function (dt) {
-																if (!fader.update(dt)) {
-																				if (onComplete) onComplete();
-																				return false;
-																}
-																return true;
-												});
-								}
-				}]);
-
-				return FadeOutTransition;
+	return FadeOutTransition;
 }();
 
 module.exports = {
-				FadeToScene: FadeTransition,
-				FadeIn: FadeInTransition,
-				FadeOut: FadeOutTransition,
-				Fader: Fader
+	FadeToScene: FadeTransition,
+	FadeIn: FadeInTransition,
+	FadeOut: FadeOutTransition,
+	Fader: Fader
 };
 
-},{"./events":4,"./utils":14}],14:[function(require,module,exports){
+},{"./utils":14}],14:[function(require,module,exports){
 "use strict";
 
 /* demoquest - An adventure game demo with parallax scrolling

@@ -16,7 +16,6 @@
  */
 
 var Utils = require("./utils");
-var Events = require("./events");
 
 /*********/
 /* Fader */
@@ -52,6 +51,13 @@ Fader.prototype.update = function(dt)
 	return false;
     }
     return true;
+}
+
+class Transition
+{
+    /* Start the scene transition, returning a promise that resolves when
+     * it's complete. */
+    start() {}
 }
 
 /******************/
@@ -93,26 +99,27 @@ class FadeTransition
 	this.screen.pause();
 	this.screen.enterCutscene();
 	fadeout.start(this.screen.stage);
-        this.screen.addUpdate(
-            dt => {
-	        if (!fadeout.update(dt)) 
-	        {
-		    this.screen.setScene(this.endSceneName, this.args);
-		    fadein.start(this.screen.stage);
-                    return false;
-                }
-                return true
-            },
-	    Utils.delayUpdate(pauseTime),
-            dt => {
+
+	return this.screen.updater(dt => {
+	    if (!fadeout.update(dt)) 
+	    {
+		this.screen.setScene(this.endSceneName, this.args);
+		fadein.start(this.screen.stage);
+                return false;
+            }
+            return true
+	}).then(result => {
+	    return this.screen.updater(Utils.delayUpdate(pauseTime));
+	}).then(result => {
+	    this.screen.updater(dt => {
 		if (!fadein.update(dt)) {
 		    this.screen.resume();
 		    this.screen.leaveCutscene();
 		    return false;
 		}
 		return true;
-            }
-	);
+	    })
+	});
     }
 }
 
@@ -126,10 +133,6 @@ class FadeInTransition
 	this.screen = screen;
 	this.sceneName = sceneName
 	this.args = args || {};
-
-	var mgr = new Events.EventManager();
-	this.onComplete = mgr.hook("complete");
-	this.dispatch = mgr.dispatcher();
     }
 
     start() {
@@ -145,10 +148,10 @@ class FadeInTransition
 	    }
 	);
 	fader.start(this.screen.stage);
-	this.screen.addUpdate(dt => {
+
+	return this.screen.updater(dt => {
 	    if (!fader.update(dt)) {
 		this.screen.leaveCutscene();
-		this.dispatch("complete");
 		return false;
 	    }
 	    return true;
@@ -179,7 +182,7 @@ class FadeOutTransition
 	    }
 	);
 	fader.start(this.screen.stage);
-	this.screen.addUpdate(dt => {
+	return this.screen.updater(dt => {
 	    if (!fader.update(dt)) {
 		if (onComplete) onComplete();
 		return false;
