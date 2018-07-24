@@ -43,7 +43,11 @@ module.exports.play = function(res, vol)
     if (enabled) {
 	if (!sounds[res]) throw Error("Invalid sound: " + res);
         if (vol !== undefined) sounds[res].volume = vol;
-        sounds[res].play();
+	try {
+	    sounds[res].play();
+	} catch(e) {
+	    console.log('failed to play: ' + e);
+	}
 	return sounds[res];
     }
     return null;

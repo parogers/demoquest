@@ -240,12 +240,19 @@ LoadingScreen.prototype._loadAudio = function()
 	sources.push(Audio.Effects[name]);
     }
 
+    let processed = 0;
     Audio.load(sources, {
 	whenLoaded: () => {
 	    this.dispatch("done");
+	    processed++;
 	},
-	onFailed: () => {
-            console.log("Failed to load audio file: " + source);
+	onFailed: (source, err) => {
+            console.log("Failed to load audio: " + source + ', ' + err);
+	    processed++;
+	    
+	    if (processed >= sources.length) {
+		this.dispatch('done');
+	    }
 	},
 	onProgress: () => {
 	    // ...
