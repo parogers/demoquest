@@ -723,9 +723,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                 // Note we force (HTML5) canvas rendering for mobile devices, because
                 // it tends to be faster.
+                // TODO - detect when webgl rendering is slow
                 Render.configure(div, {
                     aspect: 1,
-                    forceCanvas: Browser.isMobileDevice()
+                    forceCanvas: true //Browser.isMobileDevice()
                 });
 
                 // Setup mouse and/or touch handlers
@@ -1490,7 +1491,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         if (this.current !== null) {
                             // Fully stop the sound playing again. Note calling 'pause' here
                             // then 'play' again later doubles the playback speed. (BUG)
-                            this.current.soundNode.stop(0);
+                            try {
+                                this.current.soundNode.stop(0);
+                            } catch (e) {
+                                console.log('failure while stopping sound playback');
+                            }
                             this.current = null;
                         }
                         if (this.timeoutEvent !== null) {

@@ -44,9 +44,10 @@ function GameState(div)
 
     // Note we force (HTML5) canvas rendering for mobile devices, because
     // it tends to be faster.
+    // TODO - detect when webgl rendering is slow
     Render.configure(div, {
 	aspect: 1,
-	forceCanvas: Browser.isMobileDevice()
+	forceCanvas: true, //Browser.isMobileDevice()
     });
 
     // Setup mouse and/or touch handlers
