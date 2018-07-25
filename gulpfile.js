@@ -18,7 +18,7 @@ gulp.task('js', function() {
 	.pipe(source('demoquest.js'))
 	.pipe(buffer())
 	.pipe(babel())
-	.pipe(gulp.dest('.'));
+	.pipe(gulp.dest('www/js/'));
 });
 
 gulp.task('watch', function() {

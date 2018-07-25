@@ -1,5 +1,8 @@
 function onload()
 {
+    var btn = document.getElementById("close_credits");
+    btn.addEventListener('click', closeCredits);
+    
     var div = document.getElementById("canvas_area");
     var width = window.innerWidth-5;
     var height = window.innerHeight-5;
@@ -34,3 +37,5 @@ function closeCredits()
     div.style.display = "none";
     resize();
 }
+
+document.addEventListener('deviceready', onload, false);
