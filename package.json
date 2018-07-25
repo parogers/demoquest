@@ -1,8 +1,8 @@
 {
-    "name": "apdungeon",
-    "displayName": "AP-Dungeon",
+    "name": "demoquest",
+    "displayName": "DemoQuest",
     "version": "1.0.0",
-    "description": "A simple dungeon crawler game",
+    "description": "A simple point and click style adventure game",
     "main": "main.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
