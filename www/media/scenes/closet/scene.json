@@ -1,0 +1,77 @@
+{
+    "title": "Closet",
+    "name": "closet",
+    "description": "A closet",
+    "camera": "0",
+    "layers": [
+        {
+            "name": "background",
+            "sprites": []
+        },
+        {
+            "name": "wall",
+            "sprites": [
+                {
+                    "name": "bookshelf",
+                    "x": 27,
+                    "y": 9
+                },
+                {
+                    "name": "monster_0",
+                    "x": 12,
+                    "y": 0
+                },
+                {
+                    "name": "monster_1",
+                    "x": 12,
+                    "y": 0
+                }
+            ]
+        },
+        {
+            "name": "door",
+            "sprites": [
+                {
+                    "name": "doorright",
+                    "x": 54,
+                    "y": 0
+                },
+                {
+                    "name": "doorleft",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "tent1",
+                    "x": 28,
+                    "y": 20
+                },
+                {
+                    "name": "tent2",
+                    "x": 49,
+                    "y": 5
+                },
+                {
+                    "name": "darkleft",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "darkright",
+                    "x": 54,
+                    "y": 0
+                },
+                {
+                    "name": "crack",
+                    "x": 41,
+                    "y": 0
+                },
+                {
+                    "name": "shape",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
+        }
+    ]
+}
