@@ -199,17 +199,17 @@ LoadingScreen.prototype._loadSceneData = function()
     // Load all the scene meta data here, then the scene images below
     var ldr = new SceneDataLoader("media/scenes/index.json");
     ldr.ondone(dataList => {
-	    this._loadSceneImages(dataList);
+	this._loadSceneImages(dataList);
     });
 
-    ldr.onerror(src => {
+    ldr.onerror((src, err) => {
 	console.log("Error loading scene: " + src);
     });
 
     ldr.onload((scn, src) => {
 	console.log("Loaded scene: " + scn.name);
     });
-    this._showMessage("Loading scene meta data");
+    this._showMessage("Loading scene data");
 }
 
 /* Called when the basic scene data is loaded. This function loads the layer

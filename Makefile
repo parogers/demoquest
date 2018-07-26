@@ -7,12 +7,12 @@ SCENE_TARGETS = $(call MAKE_SCENES)
 
 all: $(SCENE_TARGETS)
 
-media/scenes/index.json: $(SCENE_TARGETS)
+www/media/scenes/index.json: $(SCENE_TARGETS)
 	@echo BUILDING: scene index
 	@./tools/makeindex.py > $@
 
 # Scene generation
-media/scenes/%/scene.json: rawmedia/%.xcf
+www/media/scenes/%/scene.json: rawmedia/%.xcf
 	@echo BUILDING: $@
 	@mkdir `dirname $@` 2> /dev/null || true
 	@./tools/makescene.py $< `dirname $@`

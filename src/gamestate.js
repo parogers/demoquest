@@ -51,7 +51,8 @@ function GameState(div)
     });
 
     // Setup mouse and/or touch handlers
-    var m = new Input.MouseAdapter(Render.getRenderer().view);
+    //var m = new Input.MouseAdapter(Render.getRenderer().view);
+    var m = new Input.TouchAdapter(Render.getRenderer().view);
     this.setupInputHandlers(m);
 
     this.screen = new Loader.LoadingScreen(
