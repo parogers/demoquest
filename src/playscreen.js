@@ -28,21 +28,47 @@ class DragState {
 	// The mouse cursor position when the player started dragging around
 	this.startX = null;
 	this.startY = null;
+	this.lastX = null;
+	this.lastY = null;
+	this.lastTime = 0;
 	// The thing being dragged around, or null if no dragging is happening
 	// or the player is panning around instead.
 	this.thing = null;
     }
 
-    start(x, y) {
+    // Call when the player starts dragging
+    start(tm, x, y) {
+	this.lastTime = tm;
 	this.startX = x;
 	this.startY = y;
+	this.lastX = x;
+	this.lastY = y;
+	this.velocityX = 0;
     }
 
+    // Call periodically to update the dragging state. This maintains
+    // an estimate of the drag speed. (used to keep the screen moving
+    // a little after the player stops dragging it around)
+    update(tm, x, y) {
+	var weight = 0.75;
+	var velx = (x - this.lastX) / (tm-this.lastTime);
+	this.velocityX = (1-weight)*this.velocityX + weight*velx;
+	this.lastX = x;
+	this.lastY = y;
+	this.lastTime = tm;
+    }
+
+    // Call when the player stops dragging
     stop() {
 	this.thing = null;
 	this.startX = null;
 	this.startY = null;
-	this.velocityX = null;
+	this.lastX = null;
+	this.lastY = null;
+    }
+
+    isActive() {
+	return (this.startX != null);
     }
 };
 
@@ -140,13 +166,14 @@ PlayScreen.prototype.update = function(dt)
  */
 PlayScreen.prototype.addUpdate = function()
 {
-    console.log("ADDUPDATE: " + arguments);
+    console.log("ADD UPDATE: " + arguments);
     let callbacks = Array.prototype.slice.call(arguments);
     let callback = function(dt) 
     {
         if (callbacks.length === 0) return false;
         let ret = callbacks[0](dt);
 	if (ret === false) {
+	    console.log("REMOVE UPDATE");
             callbacks.shift();
 	}
 	return callbacks.length > 0;
@@ -208,6 +235,8 @@ PlayScreen.prototype.setScene = function(name, args)
 
 PlayScreen.prototype.setCameraPos = function(xpos, ypos)
 {
+    xpos = Math.max(Math.min(xpos, 1), -1);
+    ypos = Math.max(Math.min(ypos, 1), -1);
     this.scene.setCameraPos(xpos, ypos);
     if (this.eventManager.hasListeners("camera")) {
         this.dispatch("camera");
@@ -284,7 +313,9 @@ PlayScreen.prototype.handleDragStart = function(evt)
 	} else {
 	    // Panning the scene
 	    this.dragState.thing = null;
-	    this.dragState.start(this.scene.cameraX, 0);
+	    this.dragState.start(
+		(new Date()).getTime()/1000.0,
+		this.scene.cameraX, 0);
 	}
     }
 }
@@ -302,6 +333,24 @@ PlayScreen.prototype.handleDragStop = function(evt)
     }
     this.dragState.stop();
     this.dispatch("dragStop");
+
+    // Have the camera continue sliding, gradually slowing down. This is
+    // the expected behavior on touch devices.
+    let velx = this.dragState.velocityX;
+    let duration = 0.5;
+    let timer = duration;
+
+    this.addUpdate(dt => {
+	// Have the updater expire if the player starts dragging again
+	// or we finish our slide.
+	timer -= dt;
+	if (this.dragState.isActive() || timer <= 0) return false;
+
+	// Slide the camera (slowing down as timer -> 0)
+	this.setCameraPos(
+	    this.scene.cameraX + velx * dt * (timer/duration), 0);
+	return true;
+    });
 }
 
 PlayScreen.prototype.handleDrag = function(evt)
@@ -320,10 +369,14 @@ PlayScreen.prototype.handleDrag = function(evt)
 
 	} else {
 	    // Panning the scene around
-	    var pos = this.dragState.startX - evt.dx / (window.innerWidth/2);
-	    pos = Math.max(Math.min(pos, 1), -1);
+	    var pos = this.dragState.startX - 1.25*evt.dx/(window.innerWidth/2);
 	    this.setCameraPos(pos);
 	    this.redraw();
+
+	    this.dragState.update(
+		(new Date()).getTime()/1000.0,
+		pos, 0);
+
 	    // Now figure out what's in view and send visibility events
 	    // ...
 	}

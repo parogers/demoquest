@@ -2541,24 +2541,58 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     // The mouse cursor position when the player started dragging around
                     this.startX = null;
                     this.startY = null;
+                    this.lastX = null;
+                    this.lastY = null;
+                    this.lastTime = 0;
                     // The thing being dragged around, or null if no dragging is happening
                     // or the player is panning around instead.
                     this.thing = null;
                 }
 
+                // Call when the player starts dragging
+
+
                 _createClass(DragState, [{
                     key: "start",
-                    value: function start(x, y) {
+                    value: function start(tm, x, y) {
+                        this.lastTime = tm;
                         this.startX = x;
                         this.startY = y;
+                        this.lastX = x;
+                        this.lastY = y;
+                        this.velocityX = 0;
                     }
+
+                    // Call periodically to update the dragging state. This maintains
+                    // an estimate of the drag speed. (used to keep the screen moving
+                    // a little after the player stops dragging it around)
+
+                }, {
+                    key: "update",
+                    value: function update(tm, x, y) {
+                        var weight = 0.75;
+                        var velx = (x - this.lastX) / (tm - this.lastTime);
+                        this.velocityX = (1 - weight) * this.velocityX + weight * velx;
+                        this.lastX = x;
+                        this.lastY = y;
+                        this.lastTime = tm;
+                    }
+
+                    // Call when the player stops dragging
+
                 }, {
                     key: "stop",
                     value: function stop() {
                         this.thing = null;
                         this.startX = null;
                         this.startY = null;
-                        this.velocityX = null;
+                        this.lastX = null;
+                        this.lastY = null;
+                    }
+                }, {
+                    key: "isActive",
+                    value: function isActive() {
+                        return this.startX != null;
                     }
                 }]);
 
@@ -2677,12 +2711,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
              * 
              */
             PlayScreen.prototype.addUpdate = function () {
-                console.log("ADDUPDATE: " + arguments);
+                console.log("ADD UPDATE: " + arguments);
                 var callbacks = Array.prototype.slice.call(arguments);
                 var callback = function callback(dt) {
                     if (callbacks.length === 0) return false;
                     var ret = callbacks[0](dt);
                     if (ret === false) {
+                        console.log("REMOVE UPDATE");
                         callbacks.shift();
                     }
                     return callbacks.length > 0;
@@ -2744,6 +2779,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             };
 
             PlayScreen.prototype.setCameraPos = function (xpos, ypos) {
+                xpos = Math.max(Math.min(xpos, 1), -1);
+                ypos = Math.max(Math.min(ypos, 1), -1);
                 this.scene.setCameraPos(xpos, ypos);
                 if (this.eventManager.hasListeners("camera")) {
                     this.dispatch("camera");
@@ -2815,12 +2852,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     } else {
                         // Panning the scene
                         this.dragState.thing = null;
-                        this.dragState.start(this.scene.cameraX, 0);
+                        this.dragState.start(new Date().getTime() / 1000.0, this.scene.cameraX, 0);
                     }
                 }
             };
 
             PlayScreen.prototype.handleDragStop = function (evt) {
+                var _this40 = this;
+
                 // If the player clicked and panned the scene around only a short distance,
                 // count this as a click event.
                 var dist = 5;
@@ -2829,6 +2868,23 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }
                 this.dragState.stop();
                 this.dispatch("dragStop");
+
+                // Have the camera continue sliding, gradually slowing down. This is
+                // the expected behavior on touch devices.
+                var velx = this.dragState.velocityX;
+                var duration = 0.5;
+                var timer = duration;
+
+                this.addUpdate(function (dt) {
+                    // Have the updater expire if the player starts dragging again
+                    // or we finish our slide.
+                    timer -= dt;
+                    if (_this40.dragState.isActive() || timer <= 0) return false;
+
+                    // Slide the camera (slowing down as timer -> 0)
+                    _this40.setCameraPos(_this40.scene.cameraX + velx * dt * (timer / duration), 0);
+                    return true;
+                });
             };
 
             PlayScreen.prototype.handleDrag = function (evt) {
@@ -2844,10 +2900,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         this.redraw();
                     } else {
                         // Panning the scene around
-                        var pos = this.dragState.startX - evt.dx / (window.innerWidth / 2);
-                        pos = Math.max(Math.min(pos, 1), -1);
+                        var pos = this.dragState.startX - 1.25 * evt.dx / (window.innerWidth / 2);
                         this.setCameraPos(pos);
                         this.redraw();
+
+                        this.dragState.update(new Date().getTime() / 1000.0, pos, 0);
+
                         // Now figure out what's in view and send visibility events
                         // ...
                     }
@@ -3598,7 +3656,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 _createClass(FadeTransition, [{
                     key: "start",
                     value: function start() {
-                        var _this40 = this;
+                        var _this41 = this;
 
                         // Fade out, switch scenes, then fade back in
                         var fadeout = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
@@ -3619,18 +3677,18 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                         return this.screen.updater(function (dt) {
                             if (!fadeout.update(dt)) {
-                                _this40.screen.setScene(_this40.endSceneName, _this40.args);
-                                fadein.start(_this40.screen.stage);
+                                _this41.screen.setScene(_this41.endSceneName, _this41.args);
+                                fadein.start(_this41.screen.stage);
                                 return false;
                             }
                             return true;
                         }).then(function (result) {
-                            return _this40.screen.updater(Utils.delayUpdate(pauseTime));
+                            return _this41.screen.updater(Utils.delayUpdate(pauseTime));
                         }).then(function (result) {
-                            _this40.screen.updater(function (dt) {
+                            _this41.screen.updater(function (dt) {
                                 if (!fadein.update(dt)) {
-                                    _this40.screen.resume();
-                                    _this40.screen.leaveCutscene();
+                                    _this41.screen.resume();
+                                    _this41.screen.leaveCutscene();
                                     return false;
                                 }
                                 return true;
@@ -3658,7 +3716,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 _createClass(FadeInTransition, [{
                     key: "start",
                     value: function start() {
-                        var _this41 = this;
+                        var _this42 = this;
 
                         this.screen.setScene(this.sceneName, this.args);
                         this.screen.enterCutscene();
@@ -3671,7 +3729,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                         return this.screen.updater(function (dt) {
                             if (!fader.update(dt)) {
-                                _this41.screen.leaveCutscene();
+                                _this42.screen.leaveCutscene();
                                 return false;
                             }
                             return true;
