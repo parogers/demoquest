@@ -50,9 +50,12 @@ function GameState(div)
 	forceCanvas: true, //Browser.isMobileDevice()
     });
 
-    // Setup mouse and/or touch handlers
-    //var m = new Input.MouseAdapter(Render.getRenderer().view);
-    var m = new Input.TouchAdapter(Render.getRenderer().view);
+    // Setup mouse event handlers
+    var m = new Input.MouseAdapter(Render.getRenderer().view);
+    this.setupInputHandlers(m);
+
+    // Setup touch screen event handlers
+    m = new Input.TouchAdapter(Render.getRenderer().view);
     this.setupInputHandlers(m);
 
     this.screen = new Loader.LoadingScreen(

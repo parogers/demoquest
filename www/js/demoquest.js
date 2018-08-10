@@ -729,9 +729,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     forceCanvas: true //Browser.isMobileDevice()
                 });
 
-                // Setup mouse and/or touch handlers
-                //var m = new Input.MouseAdapter(Render.getRenderer().view);
-                var m = new Input.TouchAdapter(Render.getRenderer().view);
+                // Setup mouse event handlers
+                var m = new Input.MouseAdapter(Render.getRenderer().view);
+                this.setupInputHandlers(m);
+
+                // Setup touch screen event handlers
+                m = new Input.TouchAdapter(Render.getRenderer().view);
                 this.setupInputHandlers(m);
 
                 this.screen = new Loader.LoadingScreen(Render.getRenderer().width, Render.getRenderer().height);
@@ -2529,6 +2532,41 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             var Scene = require("./scene");
             var Utils = require("./utils");
 
+            var DragState = function () {
+                function DragState() {
+                    _classCallCheck(this, DragState);
+
+                    // An average estimate of the drag speed in the X-direction
+                    this.velocityX = null;
+                    // The mouse cursor position when the player started dragging around
+                    this.startX = null;
+                    this.startY = null;
+                    // The thing being dragged around, or null if no dragging is happening
+                    // or the player is panning around instead.
+                    this.thing = null;
+                }
+
+                _createClass(DragState, [{
+                    key: "start",
+                    value: function start(x, y) {
+                        this.startX = x;
+                        this.startY = y;
+                    }
+                }, {
+                    key: "stop",
+                    value: function stop() {
+                        this.thing = null;
+                        this.startX = null;
+                        this.startY = null;
+                        this.velocityX = null;
+                    }
+                }]);
+
+                return DragState;
+            }();
+
+            ;
+
             /**************/
             /* PlayScreen */
             /**************/
@@ -2553,12 +2591,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this.viewHeight = height;
                 this.isScenePaused = false;
                 this.isCutscene = 0;
-                // The thing being dragged around, or null if no dragging is happening
-                // or the player is panning around instead.
-                this.dragging = null;
-                // The mouse cursor position when the player started dragging around
-                this.dragStartX = null;
-                this.dragStartY = null;
+                this.dragState = new DragState();
                 // List of animation callback functions
                 this.updateCallbacks = [];
                 // Setup some events for communicating with the main game state
@@ -2775,17 +2808,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     if (false) {
                         //args.thing) {
                         // Dragging an object
-                        this.dragging = this.scene.getThing(args.layer, args.thing);
-                        this.dragStartX = this.dragging.x;
-                        this.dragStartY = this.dragging.y;
-                        /*var rect = thing.getBoundingClientRect();
-                          this.dragging = args;
-                          this.dragStartX = parseInt(thing.style.left);
-                          this.dragStartY = parseInt(thing.style.top);*/
+                        // TODO - implement this
+                        this.dragState.thing = this.scene.getThing(args.layer, args.thing);
+                        this.dragState.startX = this.dragState.thing.x;
+                        this.dragState.startY = this.dragState.thing.y;
                     } else {
                         // Panning the scene
-                        this.dragging = null;
-                        this.dragStartX = this.scene.cameraX;
+                        this.dragState.thing = null;
+                        this.dragState.start(this.scene.cameraX, 0);
                     }
                 }
             };
@@ -2794,27 +2824,27 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 // If the player clicked and panned the scene around only a short distance,
                 // count this as a click event.
                 var dist = 5;
-                if (!this.dragging && Math.abs(evt.x - evt.dragStartX) < dist && Math.abs(evt.y - evt.dragStartY) < dist) {
+                if (!this.dragState.thing && Math.abs(evt.x - evt.dragStartX) < dist && Math.abs(evt.y - evt.dragStartY) < dist) {
                     this.handleClick(evt);
                 }
-                this.dragging = null;
-                this.dragStartX = null;
-                this.dragStartY = null;
+                this.dragState.stop();
                 this.dispatch("dragStop");
             };
 
             PlayScreen.prototype.handleDrag = function (evt) {
                 if (!this.scene) return;
 
-                if (!this.isCutscene && this.dragStartX !== null) {
-                    if (this.dragging) {
+                if (!this.isCutscene && this.dragState.startX !== null) {
+                    if (this.dragState.thing) {
                         // Dragging a thing
-                        this.dragging.x = this.dragStartX + evt.dx / this.getDisplayScale();
-                        this.dragging.y = this.dragStartY + evt.dy / this.getDisplayScale();
+                        var x = this.dragState.startX + evt.dx / this.getDisplayScale();
+                        var y = this.dragState.startY + evt.dy / this.getDisplayScale();
+                        this.dragState.thing.x = x;
+                        this.dragState.thing.y = y;
                         this.redraw();
                     } else {
                         // Panning the scene around
-                        var pos = this.dragStartX - evt.dx / (window.innerWidth / 2);
+                        var pos = this.dragState.startX - evt.dx / (window.innerWidth / 2);
                         pos = Math.max(Math.min(pos, 1), -1);
                         this.setCameraPos(pos);
                         this.redraw();
