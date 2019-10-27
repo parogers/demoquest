@@ -13,9 +13,11 @@
         "babel": "^6.23.0",
         "babel-core": "^6.26.3",
         "babel-preset-env": "^1.7.0",
-        "browser-sync": "^2.24.5",
+        "browser-sync": "^2.24.6",
         "browserify": "^16.2.2",
         "cheerio": "^0.19.0",
+        "cordova": "^9.0.0",
+        "cordova-android": "^7.0.0",
         "cordova-browser": "^5.0.3",
         "cordova-plugin-browsersync": "^1.1.0",
         "cordova-plugin-device": "^2.0.2",
@@ -33,5 +35,15 @@
         "svg.js": "^2.6.5",
         "vinyl-buffer": "^1.0.1",
         "vinyl-source-stream": "^2.0.0"
+    },
+    "cordova": {
+        "plugins": {
+            "cordova-plugin-whitelist": {},
+            "cordova-plugin-browsersync": {}
+        },
+        "platforms": [
+            "browser",
+            "android"
+        ]
     }
 }

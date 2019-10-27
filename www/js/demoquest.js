@@ -729,8 +729,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     forceCanvas: true //Browser.isMobileDevice()
                 });
 
-                // Setup mouse and/or touch handlers
+                // Setup mouse event handlers
                 var m = new Input.MouseAdapter(Render.getRenderer().view);
+                this.setupInputHandlers(m);
+
+                // Setup touch screen event handlers
+                m = new Input.TouchAdapter(Render.getRenderer().view);
                 this.setupInputHandlers(m);
 
                 this.screen = new Loader.LoadingScreen(Render.getRenderer().width, Render.getRenderer().height);
@@ -964,7 +968,159 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             /* TouchAdapter */
             /****************/
 
-            function TouchAdapter() {}
+            function TouchAdapter(src) {
+                var _this14 = this;
+
+                this.src = src;
+                this.currentTouch = null;
+                this.mouseAdapter = new MouseAdapter(src);
+                this.dragStartX = 0;
+                this.dragStartY = 0;
+                this.movements = 0;
+
+                // Setup some event handlers for dispatching below
+                var mgr = new Events.EventManager();
+                this.onClick = mgr.hook("click");
+                this.onDrag = mgr.hook("drag");
+                this.onDragStart = mgr.hook("dragStart");
+                this.onDragStop = mgr.hook("dragStop");
+
+                var Touch = function Touch(id, x, y) {
+                    _classCallCheck(this, Touch);
+
+                    this.id = id;
+                    this.startx = x;
+                    this.starty = y;
+                };
+
+                ;
+
+                src.addEventListener('touchstart', function (event) {
+                    if (_this14.currentTouch === null) {
+                        var viewRect = src.getBoundingClientRect();
+
+                        var _iteratorNormalCompletion6 = true;
+                        var _didIteratorError6 = false;
+                        var _iteratorError6 = undefined;
+
+                        try {
+                            for (var _iterator6 = event.changedTouches[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+                                var touch = _step6.value;
+
+                                var x = touch.clientX - viewRect.left;
+                                var y = touch.clientY - viewRect.top;
+
+                                _this14.movements = 0;
+                                _this14.currentTouch = new Touch(touch.id, x, y);
+                                break;
+                            }
+                        } catch (err) {
+                            _didIteratorError6 = true;
+                            _iteratorError6 = err;
+                        } finally {
+                            try {
+                                if (!_iteratorNormalCompletion6 && _iterator6.return) {
+                                    _iterator6.return();
+                                }
+                            } finally {
+                                if (_didIteratorError6) {
+                                    throw _iteratorError6;
+                                }
+                            }
+                        }
+                    }
+                    event.preventDefault();
+                });
+
+                src.addEventListener('touchmove', function (event) {
+                    var _iteratorNormalCompletion7 = true;
+                    var _didIteratorError7 = false;
+                    var _iteratorError7 = undefined;
+
+                    try {
+                        for (var _iterator7 = event.changedTouches[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+                            var touch = _step7.value;
+
+                            if (_this14.currentTouch !== null && _this14.currentTouch.id === touch.id) {
+                                if (_this14.movements === 0) {
+                                    var rect = _this14.src.getBoundingClientRect();
+                                    var x = touch.clientX - rect.left;
+                                    var y = touch.clientY - rect.top;
+                                    mgr.dispatch("dragStart", new GameEvent({ x: x, y: y }));
+
+                                    _this14.dragStartX = touch.clientX;
+                                    _this14.dragStartY = touch.clientY;
+                                } else {
+                                    var evt = new GameEvent({
+                                        dx: touch.clientX - _this14.dragStartX,
+                                        dy: touch.clientY - _this14.dragStartY });
+                                    mgr.dispatch("drag", evt);
+                                }
+                                _this14.movements++;
+                            }
+                            break;
+                        }
+                    } catch (err) {
+                        _didIteratorError7 = true;
+                        _iteratorError7 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion7 && _iterator7.return) {
+                                _iterator7.return();
+                            }
+                        } finally {
+                            if (_didIteratorError7) {
+                                throw _iteratorError7;
+                            }
+                        }
+                    }
+                });
+
+                var touchEnd = function touchEnd(event) {
+                    var _iteratorNormalCompletion8 = true;
+                    var _didIteratorError8 = false;
+                    var _iteratorError8 = undefined;
+
+                    try {
+                        for (var _iterator8 = event.changedTouches[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+                            var touch = _step8.value;
+
+                            if (_this14.currentTouch !== null && _this14.currentTouch.id === touch.id) {
+                                var rect = _this14.src.getBoundingClientRect();
+                                var x = touch.clientX - rect.left;
+                                var y = touch.clientY - rect.top;
+
+                                var evt = new GameEvent({ x: x, y: y });
+                                if (_this14.movements === 0 && x >= 0 && y >= 0 && x <= rect.right && y <= rect.bottom) {
+                                    mgr.dispatch("click", evt);
+                                } else {
+                                    var rect = _this14.src.getBoundingClientRect();
+                                    evt.dragStartX = _this14.dragStartX - rect.left;
+                                    evt.dragStartY = _this14.dragStartY - rect.top;
+                                    mgr.dispatch("dragStop", evt);
+                                }
+                                _this14.currentTouch = null;
+                                break;
+                            }
+                        }
+                    } catch (err) {
+                        _didIteratorError8 = true;
+                        _iteratorError8 = err;
+                    } finally {
+                        try {
+                            if (!_iteratorNormalCompletion8 && _iterator8.return) {
+                                _iterator8.return();
+                            }
+                        } finally {
+                            if (_didIteratorError8) {
+                                throw _iteratorError8;
+                            }
+                        }
+                    }
+                };
+                src.addEventListener('touchend', touchEnd);
+                src.addEventListener('touchcancel', touchEnd);
+            }
 
             module.exports = {
                 MouseAdapter: MouseAdapter,
@@ -1053,7 +1209,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             /*******************/
 
             function SceneDataLoader(indexPath) {
-                var _this14 = this;
+                var _this15 = this;
 
                 Loader.call(this);
 
@@ -1066,7 +1222,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 req.open("GET", srcPath, true);
 
                 req.onerror = function () {
-                    _this14.handleError(indexPath);
+                    _this15.handleError(indexPath);
                 };
                 req.onreadystatechange = function () {
                     if (req.readyState == 4 && req.status == "200") {
@@ -1074,27 +1230,27 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         var scenes = JSON.parse(req.responseText);
                         var n = indexPath.lastIndexOf("/");
                         var basedir = indexPath.substr(0, n + 1);
-                        var _iteratorNormalCompletion6 = true;
-                        var _didIteratorError6 = false;
-                        var _iteratorError6 = undefined;
+                        var _iteratorNormalCompletion9 = true;
+                        var _didIteratorError9 = false;
+                        var _iteratorError9 = undefined;
 
                         try {
-                            for (var _iterator6 = scenes[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-                                var scene = _step6.value;
+                            for (var _iterator9 = scenes[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+                                var scene = _step9.value;
 
-                                _this14.add(basedir + scene + "/scene.json");
+                                _this15.add(basedir + scene + "/scene.json");
                             }
                         } catch (err) {
-                            _didIteratorError6 = true;
-                            _iteratorError6 = err;
+                            _didIteratorError9 = true;
+                            _iteratorError9 = err;
                         } finally {
                             try {
-                                if (!_iteratorNormalCompletion6 && _iterator6.return) {
-                                    _iterator6.return();
+                                if (!_iteratorNormalCompletion9 && _iterator9.return) {
+                                    _iterator9.return();
                                 }
                             } finally {
-                                if (_didIteratorError6) {
-                                    throw _iteratorError6;
+                                if (_didIteratorError9) {
+                                    throw _iteratorError9;
                                 }
                             }
                         }
@@ -1106,27 +1262,27 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
             SceneDataLoader.prototype.handleDone = function () {
                 var scenes = {};
-                var _iteratorNormalCompletion7 = true;
-                var _didIteratorError7 = false;
-                var _iteratorError7 = undefined;
+                var _iteratorNormalCompletion10 = true;
+                var _didIteratorError10 = false;
+                var _iteratorError10 = undefined;
 
                 try {
-                    for (var _iterator7 = this.loaded[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-                        var scn = _step7.value;
+                    for (var _iterator10 = this.loaded[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+                        var scn = _step10.value;
 
                         scenes[scn.name] = scn;
                     }
                 } catch (err) {
-                    _didIteratorError7 = true;
-                    _iteratorError7 = err;
+                    _didIteratorError10 = true;
+                    _iteratorError10 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion7 && _iterator7.return) {
-                            _iterator7.return();
+                        if (!_iteratorNormalCompletion10 && _iterator10.return) {
+                            _iterator10.return();
                         }
                     } finally {
-                        if (_didIteratorError7) {
-                            throw _iteratorError7;
+                        if (_didIteratorError10) {
+                            throw _iteratorError10;
                         }
                     }
                 }
@@ -1135,7 +1291,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             };
 
             SceneDataLoader.prototype.add = function (src, arg) {
-                var _this15 = this;
+                var _this16 = this;
 
                 this.queue.push(src);
 
@@ -1147,7 +1303,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 req.open("GET", srcPath, true);
 
                 req.onerror = function () {
-                    _this15.handleError(src);
+                    _this16.handleError(src);
                 };
 
                 req.onreadystatechange = function () {
@@ -1156,7 +1312,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         // TODO - handle exceptions here
                         var scn = Scene.SceneData.fromJSON(src, req.responseText);
                         scn.src = src;
-                        _this15.handleLoaded(scn, src, arg);
+                        _this16.handleLoaded(scn, src, arg);
                     }
                 };
 
@@ -1203,28 +1359,28 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             };
 
             LoadingScreen.prototype._loadSceneData = function () {
-                var _this16 = this;
+                var _this17 = this;
 
                 // Load all the scene meta data here, then the scene images below
                 var ldr = new SceneDataLoader("media/scenes/index.json");
                 ldr.ondone(function (dataList) {
-                    _this16._loadSceneImages(dataList);
+                    _this17._loadSceneImages(dataList);
                 });
 
-                ldr.onerror(function (src) {
+                ldr.onerror(function (src, err) {
                     console.log("Error loading scene: " + src);
                 });
 
                 ldr.onload(function (scn, src) {
                     console.log("Loaded scene: " + scn.name);
                 });
-                this._showMessage("Loading scene meta data");
+                this._showMessage("Loading scene data");
             };
 
             /* Called when the basic scene data is loaded. This function loads the layer
              * and thing textures for each scene. */
             LoadingScreen.prototype._loadSceneImages = function (dataList) {
-                var _this17 = this;
+                var _this18 = this;
 
                 this.dataList = dataList;
                 this._showMessage("Loading scene images");
@@ -1239,12 +1395,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 });
 
                 PIXI.loader.load(function () {
-                    _this17._loadAudio();
+                    _this18._loadAudio();
                 });
             };
 
             LoadingScreen.prototype._loadAudio = function () {
-                var _this18 = this;
+                var _this19 = this;
 
                 var sources = [];
                 for (var name in Audio.Effects) {
@@ -1254,7 +1410,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 var processed = 0;
                 Audio.load(sources, {
                     whenLoaded: function whenLoaded() {
-                        _this18.dispatch("done");
+                        _this19.dispatch("done");
                         processed++;
                     },
                     onFailed: function onFailed(source, err) {
@@ -1262,7 +1418,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         processed++;
 
                         if (processed >= sources.length) {
-                            _this18.dispatch('done');
+                            _this19.dispatch('done');
                         }
                     },
                     onProgress: function onProgress() {
@@ -1515,28 +1671,28 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }, {
                     key: "_scheduleNext",
                     value: function _scheduleNext(delay) {
-                        var _this19 = this;
+                        var _this20 = this;
 
                         this.timeoutEvent = setTimeout(function () {
                             var snd = Audio.play(Audio.Effects.Crickets, 0.1);
                             snd.soundNode.onended = function () {
-                                if (_this19.isStopped()) {
+                                if (_this20.isStopped()) {
                                     return;
                                 }
                                 // Schedule the next chirp to happen either immediately (with
                                 // a longer chirp-chain meaning a decreasing probability of
                                 // that happening), or after a period of silence determined 
                                 // by the length of the (now finished) chirp chain.
-                                _this19.times++;
-                                if (Math.random() < Math.pow(1 / _this19.times, 0.9)) {
+                                _this20.times++;
+                                if (Math.random() < Math.pow(1 / _this20.times, 0.9)) {
                                     delay = 1;
                                 } else {
-                                    delay = (1000 + 500 * Math.random()) * _this19.times;
-                                    _this19.times = 0;
+                                    delay = (1000 + 500 * Math.random()) * _this20.times;
+                                    _this20.times = 0;
                                 }
-                                _this19._scheduleNext(delay);
+                                _this20._scheduleNext(delay);
                             };
-                            _this19.current = snd;
+                            _this20.current = snd;
                         }, delay);
                     }
                 }]);
@@ -1566,7 +1722,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }, {
                     key: "enterScene",
                     value: function enterScene() {
-                        var _this21 = this;
+                        var _this22 = this;
 
                         this.crickets = new CricketNoise();
                         this.crickets.play(1000);
@@ -1575,20 +1731,20 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                         // Opening sequence
                         this.timers.wait(3500).then(function (result) {
-                            var dialog = _this21.ctx.showMessage("It's getting late. I should prepare to leave.");
+                            var dialog = _this22.ctx.showMessage("It's getting late. I should prepare to leave.");
                             return dialog.closed();
                         }).then(function (result) {
-                            return _this21.ctx.screen.updater(function (dt) {
-                                var newx = _this21.ctx.scene.cameraX - 0.55 * dt;
-                                _this21.ctx.scene.setCameraPos(newx);
-                                if (_this21.ctx.scene.cameraX <= -1) {
+                            return _this22.ctx.screen.updater(function (dt) {
+                                var newx = _this22.ctx.scene.cameraX - 0.55 * dt;
+                                _this22.ctx.scene.setCameraPos(newx);
+                                if (_this22.ctx.scene.cameraX <= -1) {
                                     return false;
                                 }
                                 return true;
                             });
                         }).then(function (result) {
-                            _this21.ctx.screen.leaveCutscene();
-                            var dialog = _this21.ctx.showMessage("Alright. I must collect my things.");
+                            _this22.ctx.screen.leaveCutscene();
+                            var dialog = _this22.ctx.showMessage("Alright. I must collect my things.");
                             return dialog.closed();
                         });
                     }
@@ -1602,7 +1758,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }, {
                     key: "handleClicked",
                     value: function handleClicked(thing) {
-                        var _this22 = this;
+                        var _this23 = this;
 
                         var dialog = null;
                         switch (thing.name) {
@@ -1611,7 +1767,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                 dialog = this.ctx.showMessage("Or maybe I will. I better take it.");
                                 dialog.closed().then(function () {
                                     thing.setVisible(false);
-                                    _this22.gameState.hasCandle = true;
+                                    _this23.gameState.hasCandle = true;
                                 });
 
                                 break;
@@ -1624,7 +1780,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                 dialog = this.ctx.showMessage("A letter from my grandfather. It doesn't say very much, but I know I need to see him. I'll take it.");
                                 dialog.closed().then(function () {
                                     thing.setVisible(false);
-                                    _this22.gameState.hasLetter = true;
+                                    _this23.gameState.hasLetter = true;
                                 });
                                 break;
 
@@ -1632,7 +1788,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                 dialog = this.ctx.showMessage("My grandfather's pocket watch. It came with the letter. I'll take it.");
                                 dialog.closed().then(function () {
                                     thing.setVisible(false);
-                                    _this22.gameState.hasWatch = true;
+                                    _this23.gameState.hasWatch = true;
                                 });
                                 break;
 
@@ -1674,7 +1830,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 _createClass(RideLogic, [{
                     key: "initScene",
                     value: function initScene(screen, scene) {
-                        var _this24 = this;
+                        var _this25 = this;
 
                         _get(RideLogic.prototype.__proto__ || Object.getPrototypeOf(RideLogic.prototype), "initScene", this).call(this, screen, scene);
 
@@ -1682,8 +1838,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         var fps = 10;
                         this.timers.start(function () {
                             frame = (frame + 1) % 4;
-                            _this24.ctx.getThing("horse").setState("" + frame);
-                            _this24.ctx.redraw();
+                            _this25.ctx.getThing("horse").setState("" + frame);
+                            _this25.ctx.redraw();
                             return true;
                         }, 1000 / fps);
                     }
@@ -1713,10 +1869,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }, {
                     key: "enterScene",
                     value: function enterScene() {
-                        var _this26 = this;
+                        var _this27 = this;
 
                         this.onCameraCallback = this.ctx.screen.onCamera(function () {
-                            _this26.updateCrow();
+                            _this27.updateCrow();
                         });
                     }
                 }, {
@@ -1795,9 +1951,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 function ClosetLogic(state) {
                     _classCallCheck(this, ClosetLogic);
 
-                    var _this27 = _possibleConstructorReturn(this, (ClosetLogic.__proto__ || Object.getPrototypeOf(ClosetLogic)).call(this, state));
+                    var _this28 = _possibleConstructorReturn(this, (ClosetLogic.__proto__ || Object.getPrototypeOf(ClosetLogic)).call(this, state));
 
-                    _this27.States = {
+                    _this28.States = {
                         // Player enters scene
                         None: 0,
                         // Monster visible outside
@@ -1813,14 +1969,14 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         // Scene is fading out
                         FadeOut: 6
                     };
-                    _this27.state = _this27.States.None;
-                    return _this27;
+                    _this28.state = _this28.States.None;
+                    return _this28;
                 }
 
                 _createClass(ClosetLogic, [{
                     key: "initScene",
                     value: function initScene(screen, scene) {
-                        var _this28 = this;
+                        var _this29 = this;
 
                         _get(ClosetLogic.prototype.__proto__ || Object.getPrototypeOf(ClosetLogic.prototype), "initScene", this).call(this, screen, scene);
 
@@ -1831,29 +1987,29 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         this.ctx.screen.enterCutscene();
                         var dialog = this.ctx.showMessage("Am I safe in here???");
                         dialog.closed().then(function (result) {
-                            return _this28.timers.wait(1500);
+                            return _this29.timers.wait(1500);
                         }).then(function (result) {
-                            return _this28.ctx.screen.updater(function (dt) {
+                            return _this29.ctx.screen.updater(function (dt) {
                                 // Opening the crack
-                                var sprite = _this28.ctx.getThing("crack").getSprite();
-                                var stop = _this28.ctx.getThing("darkright").getSprite();
-                                var thing = _this28.ctx.getThing("crack");
+                                var sprite = _this29.ctx.getThing("crack").getSprite();
+                                var stop = _this29.ctx.getThing("darkright").getSprite();
+                                var thing = _this29.ctx.getThing("crack");
 
                                 //this.offset += dt;
                                 //sprite.x += 10*dt*(Math.sin(this.offset/2)**2);
                                 sprite.x += 8 * dt;
                                 if (sprite.x > stop.x) {
                                     sprite.visible = false;
-                                    _this28.ctx.screen.leaveCutscene();
+                                    _this29.ctx.screen.leaveCutscene();
                                     return false;
                                 }
                                 return true;
                             });
                         }).then(function (result) {
-                            _this28.ctx.screen.updater(function (dt) {
+                            _this29.ctx.screen.updater(function (dt) {
                                 // Player's eyes adjusting to the darkness
-                                var sprite1 = _this28.ctx.getThing("darkright").getSprite();
-                                var sprite2 = _this28.ctx.getThing("darkleft").getSprite();
+                                var sprite1 = _this29.ctx.getThing("darkright").getSprite();
+                                var sprite2 = _this29.ctx.getThing("darkleft").getSprite();
                                 sprite1.alpha -= 0.30 * dt;
                                 sprite2.alpha -= 0.30 * dt;
                                 if (sprite1.alpha < 0) {
@@ -1871,12 +2027,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }, 2200);
 
                         this.onCameraCallback = this.ctx.screen.onCamera(function () {
-                            if (_this28.state === _this28.States.MonsterVisible && _this28.ctx.scene.cameraX < 0.55) {
-                                _this28.breathingTimer.cancel();
-                                _this28.changeState(_this28.States.CentreCamera);
+                            if (_this29.state === _this29.States.MonsterVisible && _this29.ctx.scene.cameraX < 0.55) {
+                                _this29.breathingTimer.cancel();
+                                _this29.changeState(_this29.States.CentreCamera);
                             }
-                            if (_this28.state === _this28.States.None && _this28.ctx.scene.cameraX > 0.75) {
-                                _this28.changeState(_this28.States.MonsterVisible);
+                            if (_this29.state === _this29.States.None && _this29.ctx.scene.cameraX > 0.75) {
+                                _this29.changeState(_this29.States.MonsterVisible);
                             }
                         });
                     }
@@ -1891,7 +2047,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }, {
                     key: "changeState",
                     value: function changeState(state) {
-                        var _this29 = this;
+                        var _this30 = this;
 
                         this.state = state;
                         switch (state) {
@@ -1903,7 +2059,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                     this.timers.start(function () {
                                         frame = (frame + 1) % 2;
                                         monster.setState("" + frame);
-                                        _this29.ctx.redraw();
+                                        _this30.ctx.redraw();
                                         return true;
                                     }, 1000 / 5.0);
                                 }
@@ -1914,23 +2070,23 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                 this.ctx.screen.enterCutscene();
                                 this.ctx.addUpdate(function (dt) {
                                     var speed = 0.6;
-                                    var newX = _this29.ctx.scene.cameraX;
-                                    newX -= Math.sign(_this29.ctx.scene.cameraX) * speed * dt;
-                                    if (newX * _this29.ctx.scene.cameraX <= 0) {
+                                    var newX = _this30.ctx.scene.cameraX;
+                                    newX -= Math.sign(_this30.ctx.scene.cameraX) * speed * dt;
+                                    if (newX * _this30.ctx.scene.cameraX <= 0) {
                                         // Done panning
-                                        _this29.ctx.scene.setCameraPos(0);
-                                        _this29.changeState(_this29.States.LeftTentacle);
+                                        _this30.ctx.scene.setCameraPos(0);
+                                        _this30.changeState(_this30.States.LeftTentacle);
                                         return false;
                                     }
-                                    _this29.ctx.scene.setCameraPos(newX);
+                                    _this30.ctx.scene.setCameraPos(newX);
                                     return true;
                                 });
                                 break;
 
                             case this.States.LeftTentacle:
                                 this.timers.start(function () {
-                                    _this29.ctx.getThing("tent1").setVisible(true);
-                                    _this29.changeState(_this29.States.RightTentacle);
+                                    _this30.ctx.getThing("tent1").setVisible(true);
+                                    _this30.changeState(_this30.States.RightTentacle);
                                     Audio.play(Audio.Effects.Bang, 0.7);
                                     return false;
                                 }, 750);
@@ -1938,10 +2094,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                             case this.States.RightTentacle:
                                 this.timers.start(function () {
-                                    _this29.ctx.getThing("tent2").setVisible(true);
-                                    _this29.changeState(_this29.States.DoorsOpen);
+                                    _this30.ctx.getThing("tent2").setVisible(true);
+                                    _this30.changeState(_this30.States.DoorsOpen);
                                     Audio.play(Audio.Effects.Bang, 0.7);
-                                    _this29.timers.start(function () {
+                                    _this30.timers.start(function () {
                                         Audio.play(Audio.Effects.ShapeSound2, 0.7);
                                     }, 500);
                                     return false;
@@ -1951,15 +2107,15 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                             case this.States.DoorsOpen:
                                 this.timers.start(function () {
                                     var counter = 0;
-                                    _this29.ctx.addUpdate(function (dt) {
+                                    _this30.ctx.addUpdate(function (dt) {
                                         var speed = 20;
-                                        _this29.ctx.getThing("doorleft").getSprite().x -= speed * dt;
-                                        _this29.ctx.getThing("doorright").getSprite().x += speed * dt;
-                                        _this29.ctx.getThing("tent1").getSprite().x -= speed * dt;
-                                        _this29.ctx.getThing("tent2").getSprite().x += speed * dt;
+                                        _this30.ctx.getThing("doorleft").getSprite().x -= speed * dt;
+                                        _this30.ctx.getThing("doorright").getSprite().x += speed * dt;
+                                        _this30.ctx.getThing("tent1").getSprite().x -= speed * dt;
+                                        _this30.ctx.getThing("tent2").getSprite().x += speed * dt;
                                         counter += speed * dt;
                                         if (counter > 5) {
-                                            _this29.changeState(_this29.States.FadeOut);
+                                            _this30.changeState(_this30.States.FadeOut);
                                             return false;
                                         }
                                     });
@@ -2051,7 +2207,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }, {
                     key: "handleClicked",
                     value: function handleClicked(thing) {
-                        var _this32 = this;
+                        var _this33 = this;
 
                         switch (thing.name) {
                             case "ladder":
@@ -2079,11 +2235,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                     Audio.play(Audio.Effects.ShapeSound);
                                 }, 250);
                                 this.ctx.addUpdate(function (dt) {
-                                    var sprite = _this32.ctx.getThing("shape").getSprite();
+                                    var sprite = _this33.ctx.getThing("shape").getSprite();
                                     sprite.x += 40 * dt;
                                     if (sprite.x > 16) {
-                                        _this32.ctx.getThing("hole1").setVisible(true);
-                                        _this32.ctx.showMessage("AHHH! What even was that?");
+                                        _this33.ctx.getThing("hole1").setVisible(true);
+                                        _this33.ctx.showMessage("AHHH! What even was that?");
                                         return false;
                                     }
                                     return true;
@@ -2107,9 +2263,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 function BuildingLogic(state) {
                     _classCallCheck(this, BuildingLogic);
 
-                    var _this33 = _possibleConstructorReturn(this, (BuildingLogic.__proto__ || Object.getPrototypeOf(BuildingLogic)).call(this, state));
+                    var _this34 = _possibleConstructorReturn(this, (BuildingLogic.__proto__ || Object.getPrototypeOf(BuildingLogic)).call(this, state));
 
-                    _this33.States = {
+                    _this34.States = {
                         // Default state when the player enters the scene
                         None: 0,
                         // Monster waiting behind door. Triggered by checking closet
@@ -2117,8 +2273,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         // Front door is closed, player must retreat to closet
                         PlayerMustHide: 2
                     };
-                    _this33.state = _this33.States.None;
-                    return _this33;
+                    _this34.state = _this34.States.None;
+                    return _this34;
                 }
 
                 _createClass(BuildingLogic, [{
@@ -2150,7 +2306,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 }, {
                     key: "handleClicked",
                     value: function handleClicked(thing) {
-                        var _this34 = this;
+                        var _this35 = this;
 
                         switch (thing.name) {
                             case "door":
@@ -2160,12 +2316,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                     this.ctx.getThing("door").setState("open");
                                     this.ctx.getThing("monster").setState("0");
                                     this.timers.start(function () {
-                                        if (_this34.state === _this34.States.PlayerMustHide) {
+                                        if (_this35.state === _this35.States.PlayerMustHide) {
                                             return false;
                                         }
                                         frame = (frame + 1) % 2;
-                                        _this34.ctx.getThing("monster").setState("" + frame);
-                                        _this34.ctx.redraw();
+                                        _this35.ctx.getThing("monster").setState("" + frame);
+                                        _this35.ctx.redraw();
                                         return true;
                                     }, 1000.0 / fps);
 
@@ -2173,9 +2329,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                     Audio.play(Audio.Effects.Monster);
 
                                     this.timers.start(function () {
-                                        _this34.state = _this34.States.PlayerMustHide;
-                                        _this34.ctx.getThing("door").setState("closed");
-                                        _this34.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
+                                        _this35.state = _this35.States.PlayerMustHide;
+                                        _this35.ctx.getThing("door").setState("closed");
+                                        _this35.ctx.showMessage("WHAT IS THAT??!? I've got to hide!");
                                     }, 1000);
                                 } else if (this.state === this.States.PlayerMustHide) {
                                     this.ctx.showMessage("No! I've got to hide!");
@@ -2209,7 +2365,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                     var dialog = this.ctx.showMessage("It's filled with clothing and random junk. That's it. It's just a closet. Something is wrong...");
                                     if (this.state !== this.States.MonsterWaiting) {
                                         dialog.closed().then(function () {
-                                            _this34.breathingTimer = _this34.timers.start(function () {
+                                            _this35.breathingTimer = _this35.timers.start(function () {
                                                 Audio.play(Audio.Effects.Purring, 0.3);
                                                 return true;
                                             }, 2500, true);
@@ -2265,11 +2421,11 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                     this.ctx.getThing("darkness").setVisible(false);
                                     this.ctx.getThing("closet").setState("light");
                                     this.timers.wait(400).then(function (result) {
-                                        return _this34.ctx.screen.updater(function (dt) {
-                                            var sprite = _this34.ctx.getThing("candle").getSprite();
+                                        return _this35.ctx.screen.updater(function (dt) {
+                                            var sprite = _this35.ctx.getThing("candle").getSprite();
                                             sprite.y += 20 * dt;
                                             if (sprite.y > 0) {
-                                                _this34.ctx.getThing("candle").setVisible(false);
+                                                _this35.ctx.getThing("candle").setVisible(false);
                                                 return false;
                                             }
                                             return true;
@@ -2300,12 +2456,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 _createClass(EndingLogic, [{
                     key: "enterScene",
                     value: function enterScene() {
-                        var _this36 = this;
+                        var _this37 = this;
 
                         _get(EndingLogic.prototype.__proto__ || Object.getPrototypeOf(EndingLogic.prototype), "enterScene", this).call(this);
 
                         this.timers.start(function () {
-                            _this36.ctx.showMessage("That's the demo. Thanks for playing!");
+                            _this37.ctx.showMessage("That's the demo. Thanks for playing!");
                         }, 5000);
                     }
                 }]);
@@ -2376,12 +2532,81 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             var Scene = require("./scene");
             var Utils = require("./utils");
 
+            var DragState = function () {
+                function DragState() {
+                    _classCallCheck(this, DragState);
+
+                    // An average estimate of the drag speed in the X-direction
+                    this.velocityX = null;
+                    // The mouse cursor position when the player started dragging around
+                    this.startX = null;
+                    this.startY = null;
+                    this.lastX = null;
+                    this.lastY = null;
+                    this.lastTime = 0;
+                    // The thing being dragged around, or null if no dragging is happening
+                    // or the player is panning around instead.
+                    this.thing = null;
+                }
+
+                // Call when the player starts dragging
+
+
+                _createClass(DragState, [{
+                    key: "start",
+                    value: function start(tm, x, y) {
+                        this.lastTime = tm;
+                        this.startX = x;
+                        this.startY = y;
+                        this.lastX = x;
+                        this.lastY = y;
+                        this.velocityX = 0;
+                    }
+
+                    // Call periodically to update the dragging state. This maintains
+                    // an estimate of the drag speed. (used to keep the screen moving
+                    // a little after the player stops dragging it around)
+
+                }, {
+                    key: "update",
+                    value: function update(tm, x, y) {
+                        var weight = 0.75;
+                        var velx = (x - this.lastX) / (tm - this.lastTime);
+                        this.velocityX = (1 - weight) * this.velocityX + weight * velx;
+                        this.lastX = x;
+                        this.lastY = y;
+                        this.lastTime = tm;
+                    }
+
+                    // Call when the player stops dragging
+
+                }, {
+                    key: "stop",
+                    value: function stop() {
+                        this.thing = null;
+                        this.startX = null;
+                        this.startY = null;
+                        this.lastX = null;
+                        this.lastY = null;
+                    }
+                }, {
+                    key: "isActive",
+                    value: function isActive() {
+                        return this.startX != null;
+                    }
+                }]);
+
+                return DragState;
+            }();
+
+            ;
+
             /**************/
             /* PlayScreen */
             /**************/
 
             function PlayScreen(gameLogic, dataList, width, height) {
-                var _this37 = this;
+                var _this38 = this;
 
                 this.name = "PlayScreen";
                 // The scene currently displayed (Scene instance)
@@ -2400,12 +2625,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this.viewHeight = height;
                 this.isScenePaused = false;
                 this.isCutscene = 0;
-                // The thing being dragged around, or null if no dragging is happening
-                // or the player is panning around instead.
-                this.dragging = null;
-                // The mouse cursor position when the player started dragging around
-                this.dragStartX = null;
-                this.dragStartY = null;
+                this.dragState = new DragState();
                 // List of animation callback functions
                 this.updateCallbacks = [];
                 // Setup some events for communicating with the main game state
@@ -2433,12 +2653,12 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 this.dialog.onUpdate(this.addUpdate.bind(this));
                 this.dialog.onRedraw(this.redraw.bind(this));
                 this.dialog.onClosing(function (cb) {
-                    _this37.resume();
-                    _this37.leaveCutscene();
+                    _this38.resume();
+                    _this38.leaveCutscene();
                 });
                 this.dialog.onOpening(function (cb) {
-                    _this37.pause();
-                    _this37.enterCutscene();
+                    _this38.pause();
+                    _this38.enterCutscene();
                 });
             }
 
@@ -2448,13 +2668,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             PlayScreen.prototype.update = function (dt) {
                 var lst = [];
                 var redraw = false;
-                var _iteratorNormalCompletion8 = true;
-                var _didIteratorError8 = false;
-                var _iteratorError8 = undefined;
+                var _iteratorNormalCompletion11 = true;
+                var _didIteratorError11 = false;
+                var _iteratorError11 = undefined;
 
                 try {
-                    for (var _iterator8 = this.updateCallbacks[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-                        var callback = _step8.value;
+                    for (var _iterator11 = this.updateCallbacks[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+                        var callback = _step11.value;
 
                         var ret = callback(dt);
                         if (ret === true) redraw = true;
@@ -2463,16 +2683,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                     }
                 } catch (err) {
-                    _didIteratorError8 = true;
-                    _iteratorError8 = err;
+                    _didIteratorError11 = true;
+                    _iteratorError11 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion8 && _iterator8.return) {
-                            _iterator8.return();
+                        if (!_iteratorNormalCompletion11 && _iterator11.return) {
+                            _iterator11.return();
                         }
                     } finally {
-                        if (_didIteratorError8) {
-                            throw _iteratorError8;
+                        if (_didIteratorError11) {
+                            throw _iteratorError11;
                         }
                     }
                 }
@@ -2491,12 +2711,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
              * 
              */
             PlayScreen.prototype.addUpdate = function () {
-                console.log("ADDUPDATE: " + arguments);
+                console.log("ADD UPDATE: " + arguments);
                 var callbacks = Array.prototype.slice.call(arguments);
                 var callback = function callback(dt) {
                     if (callbacks.length === 0) return false;
                     var ret = callbacks[0](dt);
                     if (ret === false) {
+                        console.log("REMOVE UPDATE");
                         callbacks.shift();
                     }
                     return callbacks.length > 0;
@@ -2506,10 +2727,10 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             };
 
             PlayScreen.prototype.updater = function (cb) {
-                var _this38 = this;
+                var _this39 = this;
 
                 return new Promise(function (resolve, reject) {
-                    _this38.addUpdate(function (dt) {
+                    _this39.addUpdate(function (dt) {
                         if (!cb(dt)) {
                             resolve();
                             return false;
@@ -2558,6 +2779,8 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             };
 
             PlayScreen.prototype.setCameraPos = function (xpos, ypos) {
+                xpos = Math.max(Math.min(xpos, 1), -1);
+                ypos = Math.max(Math.min(ypos, 1), -1);
                 this.scene.setCameraPos(xpos, ypos);
                 if (this.eventManager.hasListeners("camera")) {
                     this.dispatch("camera");
@@ -2622,49 +2845,67 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     if (false) {
                         //args.thing) {
                         // Dragging an object
-                        this.dragging = this.scene.getThing(args.layer, args.thing);
-                        this.dragStartX = this.dragging.x;
-                        this.dragStartY = this.dragging.y;
-                        /*var rect = thing.getBoundingClientRect();
-                          this.dragging = args;
-                          this.dragStartX = parseInt(thing.style.left);
-                          this.dragStartY = parseInt(thing.style.top);*/
+                        // TODO - implement this
+                        this.dragState.thing = this.scene.getThing(args.layer, args.thing);
+                        this.dragState.startX = this.dragState.thing.x;
+                        this.dragState.startY = this.dragState.thing.y;
                     } else {
                         // Panning the scene
-                        this.dragging = null;
-                        this.dragStartX = this.scene.cameraX;
+                        this.dragState.thing = null;
+                        this.dragState.start(new Date().getTime() / 1000.0, this.scene.cameraX, 0);
                     }
                 }
             };
 
             PlayScreen.prototype.handleDragStop = function (evt) {
+                var _this40 = this;
+
                 // If the player clicked and panned the scene around only a short distance,
                 // count this as a click event.
                 var dist = 5;
-                if (!this.dragging && Math.abs(evt.x - evt.dragStartX) < dist && Math.abs(evt.y - evt.dragStartY) < dist) {
+                if (!this.dragState.thing && Math.abs(evt.x - evt.dragStartX) < dist && Math.abs(evt.y - evt.dragStartY) < dist) {
                     this.handleClick(evt);
                 }
-                this.dragging = null;
-                this.dragStartX = null;
-                this.dragStartY = null;
+                this.dragState.stop();
                 this.dispatch("dragStop");
+
+                // Have the camera continue sliding, gradually slowing down. This is
+                // the expected behavior on touch devices.
+                var velx = this.dragState.velocityX;
+                var duration = 0.5;
+                var timer = duration;
+
+                this.addUpdate(function (dt) {
+                    // Have the updater expire if the player starts dragging again
+                    // or we finish our slide.
+                    timer -= dt;
+                    if (_this40.dragState.isActive() || timer <= 0) return false;
+
+                    // Slide the camera (slowing down as timer -> 0)
+                    _this40.setCameraPos(_this40.scene.cameraX + velx * dt * (timer / duration), 0);
+                    return true;
+                });
             };
 
             PlayScreen.prototype.handleDrag = function (evt) {
                 if (!this.scene) return;
 
-                if (!this.isCutscene && this.dragStartX !== null) {
-                    if (this.dragging) {
+                if (!this.isCutscene && this.dragState.startX !== null) {
+                    if (this.dragState.thing) {
                         // Dragging a thing
-                        this.dragging.x = this.dragStartX + evt.dx / this.getDisplayScale();
-                        this.dragging.y = this.dragStartY + evt.dy / this.getDisplayScale();
+                        var x = this.dragState.startX + evt.dx / this.getDisplayScale();
+                        var y = this.dragState.startY + evt.dy / this.getDisplayScale();
+                        this.dragState.thing.x = x;
+                        this.dragState.thing.y = y;
                         this.redraw();
                     } else {
                         // Panning the scene around
-                        var pos = this.dragStartX - evt.dx / (window.innerWidth / 2);
-                        pos = Math.max(Math.min(pos, 1), -1);
+                        var pos = this.dragState.startX - 1.25 * evt.dx / (window.innerWidth / 2);
                         this.setCameraPos(pos);
                         this.redraw();
+
+                        this.dragState.update(new Date().getTime() / 1000.0, pos, 0);
+
                         // Now figure out what's in view and send visibility events
                         // ...
                     }
@@ -2877,28 +3118,28 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                     var backWidth = this.getBaseSize().width;
                     var centreX = 0;
                     xpos = Math.min(Math.max(xpos, -1), 1);
-                    var _iteratorNormalCompletion9 = true;
-                    var _didIteratorError9 = false;
-                    var _iteratorError9 = undefined;
+                    var _iteratorNormalCompletion12 = true;
+                    var _didIteratorError12 = false;
+                    var _iteratorError12 = undefined;
 
                     try {
-                        for (var _iterator9 = this.layers[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-                            var layer = _step9.value;
+                        for (var _iterator12 = this.layers[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+                            var layer = _step12.value;
 
                             var pos = centreX - xpos * (layer.getWidth() / 2 - backWidth / 2);
                             layer.container.x = pos;
                         }
                     } catch (err) {
-                        _didIteratorError9 = true;
-                        _iteratorError9 = err;
+                        _didIteratorError12 = true;
+                        _iteratorError12 = err;
                     } finally {
                         try {
-                            if (!_iteratorNormalCompletion9 && _iterator9.return) {
-                                _iterator9.return();
+                            if (!_iteratorNormalCompletion12 && _iterator12.return) {
+                                _iterator12.return();
                             }
                         } finally {
-                            if (_didIteratorError9) {
-                                throw _iteratorError9;
+                            if (_didIteratorError12) {
+                                throw _iteratorError12;
                             }
                         }
                     }
@@ -2918,13 +3159,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 var xoffset = x - this.getBaseSize().width / 2;
                 var yoffset = y - this.getBaseSize().height / 2;
                 var reversed = this.layers.slice().reverse();
-                var _iteratorNormalCompletion10 = true;
-                var _didIteratorError10 = false;
-                var _iteratorError10 = undefined;
+                var _iteratorNormalCompletion13 = true;
+                var _didIteratorError13 = false;
+                var _iteratorError13 = undefined;
 
                 try {
-                    for (var _iterator10 = reversed[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-                        var layer = _step10.value;
+                    for (var _iterator13 = reversed[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+                        var layer = _step13.value;
 
                         var xp = xoffset - layer.container.x;
                         var yp = yoffset;
@@ -2948,16 +3189,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                     }
                 } catch (err) {
-                    _didIteratorError10 = true;
-                    _iteratorError10 = err;
+                    _didIteratorError13 = true;
+                    _iteratorError13 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion10 && _iterator10.return) {
-                            _iterator10.return();
+                        if (!_iteratorNormalCompletion13 && _iterator13.return) {
+                            _iterator13.return();
                         }
                     } finally {
-                        if (_didIteratorError10) {
-                            throw _iteratorError10;
+                        if (_didIteratorError13) {
+                            throw _iteratorError13;
                         }
                     }
                 }
@@ -2970,27 +3211,27 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
             };
 
             Scene.prototype.getLayer = function (name) {
-                var _iteratorNormalCompletion11 = true;
-                var _didIteratorError11 = false;
-                var _iteratorError11 = undefined;
+                var _iteratorNormalCompletion14 = true;
+                var _didIteratorError14 = false;
+                var _iteratorError14 = undefined;
 
                 try {
-                    for (var _iterator11 = this.layers[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-                        var layer = _step11.value;
+                    for (var _iterator14 = this.layers[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+                        var layer = _step14.value;
 
                         if (layer.name === name) return layer;
                     }
                 } catch (err) {
-                    _didIteratorError11 = true;
-                    _iteratorError11 = err;
+                    _didIteratorError14 = true;
+                    _iteratorError14 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion11 && _iterator11.return) {
-                            _iterator11.return();
+                        if (!_iteratorNormalCompletion14 && _iterator14.return) {
+                            _iterator14.return();
                         }
                     } finally {
-                        if (_didIteratorError11) {
-                            throw _iteratorError11;
+                        if (_didIteratorError14) {
+                            throw _iteratorError14;
                         }
                     }
                 }
@@ -3031,25 +3272,25 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 var renderer = Render.getRenderer();
 
                 // Build the layers and contained sprites
-                var _iteratorNormalCompletion12 = true;
-                var _didIteratorError12 = false;
-                var _iteratorError12 = undefined;
+                var _iteratorNormalCompletion15 = true;
+                var _didIteratorError15 = false;
+                var _iteratorError15 = undefined;
 
                 try {
-                    for (var _iterator12 = sceneData.layers[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-                        var layerData = _step12.value;
+                    for (var _iterator15 = sceneData.layers[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+                        var layerData = _step15.value;
 
                         var texture = scn.sceneData.getTexture(layerData.name);
                         var mask = Utils.getTransparencyMask(renderer, texture);
                         var layer = new Layer(layerData.name, texture, mask);
                         scn.addLayer(layer);
-                        var _iteratorNormalCompletion13 = true;
-                        var _didIteratorError13 = false;
-                        var _iteratorError13 = undefined;
+                        var _iteratorNormalCompletion16 = true;
+                        var _didIteratorError16 = false;
+                        var _iteratorError16 = undefined;
 
                         try {
-                            for (var _iterator13 = layerData["sprites"][Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-                                var spriteData = _step13.value;
+                            for (var _iterator16 = layerData["sprites"][Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+                                var spriteData = _step16.value;
 
                                 var texture = scn.sceneData.getTexture(spriteData["name"]);
                                 var sprite = new PIXI.Sprite(texture);
@@ -3083,31 +3324,31 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                                 scn.thingsBySpriteName[sprite.name] = thing;
                             }
                         } catch (err) {
-                            _didIteratorError13 = true;
-                            _iteratorError13 = err;
+                            _didIteratorError16 = true;
+                            _iteratorError16 = err;
                         } finally {
                             try {
-                                if (!_iteratorNormalCompletion13 && _iterator13.return) {
-                                    _iterator13.return();
+                                if (!_iteratorNormalCompletion16 && _iterator16.return) {
+                                    _iterator16.return();
                                 }
                             } finally {
-                                if (_didIteratorError13) {
-                                    throw _iteratorError13;
+                                if (_didIteratorError16) {
+                                    throw _iteratorError16;
                                 }
                             }
                         }
                     }
                 } catch (err) {
-                    _didIteratorError12 = true;
-                    _iteratorError12 = err;
+                    _didIteratorError15 = true;
+                    _iteratorError15 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion12 && _iterator12.return) {
-                            _iterator12.return();
+                        if (!_iteratorNormalCompletion15 && _iterator15.return) {
+                            _iterator15.return();
                         }
                     } finally {
-                        if (_didIteratorError12) {
-                            throw _iteratorError12;
+                        if (_didIteratorError15) {
+                            throw _iteratorError15;
                         }
                     }
                 }
@@ -3222,13 +3463,13 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
              * instance in this layer. If so, this returns the sprite. */
             Layer.prototype.checkHitSprite = function (x, y) {
                 var reversed = this.container.children.slice().reverse();
-                var _iteratorNormalCompletion14 = true;
-                var _didIteratorError14 = false;
-                var _iteratorError14 = undefined;
+                var _iteratorNormalCompletion17 = true;
+                var _didIteratorError17 = false;
+                var _iteratorError17 = undefined;
 
                 try {
-                    for (var _iterator14 = reversed[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-                        var sprite = _step14.value;
+                    for (var _iterator17 = reversed[Symbol.iterator](), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
+                        var sprite = _step17.value;
 
                         if (sprite.name && sprite.visible && x >= sprite.x && y >= sprite.y && x < sprite.x + sprite.width && y < sprite.y + sprite.height) {
                             var xp = x - sprite.x | 0;
@@ -3237,16 +3478,16 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                         }
                     }
                 } catch (err) {
-                    _didIteratorError14 = true;
-                    _iteratorError14 = err;
+                    _didIteratorError17 = true;
+                    _iteratorError17 = err;
                 } finally {
                     try {
-                        if (!_iteratorNormalCompletion14 && _iterator14.return) {
-                            _iterator14.return();
+                        if (!_iteratorNormalCompletion17 && _iterator17.return) {
+                            _iterator17.return();
                         }
                     } finally {
-                        if (_didIteratorError14) {
-                            throw _iteratorError14;
+                        if (_didIteratorError17) {
+                            throw _iteratorError17;
                         }
                     }
                 }
@@ -3415,7 +3656,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 _createClass(FadeTransition, [{
                     key: "start",
                     value: function start() {
-                        var _this39 = this;
+                        var _this41 = this;
 
                         // Fade out, switch scenes, then fade back in
                         var fadeout = new Fader(this.screen.viewWidth, this.screen.viewHeight, {
@@ -3436,18 +3677,18 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                         return this.screen.updater(function (dt) {
                             if (!fadeout.update(dt)) {
-                                _this39.screen.setScene(_this39.endSceneName, _this39.args);
-                                fadein.start(_this39.screen.stage);
+                                _this41.screen.setScene(_this41.endSceneName, _this41.args);
+                                fadein.start(_this41.screen.stage);
                                 return false;
                             }
                             return true;
                         }).then(function (result) {
-                            return _this39.screen.updater(Utils.delayUpdate(pauseTime));
+                            return _this41.screen.updater(Utils.delayUpdate(pauseTime));
                         }).then(function (result) {
-                            _this39.screen.updater(function (dt) {
+                            _this41.screen.updater(function (dt) {
                                 if (!fadein.update(dt)) {
-                                    _this39.screen.resume();
-                                    _this39.screen.leaveCutscene();
+                                    _this41.screen.resume();
+                                    _this41.screen.leaveCutscene();
                                     return false;
                                 }
                                 return true;
@@ -3475,7 +3716,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
                 _createClass(FadeInTransition, [{
                     key: "start",
                     value: function start() {
-                        var _this40 = this;
+                        var _this42 = this;
 
                         this.screen.setScene(this.sceneName, this.args);
                         this.screen.enterCutscene();
@@ -3488,7 +3729,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
                         return this.screen.updater(function (dt) {
                             if (!fader.update(dt)) {
-                                _this40.screen.leaveCutscene();
+                                _this42.screen.leaveCutscene();
                                 return false;
                             }
                             return true;

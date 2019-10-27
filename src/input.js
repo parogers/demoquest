@@ -119,8 +119,104 @@ function GameEvent(options)
 /* TouchAdapter */
 /****************/
 
-function TouchAdapter()
+function TouchAdapter(src)
 {
+    this.src = src;
+    this.currentTouch = null;
+    this.mouseAdapter = new MouseAdapter(src);
+    this.dragStartX = 0;
+    this.dragStartY = 0;
+    this.movements = 0;
+
+    // Setup some event handlers for dispatching below
+    var mgr = new Events.EventManager();
+    this.onClick = mgr.hook("click");
+    this.onDrag = mgr.hook("drag");
+    this.onDragStart = mgr.hook("dragStart");
+    this.onDragStop = mgr.hook("dragStop");
+
+    class Touch
+    {
+        constructor(id, x, y)
+	{
+            this.id = id;
+            this.startx = x;
+            this.starty = y;
+        }
+    };
+
+    src.addEventListener('touchstart', event => {
+	if (this.currentTouch === null)
+	{
+	    let viewRect = src.getBoundingClientRect();
+
+	    for (let touch of event.changedTouches)
+	    {
+		let x = touch.clientX - viewRect.left;
+		let y = touch.clientY - viewRect.top;
+
+		this.movements = 0;
+		this.currentTouch = new Touch(touch.id, x, y);
+		break;
+	    }
+	}
+	event.preventDefault();
+    });
+    
+    src.addEventListener('touchmove', event => {
+	for (let touch of event.changedTouches)
+	{
+	    if (this.currentTouch !== null &&
+		this.currentTouch.id === touch.id)
+	    {
+		if (this.movements === 0) {
+		    var rect = this.src.getBoundingClientRect();
+		    var x = touch.clientX - rect.left;
+		    var y = touch.clientY - rect.top;
+		    mgr.dispatch("dragStart", new GameEvent({x: x, y: y}));
+
+		    this.dragStartX = touch.clientX;
+		    this.dragStartY = touch.clientY;
+
+		} else {
+		    var evt = new GameEvent({
+			dx: touch.clientX - this.dragStartX, 
+			dy: touch.clientY - this.dragStartY});
+		    mgr.dispatch("drag", evt);
+		}
+		this.movements++;
+	    }
+	    break;
+    	}
+    });
+
+    let touchEnd = (event) => {
+        for (let touch of event.changedTouches) 
+        {
+	    if (this.currentTouch !== null &&
+		this.currentTouch.id === touch.id)
+	    {
+		var rect = this.src.getBoundingClientRect();
+		var x = touch.clientX - rect.left;
+		var y = touch.clientY - rect.top;
+
+		var evt = new GameEvent({x: x, y: y});
+		if (this.movements === 0 && x >= 0 && y >= 0 && 
+		    x <= rect.right && y <= rect.bottom) {
+		    mgr.dispatch("click", evt);
+		} else {
+		    var rect = this.src.getBoundingClientRect();
+		    evt.dragStartX = this.dragStartX - rect.left;
+		    evt.dragStartY = this.dragStartY - rect.top;
+		    mgr.dispatch("dragStop", evt);
+		}
+		this.currentTouch = null;
+		break;
+	    }
+	}
+    };
+    src.addEventListener('touchend', touchEnd);
+    src.addEventListener('touchcancel', touchEnd);
 }
 
 module.exports = {
