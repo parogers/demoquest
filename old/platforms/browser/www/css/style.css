@@ -1,0 +1,57 @@
+#canvas_area
+{
+    width: 800px;
+    height: 800px;
+}
+
+canvas
+{
+    margin: 0;
+    padding: 0;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+body
+{
+    margin: 0px;
+    background: #222;
+    /* Prevents pinch-zoom under chrome */
+    touch-action: none;
+}
+
+#credits {
+    background: white;
+    color: black;
+    width: 100%;
+    position: fixed;
+    padding: 0.5em;
+    padding-left: 1em;
+    bottom: 1px;
+}
+
+#credits .content div {
+    margin-top: 0.75em;
+    margin-bottom: 0.75em;
+}
+
+#credits .content {
+    width: 90%;
+    float: left;
+}
+
+#credits .button {
+    background: black;
+    color: white;
+    font-family: monospace;
+    font-size: xx-large;
+    float: right;
+    width: 1.5em;
+    padding: 0px;
+    margin-right: 1em;
+    display: inline;
+    text-align: center;
+    border: solid 1px;
+    cursor: pointer;
+}

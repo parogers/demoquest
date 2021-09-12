@@ -1,0 +1,12 @@
+{
+    "title": "Ending",
+    "name": "ending",
+    "description": "The end",
+    "camera": "0",
+    "layers": [
+        {
+            "name": "Background",
+            "sprites": []
+        }
+    ]
+}

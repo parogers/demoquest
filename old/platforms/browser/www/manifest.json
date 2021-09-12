@@ -1,0 +1,11 @@
+{
+  "background_color": "#FFF",
+  "display": "standalone",
+  "name": "DemoQuest",
+  "short_name": "DemoQuest",
+  "version": "com.github.parogers.demoquest",
+  "description": "A simple point and click style adventure game.",
+  "author": "Peter Rogers",
+  "icons": [],
+  "start_url": "index.html"
+}

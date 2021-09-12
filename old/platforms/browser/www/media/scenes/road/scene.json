@@ -1,0 +1,76 @@
+{
+    "title": "Road",
+    "name": "road",
+    "description": "The road ends in a small building.",
+    "camera": "-1",
+    "layers": [
+        {
+            "name": "sky",
+            "sprites": []
+        },
+        {
+            "name": "forest",
+            "sprites": []
+        },
+        {
+            "name": "roadway",
+            "sprites": [
+                {
+                    "name": "house",
+                    "x": 17,
+                    "y": 14
+                }
+            ]
+        },
+        {
+            "name": "foreground2",
+            "sprites": [
+                {
+                    "name": "player",
+                    "x": 1,
+                    "y": 6
+                },
+                {
+                    "name": "cave",
+                    "x": 82,
+                    "y": 26
+                },
+                {
+                    "name": "bush1",
+                    "x": 77,
+                    "y": 25
+                },
+                {
+                    "name": "bush2",
+                    "x": 83,
+                    "y": 24
+                }
+            ]
+        },
+        {
+            "name": "foreground",
+            "sprites": [
+                {
+                    "name": "crow_right",
+                    "x": 39,
+                    "y": 2
+                },
+                {
+                    "name": "crow_blinkright",
+                    "x": 39,
+                    "y": 2
+                },
+                {
+                    "name": "crow_left",
+                    "x": 39,
+                    "y": 2
+                },
+                {
+                    "name": "crow_blinkleft",
+                    "x": 39,
+                    "y": 2
+                }
+            ]
+        }
+    ]
+}

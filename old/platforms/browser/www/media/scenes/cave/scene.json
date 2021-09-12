@@ -1,0 +1,62 @@
+{
+    "title": "Cave",
+    "name": "cave",
+    "description": "A cave deep underground",
+    "camera": "-1",
+    "layers": [
+        {
+            "name": "background",
+            "sprites": [
+                {
+                    "name": "shape",
+                    "x": 0,
+                    "y": 11
+                }
+            ]
+        },
+        {
+            "name": "wall",
+            "sprites": [
+                {
+                    "name": "hole1",
+                    "x": 21,
+                    "y": 11
+                },
+                {
+                    "name": "hole2_empty",
+                    "x": 73,
+                    "y": 11
+                },
+                {
+                    "name": "hole2_eyes",
+                    "x": 73,
+                    "y": 11
+                }
+            ]
+        },
+        {
+            "name": "ladder",
+            "sprites": [
+                {
+                    "name": "ladder",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
+        },
+        {
+            "name": "table",
+            "sprites": [
+                {
+                    "name": "key",
+                    "x": 54,
+                    "y": 20
+                }
+            ]
+        },
+        {
+            "name": "darkness",
+            "sprites": []
+        }
+    ]
+}

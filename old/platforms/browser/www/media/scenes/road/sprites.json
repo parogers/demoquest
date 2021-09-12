@@ -1,0 +1,295 @@
+{
+    "frames": {
+        "bush1": {
+            "frame": {
+                "h": 7,
+                "w": 10,
+                "x": 1,
+                "y": 174
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 7,
+                "w": 10
+            },
+            "spriteSourceSize": {
+                "h": 7,
+                "w": 10,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "bush2": {
+            "frame": {
+                "h": 8,
+                "w": 8,
+                "x": 1,
+                "y": 182
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 8,
+                "w": 8
+            },
+            "spriteSourceSize": {
+                "h": 8,
+                "w": 8,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "cave": {
+            "frame": {
+                "h": 6,
+                "w": 7,
+                "x": 1,
+                "y": 167
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 6,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 6,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "crow_blinkleft": {
+            "frame": {
+                "h": 12,
+                "w": 7,
+                "x": 1,
+                "y": 263
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 12,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 12,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "crow_blinkright": {
+            "frame": {
+                "h": 12,
+                "w": 7,
+                "x": 1,
+                "y": 237
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 12,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 12,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "crow_left": {
+            "frame": {
+                "h": 12,
+                "w": 7,
+                "x": 1,
+                "y": 250
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 12,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 12,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "crow_right": {
+            "frame": {
+                "h": 12,
+                "w": 7,
+                "x": 1,
+                "y": 224
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 12,
+                "w": 7
+            },
+            "spriteSourceSize": {
+                "h": 12,
+                "w": 7,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "foreground": {
+            "frame": {
+                "h": 32,
+                "w": 96,
+                "x": 1,
+                "y": 191
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 96
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 96,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "foreground2": {
+            "frame": {
+                "h": 32,
+                "w": 91,
+                "x": 1,
+                "y": 107
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 91
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 91,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "forest": {
+            "frame": {
+                "h": 32,
+                "w": 43,
+                "x": 1,
+                "y": 34
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 43
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 43,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "house": {
+            "frame": {
+                "h": 6,
+                "w": 11,
+                "x": 1,
+                "y": 100
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 6,
+                "w": 11
+            },
+            "spriteSourceSize": {
+                "h": 6,
+                "w": 11,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "player": {
+            "frame": {
+                "h": 26,
+                "w": 13,
+                "x": 1,
+                "y": 140
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 26,
+                "w": 13
+            },
+            "spriteSourceSize": {
+                "h": 26,
+                "w": 13,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "roadway": {
+            "frame": {
+                "h": 32,
+                "w": 46,
+                "x": 1,
+                "y": 67
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 46
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 46,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        },
+        "sky": {
+            "frame": {
+                "h": 32,
+                "w": 32,
+                "x": 1,
+                "y": 1
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 32
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 32,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        }
+    },
+    "meta": {
+        "app": "makescene.py conversion",
+        "format": "RGBA8888",
+        "image": "sprites.png",
+        "scale": "1",
+        "size": {
+            "W": 98,
+            "h": 277
+        },
+        "version": "1"
+    }
+}
