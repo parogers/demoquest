@@ -16,3 +16,13 @@ export default defineComponent({
     }
 });
 </script>
+
+<style>
+body
+{
+    margin: 0px;
+    background: #222;
+    /* Prevents pinch-zoom under chrome */
+    touch-action: none;
+}
+</style>
