@@ -9,11 +9,11 @@ as a game demo for me to explore some different coding techniques.
 
 # Screenshots
 
-<img src="https://github.com/parogers/demoquest/raw/master/screenshots/screenshot1.png" style="width: 200px; height: auto; border: solid 1px">
+<img src="https://github.com/parogers/demoquest/raw/main/docs/screenshots/screenshot1.png" style="width: 200px; height: auto; border: solid 1px">
 
-<img src="https://github.com/parogers/demoquest/raw/master/screenshots/screenshot2.png" style="width: 200px; height: auto; border: solid 1px">
+<img src="https://github.com/parogers/demoquest/raw/main/docs/screenshots/screenshot2.png" style="width: 200px; height: auto; border: solid 1px">
 
-<img src="https://github.com/parogers/demoquest/raw/master/screenshots/screenshot3.png" style="width: 200px; height: auto; border: solid 1px">
+<img src="https://github.com/parogers/demoquest/raw/main/docs/screenshots/screenshot3.png" style="width: 200px; height: auto; border: solid 1px">
 
 # About the code
 
