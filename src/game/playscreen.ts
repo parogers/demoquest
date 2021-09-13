@@ -80,7 +80,7 @@ class DragState {
     isActive() {
 	return (this.startX != null);
     }
-};
+}
 
 /**************/
 /* PlayScreen */
@@ -176,14 +176,12 @@ PlayScreen.prototype.update = function(dt)
  */
 PlayScreen.prototype.addUpdate = function()
 {
-    console.log("ADD UPDATE: " + arguments);
     let callbacks = Array.prototype.slice.call(arguments);
     let callback = function(dt) 
     {
         if (callbacks.length === 0) return false;
         let ret = callbacks[0](dt);
 	if (ret === false) {
-	    console.log("REMOVE UPDATE");
             callbacks.shift();
 	}
 	return callbacks.length > 0;
@@ -314,19 +312,19 @@ PlayScreen.prototype.handleDragStart = function(evt)
     if (!this.isCutscene)
     {
 	var args = this.scene.checkHit(xp, yp);
-	if (false) { //args.thing) {
-	    // Dragging an object
-	    // TODO - implement this
-	    this.dragState.thing = this.scene.getThing(args.layer, args.thing);
-	    this.dragState.startX = this.dragState.thing.x;
-	    this.dragState.startY = this.dragState.thing.y;
-	} else {
+	// if (false) { //args.thing) {
+	//     // Dragging an object
+	//     // TODO - implement this
+	//     this.dragState.thing = this.scene.getThing(args.layer, args.thing);
+	//     this.dragState.startX = this.dragState.thing.x;
+	//     this.dragState.startY = this.dragState.thing.y;
+	// } else {
 	    // Panning the scene
 	    this.dragState.thing = null;
 	    this.dragState.start(
 		(new Date()).getTime()/1000.0,
 		this.scene.cameraX, 0);
-	}
+	// }
     }
 }
 

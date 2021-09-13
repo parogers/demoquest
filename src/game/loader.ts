@@ -239,28 +239,29 @@ LoadingScreen.prototype._loadSceneImages = function(dataList)
 
 LoadingScreen.prototype._loadAudio = function()
 {
-    let sources: any = [];
-    for (let name in Audio.Effects) {
-	sources.push(Audio.Effects[name]);
-    }
-
-    let processed = 0;
-    Audio.load(sources, {
-	whenLoaded: () => {
-	    this.dispatch("done");
-	    processed++;
-	},
-	onFailed: (source, err) => {
-            console.log("Failed to load audio: " + source + ', ' + err);
-	    processed++;
-	    
-	    if (processed >= sources.length) {
-		this.dispatch('done');
-	    }
-	},
-	onProgress: () => {
-	    // ...
-	}
-    });
-    this._showMessage("Loading audio");
+    this.dispatch('done');
+    // let sources: any = [];
+    // for (let name in Audio.Effects) {
+	// sources.push(Audio.Effects[name]);
+    // }
+    // 
+    // let processed = 0;
+    // Audio.load(sources, {
+	// whenLoaded: () => {
+	//     this.dispatch("done");
+	//     processed++;
+	// },
+	// onFailed: (source, err) => {
+    //         console.log("Failed to load audio: " + source + ', ' + err);
+	//     processed++;
+    // 
+	//     if (processed >= sources.length) {
+	// 	this.dispatch('done');
+	//     }
+	// },
+	// onProgress: () => {
+	//     // ...
+	// }
+    // });
+    // this._showMessage("Loading audio");
 }
