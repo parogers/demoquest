@@ -40,33 +40,39 @@ export const Effects = {
 
 export function play(res, vol: number|undefined =undefined)
 {
-    if (enabled) {
-	if (!sounds[res]) throw Error("Invalid sound: " + res);
-        if (vol !== undefined) sounds[res].volume = vol;
-	try {
-	    sounds[res].play();
-	} catch(e) {
-	    console.log('failed to play: ' + e);
-	}
-	return sounds[res];
-    }
-    return null;
+    // if (enabled) {
+	// if (!sounds[res]) throw Error("Invalid sound: " + res);
+    //     if (vol !== undefined) sounds[res].volume = vol;
+	// try {
+	//     sounds[res].play();
+	// } catch(e) {
+	//     console.log('failed to play: ' + e);
+	// }
+	// return sounds[res];
+    // }
+    // return null;
+    const onended: any = null;
+    return {
+        soundNode: {
+            onended: onended
+        }
+    };
 }
 
 export function setEnabled(b)
 {
-    enabled = b;
-    for (let name of sounds) {
-	if (sounds[name].play && sounds[name].pause) {
-	    sounds[name].pause();
-	}
-    }
+    // enabled = b;
+    // for (let name of sounds) {
+	// if (sounds[name].play && sounds[name].pause) {
+	//     sounds[name].pause();
+	// }
+    // }
 }
 
 export function load(sources, opts)
 {
-    sounds.whenLoaded = opts.whenLoaded || null;
-    sounds.onFailed = opts.onFailed || null;
-    sounds.onProgress = opts.onProgress || null;
-    sounds.load(sources);
+    // sounds.whenLoaded = opts.whenLoaded || null;
+    // sounds.onFailed = opts.onFailed || null;
+    // sounds.onProgress = opts.onProgress || null;
+    // sounds.load(sources);
 }

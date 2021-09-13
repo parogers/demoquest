@@ -1,0 +1,117 @@
+{
+    "title": "Building",
+    "name": "building",
+    "description": "An abandoned cabin",
+    "camera": "-1",
+    "layers": [
+        {
+            "name": "background",
+            "sprites": []
+        },
+        {
+            "name": "terrain",
+            "sprites": [
+                {
+                    "name": "monster_0",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "monster_1",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "outside",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
+        },
+        {
+            "name": "incloset",
+            "sprites": [
+                {
+                    "name": "closet_light",
+                    "x": 132,
+                    "y": 0
+                },
+                {
+                    "name": "closet_dark",
+                    "x": 132,
+                    "y": 0
+                }
+            ]
+        },
+        {
+            "name": "wall",
+            "sprites": [
+                {
+                    "name": "bloodarea",
+                    "x": 120,
+                    "y": 0
+                },
+                {
+                    "name": "light_on",
+                    "x": 25,
+                    "y": 15
+                },
+                {
+                    "name": "light_off",
+                    "x": 25,
+                    "y": 15
+                },
+                {
+                    "name": "bookshelf",
+                    "x": 45,
+                    "y": 9
+                },
+                {
+                    "name": "clock",
+                    "x": 68,
+                    "y": 4
+                },
+                {
+                    "name": "clothes",
+                    "x": 86,
+                    "y": 24
+                },
+                {
+                    "name": "door_closed",
+                    "x": 5,
+                    "y": 5
+                },
+                {
+                    "name": "door_open",
+                    "x": 20,
+                    "y": 5
+                },
+                {
+                    "name": "cdoor_open",
+                    "x": 137,
+                    "y": 5
+                },
+                {
+                    "name": "cdoor_closed",
+                    "x": 137,
+                    "y": 5
+                }
+            ]
+        },
+        {
+            "name": "candlelayer",
+            "sprites": [
+                {
+                    "name": "darkness",
+                    "x": 0,
+                    "y": 0
+                },
+                {
+                    "name": "candle",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
+        }
+    ]
+}

@@ -201,7 +201,7 @@ LoadingScreen.prototype._showMessage = function(msg)
 LoadingScreen.prototype._loadSceneData = function()
 {
     // Load all the scene meta data here, then the scene images below
-    var ldr = new SceneDataLoader("media/scenes/index.json");
+    var ldr = new SceneDataLoader("/assets/media/scenes/index.json");
     ldr.ondone(dataList => {
 	this._loadSceneImages(dataList);
     });

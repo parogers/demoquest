@@ -1,0 +1,35 @@
+{
+    "frames": {
+        "Background": {
+            "frame": {
+                "h": 32,
+                "w": 32,
+                "x": 1,
+                "y": 1
+            },
+            "rotated": false,
+            "sourceSize": {
+                "h": 32,
+                "w": 32
+            },
+            "spriteSourceSize": {
+                "h": 32,
+                "w": 32,
+                "x": 0,
+                "y": 0
+            },
+            "trimmed": false
+        }
+    },
+    "meta": {
+        "app": "makescene.py conversion",
+        "format": "RGBA8888",
+        "image": "sprites.png",
+        "scale": "1",
+        "size": {
+            "W": 34,
+            "h": 35
+        },
+        "version": "1"
+    }
+}

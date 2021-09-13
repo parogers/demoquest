@@ -1,0 +1,41 @@
+{
+    "title": "Ride",
+    "name": "ride",
+    "description": "...",
+    "camera": "-1",
+    "layers": [
+        {
+            "name": "background",
+            "sprites": []
+        },
+        {
+            "name": "sky",
+            "sprites": []
+        },
+        {
+            "name": "road",
+            "sprites": [
+                {
+                    "name": "horse_0",
+                    "x": 3,
+                    "y": 24
+                },
+                {
+                    "name": "horse_1",
+                    "x": 3,
+                    "y": 24
+                },
+                {
+                    "name": "horse_2",
+                    "x": 3,
+                    "y": 24
+                },
+                {
+                    "name": "horse_3",
+                    "x": 3,
+                    "y": 24
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,72 @@
+{
+    "title": "Cabin",
+    "name": "intro",
+    "description": "Your cabin",
+    "camera": "-1",
+    "layers": [
+        {
+            "name": "sunset",
+            "sprites": []
+        },
+        {
+            "name": "terrain",
+            "sprites": [
+                {
+                    "name": "outside",
+                    "x": 0,
+                    "y": 0
+                }
+            ]
+        },
+        {
+            "name": "wall",
+            "sprites": [
+                {
+                    "name": "candle",
+                    "x": 23,
+                    "y": 18
+                },
+                {
+                    "name": "door_closed",
+                    "x": 111,
+                    "y": 5
+                },
+                {
+                    "name": "door_open",
+                    "x": 98,
+                    "y": 5
+                },
+                {
+                    "name": "paintings",
+                    "x": 34,
+                    "y": 6
+                },
+                {
+                    "name": "cupboard_closed",
+                    "x": 57,
+                    "y": 2
+                },
+                {
+                    "name": "cupboard_open",
+                    "x": 45,
+                    "y": 2
+                },
+                {
+                    "name": "pocketwatch",
+                    "x": 11,
+                    "y": 21
+                },
+                {
+                    "name": "letter",
+                    "x": 4,
+                    "y": 21
+                },
+                {
+                    "name": "suitcase",
+                    "x": 87,
+                    "y": 23
+                }
+            ]
+        }
+    ]
+}
