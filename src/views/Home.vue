@@ -7,18 +7,17 @@
 <script lang="ts">
 import { IonPage } from '@ionic/vue';
 import { defineComponent } from 'vue';
-import * as PIXI from 'pixi.js';
+import { configure } from '../game/main';
 
 export default defineComponent({
     name: 'Home',
     components: {
         IonPage,
     },
-    mounted: () => {
-        const app = new PIXI.Application({ width: 640, height: 360 });
+    mounted() {
         const div = document.getElementById('canvas_area');
         if (div) {
-            div.appendChild(app.view);
+            configure(div);
         }
     },
 });
